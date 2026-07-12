@@ -9,5 +9,8 @@
     "preview": "npm run preview --prefix frontend",
     "dev:api": "cd backend && go run ./cmd/server",
     "build:api": "cd backend && go build -o bin/server ./cmd/server"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
