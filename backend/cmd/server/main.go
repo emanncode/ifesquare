@@ -6,13 +6,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
-	"golang.org/x/crypto/bcrypt"
 
 	"github.com/emanncode/ifesquare/backend/internal/auth"
 	"github.com/emanncode/ifesquare/backend/internal/db"
@@ -22,7 +20,6 @@ import (
 )
 
 func main() {
-	seedMode := flag.Bool("seed", false, "seed the admin user and exit")
 	logoutAll := flag.Bool("logout-all", false, "invalidate every active session and exit")
 	flag.Parse()
 
@@ -45,11 +42,6 @@ func main() {
 		log.Fatalf("failed to init db: %v", err)
 	}
 	defer db.Close()
-
-	if *seedMode {
-		seedAdmin()
-		return
-	}
 
 	if *logoutAll {
 		if err := auth.RevokeAllSessions(); err != nil {
@@ -96,6 +88,7 @@ func main() {
 			r.Get("/today", ledger.TodayHandler)
 			r.Patch("/today/{productId}", ledger.UpdateTodayEntryHandler)
 			r.Post("/close", ledger.CloseHandler)
+			r.Post("/sync-from-last-closed", ledger.SyncFromLastClosedHandler)
 		})
 
 		r.Route("/api/history", func(r chi.Router) {
@@ -143,29 +136,4 @@ func main() {
 	if err := http.ListenAndServe(":"+port, r); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
-}
-
-func seedAdmin() {
-	email := os.Getenv("ADMIN_EMAIL")
-	password := os.Getenv("ADMIN_PASSWORD")
-
-	if email == "" || password == "" {
-		log.Fatal("ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required for seeding")
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		log.Fatalf("failed to hash password: %v", err)
-	}
-
-	_, err = db.DB.Exec(
-		"INSERT OR IGNORE INTO users (email, password_hash) VALUES (?, ?)",
-		strings.ToLower(strings.TrimSpace(email)),
-		string(hash),
-	)
-	if err != nil {
-		log.Fatalf("failed to seed admin: %v", err)
-	}
-
-	log.Println("admin user seeded successfully")
 }
