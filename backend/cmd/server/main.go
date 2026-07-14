@@ -1,63 +1,171 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
+	"strings"
 
-	"github.com/emanncode/ifesquare/backend/internal/db"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/joho/godotenv"
+	"golang.org/x/crypto/bcrypt"
+
+	"github.com/emanncode/ifesquare/backend/internal/auth"
+	"github.com/emanncode/ifesquare/backend/internal/db"
+	"github.com/emanncode/ifesquare/backend/internal/history"
+	"github.com/emanncode/ifesquare/backend/internal/ledger"
+	"github.com/emanncode/ifesquare/backend/internal/products"
 )
 
 func main() {
-	port := envOr("PORT", "8080")
-	dbPath := envOr("DATABASE_PATH", filepath.Join("data", "ifesquare.db"))
+	seedMode := flag.Bool("seed", false, "seed the admin user and exit")
+	logoutAll := flag.Bool("logout-all", false, "invalidate every active session and exit")
+	flag.Parse()
 
-	database, err := db.Open(dbPath)
-	if err != nil {
-		log.Fatalf("open database: %v", err)
+	if err := godotenv.Load(); err != nil {
+		log.Println("no .env file found, using environment variables")
 	}
-	defer database.Close()
 
-	if err := db.Migrate(database); err != nil {
-		log.Fatalf("migrate database: %v", err)
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatal("JWT_SECRET environment variable is required")
+	}
+	auth.SetJWTSecret(jwtSecret)
+
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "./ifesquare.db"
+	}
+
+	if err := db.Init(dbPath); err != nil {
+		log.Fatalf("failed to init db: %v", err)
+	}
+	defer db.Close()
+
+	if *seedMode {
+		seedAdmin()
+		return
+	}
+
+	if *logoutAll {
+		if err := auth.RevokeAllSessions(); err != nil {
+			log.Fatalf("failed to logout all sessions: %v", err)
+		}
+		log.Println("all sessions revoked — users must sign in again")
+		return
 	}
 
 	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(60 * time.Second))
+
+	r.Use(chimw.Logger)
+	r.Use(chimw.Recoverer)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{envOr("CORS_ORIGIN", "http://localhost:5173")},
+		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:3000"},
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
 
-	r.Get("/api/health", func(w http.ResponseWriter, _ *http.Request) {
+	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
+		w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	// Auth, products, ledger, and history routes land here in later milestones.
+	r.Route("/api/auth", func(r chi.Router) {
+		r.Post("/login", auth.Login)
+		r.Post("/logout", auth.Logout)
+		r.With(auth.Middleware).Get("/me", auth.Me)
+	})
 
-	log.Printf("ifesquare api listening on :%s", port)
+	r.Group(func(r chi.Router) {
+		r.Use(auth.Middleware)
+
+		r.Route("/api/products", func(r chi.Router) {
+			r.Get("/", products.ListHandler)
+			r.Post("/", products.CreateHandler)
+			r.Patch("/{id}", products.UpdateHandler)
+			r.Delete("/{id}", products.DeleteHandler)
+		})
+
+		r.Route("/api/ledger", func(r chi.Router) {
+			r.Get("/today", ledger.TodayHandler)
+			r.Patch("/today/{productId}", ledger.UpdateTodayEntryHandler)
+			r.Post("/close", ledger.CloseHandler)
+		})
+
+		r.Route("/api/history", func(r chi.Router) {
+			r.Get("/", history.ListHandler)
+			r.Get("/{date}", history.GetByDateHandler)
+		})
+	})
+
+	staticDir := os.Getenv("STATIC_DIR")
+	if staticDir == "" {
+		staticDir = "../frontend/dist"
+	}
+
+	absStatic, err := filepath.Abs(staticDir)
+	if err == nil {
+		if info, err := os.Stat(absStatic); err == nil && info.IsDir() {
+			fs := http.FileServer(http.Dir(absStatic))
+			r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+				path := r.URL.Path
+				fullPath := filepath.Join(absStatic, path)
+
+				if info, err := os.Stat(fullPath); err == nil && !info.IsDir() {
+					fs.ServeHTTP(w, r)
+					return
+				}
+
+				indexPath := filepath.Join(absStatic, "index.html")
+				if _, err := os.Stat(indexPath); err == nil {
+					http.ServeFile(w, r, indexPath)
+				} else {
+					fs.ServeHTTP(w, r)
+				}
+			})
+		} else {
+			log.Printf("static directory %s not found, API-only mode", absStatic)
+		}
+	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Printf("listening on :%s", port)
 	if err := http.ListenAndServe(":"+port, r); err != nil {
-		log.Fatalf("server: %v", err)
+		log.Fatalf("server error: %v", err)
 	}
 }
 
-func envOr(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
+func seedAdmin() {
+	email := os.Getenv("ADMIN_EMAIL")
+	password := os.Getenv("ADMIN_PASSWORD")
+
+	if email == "" || password == "" {
+		log.Fatal("ADMIN_EMAIL and ADMIN_PASSWORD environment variables are required for seeding")
 	}
-	return fallback
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		log.Fatalf("failed to hash password: %v", err)
+	}
+
+	_, err = db.DB.Exec(
+		"INSERT OR IGNORE INTO users (email, password_hash) VALUES (?, ?)",
+		strings.ToLower(strings.TrimSpace(email)),
+		string(hash),
+	)
+	if err != nil {
+		log.Fatalf("failed to seed admin: %v", err)
+	}
+
+	log.Println("admin user seeded successfully")
 }
