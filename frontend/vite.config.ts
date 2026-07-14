@@ -11,4 +11,14 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    // Proxy API to the Go backend so cookie auth stays same-origin in dev
+    // when VITE_API_URL is unset (empty base = relative /api/...).
+    proxy: {
+      "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+      },
+    },
+  },
 });

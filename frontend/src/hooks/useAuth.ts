@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { api, ApiError } from "@/lib/api"
+import { getLoginErrorMessage } from "@/lib/loginErrors"
 import type { User } from "@/lib/types"
 
 type AuthState = {
@@ -10,7 +11,7 @@ type AuthState = {
 
 /**
  * Session helper: checks /api/auth/me on mount and exposes login/logout.
- * Wired fully once the auth API (milestone 2) is live.
+ * Cookie-based JWT session against the Go /api/auth/* endpoints.
  */
 export function useAuth() {
   const [state, setState] = useState<AuthState>({
@@ -51,9 +52,10 @@ export function useAuth() {
       setState({ user, loading: false, error: null })
       return user
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Login failed"
+      const message = getLoginErrorMessage(err)
       setState((s) => ({ ...s, loading: false, error: message }))
-      throw err
+      // Re-throw with a friendly message so LoginPage can display it.
+      throw new Error(message, { cause: err })
     }
   }, [])
 

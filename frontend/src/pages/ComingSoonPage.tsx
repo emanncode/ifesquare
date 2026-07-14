@@ -300,7 +300,7 @@ export default function ComingSoonPage() {
                 </div>
 
                 <div className="overflow-x-auto p-3 sm:p-4">
-                  <table className="w-full min-w-[420px] text-left text-[11px] sm:text-xs">
+                  <table className="w-full min-w-105 text-left text-[11px] sm:text-xs">
                     <thead>
                       <tr style={{ color: green[600] }}>
                         <th className="pb-2 font-medium">Product</th>
