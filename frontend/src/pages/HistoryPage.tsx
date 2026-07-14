@@ -20,6 +20,11 @@ export default function HistoryPage() {
   const [detailError, setDetailError] = useState<string | null>(null)
 
   async function openDay(date: string) {
+    if (date === selected) {
+      setSelected(null)
+      setDetail(null)
+      return
+    }
     setSelected(date)
     setDetailLoading(true)
     setDetailError(null)
