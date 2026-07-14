@@ -1,0 +1,102 @@
+{
+  "version": "2.14",
+  "children": [
+    {
+      "type": "frame",
+      "id": "canvas",
+      "x": 0,
+      "y": 0,
+      "name": "Design Canvas",
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "#0a0a0b",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": [
+        48,
+        24
+      ],
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "text",
+          "id": "title",
+          "fill": "#ffffff",
+          "content": "Design here first",
+          "textAlign": "center",
+          "fontFamily": "Inter",
+          "fontSize": 28,
+          "fontWeight": "700"
+        },
+        {
+          "type": "text",
+          "id": "subtitle",
+          "fill": "#a1a1a1",
+          "textGrowth": "fixed-width",
+          "width": 320,
+          "content": "Ask your agent to create screens in Pencil.\nApprove the design before any code is written.",
+          "lineHeight": 1.5,
+          "textAlign": "center",
+          "fontFamily": "Inter",
+          "fontSize": 14
+        },
+        {
+          "type": "frame",
+          "id": "placeholderCard",
+          "name": "Placeholder Screen",
+          "width": "fill_container",
+          "fill": "#0f1011",
+          "cornerRadius": 16,
+          "stroke": "#ffffff0d",
+          "strokeWidth": 1,
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 20,
+          "children": [
+            {
+              "type": "text",
+              "id": "cardTitle",
+              "fill": "#ff5c1a",
+              "content": "Screen 1",
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "cardBody",
+              "fill": "#666666",
+              "content": "Replace this frame with your first approved UI.",
+              "fontFamily": "Inter",
+              "fontSize": 13
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "--bg-primary": {
+      "type": "color",
+      "value": "#0a0a0b"
+    },
+    "--bg-secondary": {
+      "type": "color",
+      "value": "#0f1011"
+    },
+    "--text-primary": {
+      "type": "color",
+      "value": "#ffffff"
+    },
+    "--text-secondary": {
+      "type": "color",
+      "value": "#a1a1a1"
+    },
+    "--brand": {
+      "type": "color",
+      "value": "#ff5c1a"
+    }
+  },
+  "fileToken": "07b3bb32-1720-43ec-8645-6516a3f2da30"
+}
