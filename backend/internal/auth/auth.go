@@ -1,15 +1,26 @@
-// Package auth will hold JWT issue/verify, bcrypt helpers, and HTTP middleware.
-// Handlers (login/logout/me) land in milestone 2.
 package auth
 
 import (
+	"database/sql"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/emanncode/ifesquare/backend/internal/db"
 )
 
-const DefaultTokenTTL = 7 * 24 * time.Hour
+var jwtSecret []byte
+
+func SetJWTSecret(secret string) {
+	jwtSecret = []byte(secret)
+}
+
+const DefaultTokenTTL = 72 * time.Hour
+
+const sessionsRevokedBeforeKey = "sessions_revoked_before"
 
 // Claims are embedded in the httpOnly session JWT.
 type Claims struct {
@@ -64,4 +75,58 @@ func ParseToken(secret []byte, tokenString string) (*Claims, error) {
 		return nil, jwt.ErrTokenInvalidClaims
 	}
 	return claims, nil
+}
+
+// RevokeAllSessions invalidates every JWT issued so far.
+// New logins work; existing cookies are rejected by middleware.
+func RevokeAllSessions() error {
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	_, err := db.DB.Exec(`
+		INSERT INTO app_meta (key, value) VALUES (?, ?)
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value
+	`, sessionsRevokedBeforeKey, now)
+	if err != nil {
+		return fmt.Errorf("revoke all sessions: %w", err)
+	}
+	return nil
+}
+
+// SessionsRevokedBefore returns the cutoff; tokens issued at or before it are invalid.
+func SessionsRevokedBefore() (time.Time, error) {
+	var raw string
+	err := db.DB.QueryRow(
+		`SELECT value FROM app_meta WHERE key = ?`,
+		sessionsRevokedBeforeKey,
+	).Scan(&raw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return time.Time{}, nil
+	}
+	if err != nil {
+		return time.Time{}, err
+	}
+	t, err := time.Parse(time.RFC3339Nano, raw)
+	if err != nil {
+		// Fall back to RFC3339 without nanos.
+		t, err = time.Parse(time.RFC3339, raw)
+		if err != nil {
+			return time.Time{}, err
+		}
+	}
+	return t, nil
+}
+
+// TokenIsRevoked reports whether claims were issued before the global logout cutoff.
+func TokenIsRevoked(claims *Claims) (bool, error) {
+	cutoff, err := SessionsRevokedBefore()
+	if err != nil {
+		return false, err
+	}
+	if cutoff.IsZero() {
+		return false, nil
+	}
+	if claims.IssuedAt == nil {
+		return true, nil
+	}
+	// Allow a 1s skew so a token issued in the same second as revoke still works after re-login.
+	return !claims.IssuedAt.Time.After(cutoff), nil
 }
