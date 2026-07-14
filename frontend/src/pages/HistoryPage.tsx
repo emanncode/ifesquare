@@ -104,7 +104,7 @@ export default function HistoryPage() {
       )}
 
       {!loading && days.length > 0 && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] items-start">
           <Card hoverable={false} className="overflow-hidden py-0">
             <div className="border-b border-border px-5 py-4">
               <CardTitle className="text-base">Closed days</CardTitle>

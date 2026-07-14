@@ -81,12 +81,12 @@ export function DashboardHeader({
         <DialogTrigger asChild>
           <Button
             size="lg"
-            className="h-12 shrink-0 rounded-2xl px-6 text-base font-semibold shadow-md shadow-primary/20"
+            className="h-12 shrink-0 rounded-xl px-6 text-base font-semibold shadow-md shadow-primary/20"
           >
             Close &amp; save day
           </Button>
         </DialogTrigger>
-        <DialogContent className="rounded-2xl sm:rounded-3xl">
+        <DialogContent className="rounded-xl sm:rounded23xl">
           <DialogHeader>
             <DialogTitle>Close &amp; save today&apos;s ledger?</DialogTitle>
             <DialogDescription>
@@ -95,7 +95,7 @@ export function DashboardHeader({
               numbers afterward.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
               className="rounded-2xl"
