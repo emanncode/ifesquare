@@ -18,7 +18,7 @@ type Product struct {
 }
 
 func List() ([]Product, error) {
-	rows, err := db.DB.Query("SELECT id, name, unit, price, stock, archived_at, created_at FROM products ORDER BY created_at DESC")
+	rows, err := db.DB.Query("SELECT id, name, unit, price, stock, archived_at, created_at FROM products WHERE archived_at IS NULL ORDER BY name ASC")
 	if err != nil {
 		return nil, err
 	}
