@@ -2,6 +2,7 @@ package ledger
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/emanncode/ifesquare/backend/internal/db"
@@ -120,6 +121,65 @@ func getEntry(dayDate string, productID int64) (*Entry, error) {
 		return nil, err
 	}
 	return &e, nil
+}
+
+// SyncFromLastClosedDay copies closing values from the most recent
+// previous closed day into today's entry openings (and product stock).
+// Returns the date we synced from, or an error if no previous closed day exists.
+func SyncFromLastClosedDay(today string) (string, error) {
+	var prevDate string
+	err := db.DB.QueryRow(`
+		SELECT date FROM days
+		WHERE closed_at IS NOT NULL AND date < ?
+		ORDER BY date DESC
+		LIMIT 1
+	`, today).Scan(&prevDate)
+	if err == sql.ErrNoRows {
+		return "", fmt.Errorf("no previous closed day found")
+	}
+	if err != nil {
+		return "", err
+	}
+
+	// Ensure today has entries for all active products
+	_, err = db.DB.Exec("INSERT OR IGNORE INTO days (date) VALUES (?)", today)
+	if err != nil {
+		return "", err
+	}
+	ensureEntries(today)
+
+	rows, err := db.DB.Query(`
+		SELECT e.product_id, e.closing, p.stock
+		FROM entries e
+		JOIN products p ON p.id = e.product_id
+		WHERE e.day_date = ? AND e.closing IS NOT NULL
+	`, prevDate)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var productID, closing, stock int64
+		if err := rows.Scan(&productID, &closing, &stock); err != nil {
+			return "", err
+		}
+		// Update today's opening to match previous closing
+		if _, err := db.DB.Exec(
+			"UPDATE entries SET opening = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ?",
+			closing, today, productID,
+		); err != nil {
+			return "", err
+		}
+		// Update product stock to match
+		if _, err := db.DB.Exec(
+			"UPDATE products SET stock = ? WHERE id = ?", closing, productID,
+		); err != nil {
+			return "", err
+		}
+	}
+
+	return prevDate, nil
 }
 
 func CloseDay(dayDate string) error {

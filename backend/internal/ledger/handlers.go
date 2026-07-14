@@ -60,6 +60,19 @@ func CloseHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "day closed"})
 }
 
+func SyncFromLastClosedHandler(w http.ResponseWriter, r *http.Request) {
+	today := getToday()
+	prevDate, err := SyncFromLastClosedDay(today)
+	if err != nil {
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{
+		"message":   "synced",
+		"synced_from": prevDate,
+	})
+}
+
 func getToday() string {
 	return time.Now().Format("2006-01-02")
 }
