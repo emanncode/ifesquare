@@ -85,7 +85,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             onClick={onClose}
             className="flex min-w-0 items-center gap-2.5"
           >
-            <BrandMark sizeClassName="size-11" />
+            <BrandMark sizeClassName="size-11" className="rounded-xl" />
             <span className="truncate text-xl font-bold tracking-tight text-foreground">
               Ifesquare
             </span>
@@ -113,7 +113,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               onClick={onClose}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 rounded-2xl px-3.5 py-3 text-base transition-colors",
+                  "flex items-center gap-3 rounded-xl px-3.5 py-3 text-base transition-colors",
                   isActive
                     ? "bg-primary/10 font-semibold text-primary"
                     : "font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -142,7 +142,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           <button
             type="button"
             onClick={() => void handleSignOut()}
-            className="flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <LogOut className="size-5 shrink-0" strokeWidth={2} />
             Sign out

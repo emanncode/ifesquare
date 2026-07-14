@@ -17,6 +17,7 @@ export default function HistoryPage() {
   const [detail, setDetail] = useState<ApiHistoryDayDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
+  const today = new Date().toISOString().slice(0, 10)
 
   async function openDay(date: string) {
     if (date === selected) {
@@ -169,6 +170,12 @@ export default function HistoryPage() {
               )}
               {detail && !detailLoading && (
                 <div className="overflow-x-auto">
+                  {detail.date === today && (
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      This is today&apos;s closed ledger. Edit values on the{" "}
+                      <a href="/app/products" className="underline hover:text-foreground">Products</a> page.
+                    </p>
+                  )}
                   <table className="w-full min-w-[560px] border-collapse text-sm">
                     <thead>
                       <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
@@ -187,6 +194,7 @@ export default function HistoryPage() {
                         const total = e.opening + e.receipts
                         const sales = e.closing != null ? Math.max(0, total - e.closing) : null
                         const amount = sales != null ? sales * e.price : null
+                        const isToday = detail.date === today
                         return (
                           <tr
                             key={e.id}
@@ -198,29 +206,33 @@ export default function HistoryPage() {
                                 {e.product_unit}
                               </span>
                             </td>
-                            <EditableNumTd
-                              value={e.opening}
-                              onChange={(v) => void patchEntry(e.product_id, "opening", v)}
-                            />
-                            <EditableNumTd
-                              value={e.receipts}
-                              onChange={(v) => void patchEntry(e.product_id, "receipts", v)}
-                            />
+                            {isToday ? (
+                              <>
+                                <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">{fmtInt(e.opening)}</td>
+                                <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">{fmtInt(e.receipts)}</td>
+                              </>
+                            ) : (
+                              <>
+                                <EditableNumTd value={e.opening} onChange={(v) => void patchEntry(e.product_id, "opening", v)} />
+                                <EditableNumTd value={e.receipts} onChange={(v) => void patchEntry(e.product_id, "receipts", v)} />
+                              </>
+                            )}
                             <td className="px-2 py-3 text-right tabular-nums font-medium text-foreground">
                               {fmtInt(total)}
                             </td>
-                            <EditableNumTd
-                              value={e.closing}
-                              onChange={(v) => void patchEntry(e.product_id, "closing", v)}
-                              placeholder="—"
-                            />
+                            {isToday ? (
+                              <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">{e.closing == null ? "—" : fmtInt(e.closing)}</td>
+                            ) : (
+                              <EditableNumTd value={e.closing} onChange={(v) => void patchEntry(e.product_id, "closing", v)} placeholder="—" />
+                            )}
                             <td className="px-2 py-3 text-right tabular-nums font-semibold text-foreground">
                               {sales == null ? "—" : fmtInt(sales)}
                             </td>
-                            <EditableNumTd
-                              value={e.price}
-                              onChange={(v) => void patchEntry(e.product_id, "price", v)}
-                            />
+                            {isToday ? (
+                              <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">{nairaFmt(e.price)}</td>
+                            ) : (
+                              <EditableNumTd value={e.price} onChange={(v) => void patchEntry(e.product_id, "price", v)} />
+                            )}
                             <td className="px-2 py-3 text-right font-semibold tabular-nums text-primary">
                               {amount == null ? "—" : nairaFmt(amount)}
                             </td>
