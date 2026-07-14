@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "pencil": {
+      "command": "${HOME}/.pencil/mcp/visual_studio_code/out/mcp-server-linux-x64",
+      "args": [
+        "--app",
+        "visual_studio_code",
+        "--agent",
+        "cursorCLI"
+      ]
+    }
+  }
+}
