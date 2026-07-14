@@ -9,6 +9,8 @@ import {
   Sparkles,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import BrandMark from "@/components/login/brandmark"
+import { ThemeToggle } from "@/components/ThemeToggle"
 import { cn } from "@/lib/utils"
 
 /** Ardova-style petrol green — bold station green on clean white. */
@@ -62,38 +64,38 @@ export default function ComingSoonPage() {
   }
 
   return (
-    <div className="relative min-h-svh overflow-hidden bg-white text-zinc-900">
-      {/* Soft green atmosphere — light, clean, station-brand energy */}
+    <div className="relative min-h-svh overflow-hidden bg-background text-foreground">
+      {/* Soft green atmosphere — respects light/dark surface tokens */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 opacity-90 dark:opacity-50"
           style={{
             background: `radial-gradient(ellipse 90% 55% at 50% -10%, ${green[100]}CC, transparent 55%)`,
           }}
         />
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 opacity-80 dark:opacity-30"
           style={{
             background: `radial-gradient(ellipse 50% 40% at 100% 40%, ${green[50]}, transparent)`,
           }}
         />
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 opacity-80 dark:opacity-30"
           style={{
             background: `radial-gradient(ellipse 45% 35% at 0% 80%, ${green[50]}, transparent)`,
           }}
         />
 
         <div
-          className="absolute -left-20 top-1/4 size-72 animate-float rounded-full blur-3xl"
+          className="absolute -left-20 top-1/4 size-72 animate-float rounded-full blur-3xl opacity-70 dark:opacity-40"
           style={{ backgroundColor: `${green[200]}55` }}
         />
         <div
-          className="absolute -right-16 top-1/3 size-80 animate-float-delayed rounded-full blur-3xl"
+          className="absolute -right-16 top-1/3 size-80 animate-float-delayed rounded-full blur-3xl opacity-70 dark:opacity-35"
           style={{ backgroundColor: `${green[100]}99` }}
         />
         <div
-          className="absolute bottom-0 left-1/3 size-64 animate-float-slow rounded-full blur-3xl"
+          className="absolute bottom-0 left-1/3 size-64 animate-float-slow rounded-full blur-3xl opacity-70 dark:opacity-30"
           style={{ backgroundColor: `${green[200]}40` }}
         />
 
@@ -115,20 +117,17 @@ export default function ComingSoonPage() {
         <header className="flex items-center justify-between px-6 py-6 sm:px-10">
           <div className="flex items-center gap-2.5">
             <BrandMark />
-            <span
-              className="text-sm font-semibold tracking-tight"
-              style={{ color: green[800] }}
-            >
+            <span className="text-sm font-semibold tracking-tight text-foreground">
               Ifesquare
             </span>
           </div>
-          <div
-            className="flex items-center gap-2 text-xs font-medium"
-            style={{ color: green[600] }}
-          >
-            <Heart className="size-3.5" style={{ color: green[500] }} />
-            <span className="hidden sm:inline">Built for Mum&apos;s shop</span>
-            <span className="sm:hidden">For Mum&apos;s shop</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs font-medium text-primary">
+              <Heart className="size-3.5 text-primary" />
+              <span className="hidden sm:inline">Built for Mum&apos;s shop</span>
+              <span className="sm:hidden">For Mum&apos;s shop</span>
+            </div>
+            <ThemeToggle />
           </div>
         </header>
 
@@ -461,23 +460,4 @@ export default function ComingSoonPage() {
   )
 }
 
-function BrandMark() {
-  return (
-    <div className="relative flex size-9 items-center justify-center">
-      <div
-        className="absolute inset-0 rounded-xl"
-        style={{
-          background: `linear-gradient(145deg, ${green[400]}, ${green[700]})`,
-        }}
-      />
-      <div className="relative flex size-7 items-center justify-center rounded-lg bg-white/95">
-        <span
-          className="text-xs font-bold tracking-tight"
-          style={{ color: green[700] }}
-        >
-          IS
-        </span>
-      </div>
-    </div>
-  )
-}
+

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import BrandMark from "@/components/login/brandmark";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { getLoginErrorMessage } from "@/lib/loginErrors";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,9 @@ export default function LoginPage({ onSubmit }: LoginPageProps) {
 
   return (
     <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-background px-6">
+      <div className="absolute top-4 right-4 z-20 sm:top-6 sm:right-6">
+        <ThemeToggle />
+      </div>
       {/* Single soft glow — a quieter echo of the coming-soon page's         */}
       {/* atmosphere, not a repeat of it. One light source, not three.       */}
       <div
@@ -42,7 +46,7 @@ export default function LoginPage({ onSubmit }: LoginPageProps) {
         aria-hidden
         style={{
           background:
-            "radial-gradient(ellipse 60% 60% at 50% 0%, oklch(0.55 0.15 150 / 0.08), transparent 70%)",
+            "radial-gradient(ellipse 60% 60% at 50% 0%, oklch(0.55 0.15 150 / 0.12), transparent 70%)",
         }}
       />
 
@@ -59,7 +63,7 @@ export default function LoginPage({ onSubmit }: LoginPageProps) {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-7 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-7 shadow-sm dark:shadow-none">
           <form
             onSubmit={handleSubmit}
             noValidate

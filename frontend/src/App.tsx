@@ -1,20 +1,29 @@
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom"
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+} from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import ComingSoonPage from "@/pages/ComingSoonPage"
 import LoginPage from "@/pages/LoginPage"
 import DashboardPage from "@/pages/DashboardPage"
 import HistoryPage from "@/pages/HistoryPage"
-import { useAuth } from "@/hooks/useAuth"
+import ProductsPage from "@/pages/ProductsPage"
+import { AppLayout } from "@/components/layout/AppLayout"
+import { AuthProvider, useAuth } from "@/hooks/useAuth"
 
 /**
  * While the product is under construction, `/` is the public coming-soon page.
- * App routes exist under `/app/*` so we can build them in parallel without
- * exposing an unfinished dashboard. Flip the landing route when ready to launch.
+ * Authenticated app routes share a fixed sidebar shell under `/app/*`.
  */
 export default function App() {
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </BrowserRouter>
   )
 }
@@ -52,28 +61,19 @@ function AppRoutes() {
           )
         }
       />
-      <Route
-        path="/app"
-        element={
-          isAuthenticated ? (
-            <DashboardPage />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
-      <Route
-        path="/app/history"
-        element={
-          isAuthenticated ? (
-            <HistoryPage />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
+
+      {/* Shared fixed sidebar; only <main> / Outlet content scrolls */}
+      <Route path="/app" element={<AppLayout />}>
+        <Route index element={<DashboardPage />} />
+        <Route path="products" element={<ProductsPage />} />
+        <Route path="history" element={<HistoryPage />} />
+      </Route>
+
       <Route path="/history" element={<Navigate to="/app/history" replace />} />
-      <Route path="/products" element={<Navigate to="/app" replace />} />
+      <Route
+        path="/products"
+        element={<Navigate to="/app/products" replace />}
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
