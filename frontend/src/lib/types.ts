@@ -1,56 +1,89 @@
-/** Shared domain types for the Ifesquare shop ledger. */
+/** Shared domain types aligned with the Go API JSON (snake_case fields). */
 
 export type User = {
   id: number
   email: string
 }
 
-export type Product = {
+/** GET/POST /api/products */
+export type ApiProduct = {
   id: number
   name: string
   unit: string
   price: number
   stock: number
-  createdAt: string
-  archivedAt?: string | null
+  archived_at?: string | null
+  created_at: string
 }
 
-/** One product line on a ledger day. sales & amount are derived, never stored. */
-export type LedgerEntry = {
+/** One row from GET /api/ledger/today */
+export type ApiLedgerEntry = {
   id: number
-  dayDate: string
-  productId: number
-  productName: string
-  unit: string
+  day_date: string
+  product_id: number
+  product_name: string
+  product_unit: string
   opening: number
   receipts: number
   closing: number | null
   price: number
-  /** Derived: opening + receipts */
+  created_at?: string
+  updated_at?: string
+}
+
+/** GET /api/history */
+export type ApiHistoryDaySummary = {
+  date: string
+  closed_at: string
+  total_revenue: number
+  total_units: number
+}
+
+/** GET /api/history/:date */
+export type ApiHistoryDayDetail = {
+  date: string
+  entries: Array<
+    ApiLedgerEntry & {
+      total: number
+      sales: number | null
+      amount: number | null
+    }
+  >
+  total_revenue: number
+  total_units: number
+}
+
+/** Derived UI row for today's ledger table. */
+export type LedgerRow = {
+  id: number
+  productId: number
+  name: string
+  unit: string
+  stock: number
+  price: number
+  receipts: number
+  closing: number | null
   total: number
-  /** Derived: total - closing (null if closing not set) */
   sales: number | null
-  /** Derived: sales * price (null if sales not set) */
   amount: number | null
 }
 
-export type TodayLedger = {
-  date: string
-  closed: boolean
-  entries: LedgerEntry[]
-}
-
-export type HistoryDaySummary = {
-  date: string
-  totalRevenue: number
-  totalUnits: number
-  closedAt: string
-}
-
-export type HistoryDayDetail = {
-  date: string
-  closedAt: string
-  entries: LedgerEntry[]
-  totalRevenue: number
-  totalUnits: number
+export function deriveLedgerRow(e: ApiLedgerEntry): LedgerRow {
+  const total = e.opening + e.receipts
+  const hasClosing = e.closing != null
+  const sales = hasClosing ? Math.max(0, total - (e.closing as number)) : null
+  const amount = sales != null ? sales * e.price : null
+  return {
+    id: e.id,
+    productId: e.product_id,
+    name: e.product_name,
+    unit: e.product_unit,
+    stock: e.opening,
+    price: e.price,
+    receipts: e.receipts,
+    closing: e.closing,
+    total,
+    sales,
+    amount,
+  }
 }

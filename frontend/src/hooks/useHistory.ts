@@ -1,24 +1,50 @@
 import { useCallback, useEffect, useState } from "react"
 import { api } from "@/lib/api"
-import type { HistoryDayDetail, HistoryDaySummary } from "@/lib/types"
+import type { ApiHistoryDayDetail, ApiHistoryDaySummary } from "@/lib/types"
 
 /**
- * Closed-day history list + optional day detail.
- * Ready for milestone 9 once the history API is live.
+ * Closed-day history from GET /api/history and GET /api/history/:date.
  */
 export function useHistory(limit = 30) {
-  const [days, setDays] = useState<HistoryDaySummary[]>([])
+  const [days, setDays] = useState<ApiHistoryDaySummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const data = await api<ApiHistoryDaySummary[]>(
+          `/api/history?limit=${limit}`,
+        )
+        if (!cancelled) {
+          setDays(data ?? [])
+          setError(null)
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : "Failed to load history",
+          )
+          setDays([])
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [limit])
 
   const refresh = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const data = await api<HistoryDaySummary[]>(
-        `/api/history?limit=${limit}`
+      const data = await api<ApiHistoryDaySummary[]>(
+        `/api/history?limit=${limit}`,
       )
-      setDays(data)
+      setDays(data ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load history")
     } finally {
@@ -26,12 +52,8 @@ export function useHistory(limit = 30) {
     }
   }, [limit])
 
-  useEffect(() => {
-    void refresh()
-  }, [refresh])
-
   const getDay = useCallback(async (date: string) => {
-    return api<HistoryDayDetail>(`/api/history/${date}`)
+    return api<ApiHistoryDayDetail>(`/api/history/${date}`)
   }, [])
 
   return {

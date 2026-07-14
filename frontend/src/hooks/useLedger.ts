@@ -1,60 +1,79 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { api } from "@/lib/api"
-import type { TodayLedger } from "@/lib/types"
+import { deriveLedgerRow, type ApiLedgerEntry, type LedgerRow } from "@/lib/types"
 
 /**
- * Today's ledger: load, patch a product row, and close the day.
- * Ready for milestone 7 once the ledger API is live.
+ * Today's ledger from GET /api/ledger/today (+ close day).
+ * Backend returns a flat array of entries; we derive sales/amount client-side.
  */
 export function useLedger() {
-  const [ledger, setLedger] = useState<TodayLedger | null>(null)
+  const [entries, setEntries] = useState<ApiLedgerEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState(() => new Date())
+
+  const load = useCallback(async () => {
+    const data = await api<ApiLedgerEntry[]>("/api/ledger/today")
+    setEntries(data ?? [])
+    setLastUpdated(new Date())
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const data = await api<ApiLedgerEntry[]>("/api/ledger/today")
+        if (!cancelled) {
+          setEntries(data ?? [])
+          setError(null)
+          setLastUpdated(new Date())
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load ledger")
+          setEntries([])
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const refresh = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const data = await api<TodayLedger>("/api/ledger/today")
-      setLedger(data)
+      await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load ledger")
     } finally {
       setLoading(false)
     }
-  }, [])
-
-  useEffect(() => {
-    void refresh()
-  }, [refresh])
-
-  const patchEntry = useCallback(
-    async (
-      productId: number,
-      patch: { receipts?: number; closing?: number | null }
-    ) => {
-      const data = await api<TodayLedger>(`/api/ledger/today/${productId}`, {
-        method: "PATCH",
-        body: patch,
-      })
-      setLedger(data)
-      return data
-    },
-    []
-  )
+  }, [load])
 
   const closeDay = useCallback(async () => {
-    const data = await api<TodayLedger>("/api/ledger/close", { method: "POST" })
-    setLedger(data)
-    return data
-  }, [])
+    await api("/api/ledger/close", { method: "POST" })
+    await load()
+  }, [load])
+
+  const rows: LedgerRow[] = useMemo(
+    () => (entries ?? []).map(deriveLedgerRow),
+    [entries],
+  )
+
+  const date = entries[0]?.day_date ?? new Date().toISOString().slice(0, 10)
 
   return {
-    ledger,
+    date,
+    rows,
+    entries,
     loading,
     error,
+    lastUpdated,
     refresh,
-    patchEntry,
     closeDay,
   }
 }

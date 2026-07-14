@@ -10,6 +10,26 @@
       content="Ifesquare replaces a handwritten stock ledger with a web dashboard that auto-calculates sales and visualizes them for small shops."
     />
     <meta name="theme-color" content="#009B4D" />
+    <!-- Apply theme before paint to avoid light/dark flash -->
+    <script>
+      (function () {
+        try {
+          var key = "ifesquare-theme";
+          var stored = localStorage.getItem(key);
+          var theme =
+            stored === "light" || stored === "dark"
+              ? stored
+              : window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          var root = document.documentElement;
+          if (theme === "dark") root.classList.add("dark");
+          else root.classList.remove("dark");
+          root.style.colorScheme = theme;
+          root.dataset.theme = theme;
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
