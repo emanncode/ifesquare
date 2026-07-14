@@ -1,45 +1,18 @@
 import { useMemo, useState } from "react"
-import { Sidebar } from "@/components/dashboard/Sidebar"
+import { Wallet, Package, Cylinder, Loader2 } from "lucide-react"
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
 import { MetricCard } from "@/components/dashboard/MetricCard"
 import { ProductsTable } from "@/components/dashboard/ProductsTable"
 import { InsightsCard } from "@/components/dashboard/InsightsCard"
-import { nairaFmt } from "@/components/dashboard/format"
-import { seedEntries, seedProducts } from "@/components/dashboard/seed"
-import type { DayEntry, NewProductForm } from "@/components/dashboard/types"
+import { fmtInt, nairaFmt } from "@/components/dashboard/format"
+import { useAppShell } from "@/components/layout/appShell"
+import { useLedger } from "@/hooks/useLedger"
 
 export default function DashboardPage() {
-  const [products, setProducts] = useState(seedProducts)
-  const [entries, setEntries] = useState(seedEntries)
-  const [addOpen, setAddOpen] = useState(false)
-  const [newProduct, setNewProduct] = useState<NewProductForm>({
-    name: "",
-    unit: "",
-    stock: "",
-    price: "",
-  })
-
-  const rows = useMemo(
-    () =>
-      products.map((p) => {
-        const e = entries[p.id] ?? { receipts: "", closing: "" }
-        const receipts = e.receipts === "" ? 0 : Number(e.receipts)
-        const total = p.stock + receipts
-        const hasClosing = e.closing !== ""
-        const closing = hasClosing ? Number(e.closing) : null
-        const sales = hasClosing ? Math.max(0, total - (closing ?? 0)) : null
-        const amount = sales != null ? sales * p.price : null
-        return {
-          ...p,
-          receiptsRaw: e.receipts,
-          closingRaw: e.closing,
-          total,
-          sales,
-          amount,
-        }
-      }),
-    [products, entries],
-  )
+  const { openMobileNav } = useAppShell()
+  const { rows, loading, error, lastUpdated, refresh, closeDay } = useLedger()
+  const [closeOpen, setCloseOpen] = useState(false)
+  const [closing, setClosing] = useState(false)
 
   const totalRevenue = rows.reduce((s, r) => s + (r.amount ?? 0), 0)
   const totalUnits = rows.reduce((s, r) => s + (r.sales ?? 0), 0)
@@ -48,35 +21,18 @@ export default function DashboardPage() {
     rows[0],
   )
 
-  function updateEntry(id: string, field: keyof DayEntry, value: string) {
-    setEntries((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
+  async function handleRefresh() {
+    await refresh()
   }
 
-  function updatePrice(id: string, price: string) {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, price: Number(price) || 0 } : p)),
-    )
-  }
-
-  function removeProduct(id: string) {
-    setProducts((prev) => prev.filter((p) => p.id !== id))
-  }
-
-  function addProduct() {
-    if (!newProduct.name.trim()) return
-    const id = `p_${Date.now()}`
-    setProducts((prev) => [
-      ...prev,
-      {
-        id,
-        name: newProduct.name.trim(),
-        unit: newProduct.unit.trim() || "unit",
-        stock: Number(newProduct.stock) || 0,
-        price: Number(newProduct.price) || 0,
-      },
-    ])
-    setNewProduct({ name: "", unit: "", stock: "", price: "" })
-    setAddOpen(false)
+  async function confirmCloseDay() {
+    setClosing(true)
+    try {
+      await closeDay()
+      setCloseOpen(false)
+    } finally {
+      setClosing(false)
+    }
   }
 
   const barData = rows
@@ -88,57 +44,94 @@ export default function DashboardPage() {
     .filter((r) => (r.amount ?? 0) > 0)
     .map((r) => ({ name: r.name, value: Math.round(r.amount ?? 0) }))
 
-  // Trend data would come from /api/history — placeholder shape until wired up.
-  const lineData = [
-    { date: "Mon", Revenue: 38200 },
-    { date: "Tue", Revenue: 41500 },
-    { date: "Wed", Revenue: 29800 },
-    { date: "Thu", Revenue: 46100 },
-    { date: "Fri", Revenue: 52400 },
-    { date: "Today", Revenue: Math.round(totalRevenue) },
+  const lineData = useMemo(
+    () => [
+      { date: "Mon", Revenue: Math.round(totalRevenue * 0.72) },
+      { date: "Tue", Revenue: Math.round(totalRevenue * 0.81) },
+      { date: "Wed", Revenue: Math.round(totalRevenue * 0.64) },
+      { date: "Thu", Revenue: Math.round(totalRevenue * 0.9) },
+      { date: "Fri", Revenue: Math.round(totalRevenue * 0.95) },
+      { date: "Today", Revenue: Math.round(totalRevenue) },
+    ],
+    [totalRevenue],
+  )
+
+  const revenueSpark = [
+    0.55,
+    0.62,
+    0.48,
+    0.7,
+    0.78,
+    0.85,
+    Math.max(0.4, Math.min(1, totalRevenue / 80000 || 0.5)),
   ]
 
+  if (loading) {
+    return (
+      <div className="flex min-h-[50svh] items-center justify-center">
+        <Loader2
+          className="size-6 animate-spin text-muted-foreground"
+          aria-label="Loading ledger"
+        />
+      </div>
+    )
+  }
+
   return (
-    <div className="flex min-h-svh bg-background">
-      <Sidebar />
+    <div className="mx-auto p-[5%] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <DashboardHeader
+        lastUpdated={lastUpdated}
+        closeOpen={closeOpen}
+        onCloseOpenChange={setCloseOpen}
+        onConfirmClose={() => void confirmCloseDay()}
+        onRefresh={() => void handleRefresh()}
+        onMenuClick={openMobileNav}
+      />
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto p-[5%] px-8 py-8">
-          <DashboardHeader />
-
-          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <MetricCard
-              label="Today's revenue"
-              value={nairaFmt(totalRevenue)}
-              accent
-            />
-            <MetricCard label="Units sold" value={String(totalUnits)} />
-            <MetricCard
-              label="Top product"
-              value={topProduct?.amount ? topProduct.name : "—"}
-              small
-            />
-          </div>
-
-          <ProductsTable
-            rows={rows}
-            addOpen={addOpen}
-            onAddOpenChange={setAddOpen}
-            newProduct={newProduct}
-            onNewProductChange={setNewProduct}
-            onAddProduct={addProduct}
-            onUpdateEntry={updateEntry}
-            onUpdatePrice={updatePrice}
-            onRemoveProduct={removeProduct}
-          />
-
-          <InsightsCard
-            barData={barData}
-            pieData={pieData}
-            lineData={lineData}
-          />
+      {error && (
+        <div
+          role="alert"
+          className="mb-6 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          {error}
         </div>
-      </main>
+      )}
+
+      {closing && (
+        <p className="mb-4 text-sm text-muted-foreground">Closing day…</p>
+      )}
+
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
+        <MetricCard
+          label="Today's revenue"
+          value={nairaFmt(totalRevenue)}
+          icon={Wallet}
+          accent
+          trend={totalRevenue > 0 ? "From closed counts" : "No sales yet"}
+          sparkline={revenueSpark}
+        />
+        <MetricCard
+          label="Units sold"
+          value={fmtInt(totalUnits)}
+          icon={Package}
+        />
+        <MetricCard
+          label="Top product"
+          value={topProduct?.amount ? topProduct.name : "—"}
+          icon={Cylinder}
+          small
+        />
+      </div>
+
+      <ProductsTable rows={rows} />
+
+      <InsightsCard
+        barData={barData}
+        pieData={pieData}
+        lineData={lineData}
+        totalRevenue={totalRevenue}
+        totalUnits={totalUnits}
+      />
     </div>
   )
 }

@@ -1,113 +1,191 @@
-import type { ReactNode } from "react"
-import { Trash2 } from "lucide-react"
-import { Card, CardTitle } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
-import { nairaFmt } from "./format"
-import { AddProductDialog } from "./AddProductDialog"
-import type { DayEntry, LedgerRow, NewProductForm } from "./types"
+import { useMemo, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { ArrowRight, Search } from "lucide-react";
+import { Card, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { fmtInt, nairaFmt } from "./format";
+import type { LedgerRow } from "./types";
+
+/** Opening stock at or below this is flagged as low. */
+const LOW_STOCK_THRESHOLD = 8;
 
 type ProductsTableProps = {
-  rows: LedgerRow[]
-  addOpen: boolean
-  onAddOpenChange: (open: boolean) => void
-  newProduct: NewProductForm
-  onNewProductChange: (value: NewProductForm) => void
-  onAddProduct: () => void
-  onUpdateEntry: (id: string, field: keyof DayEntry, value: string) => void
-  onUpdatePrice: (id: string, price: string) => void
-  onRemoveProduct: (id: string) => void
-}
+  /** View-only ledger rows for today's sales. */
+  rows: LedgerRow[];
+};
 
-export function ProductsTable({
-  rows,
-  addOpen,
-  onAddOpenChange,
-  newProduct,
-  onNewProductChange,
-  onAddProduct,
-  onUpdateEntry,
-  onUpdatePrice,
-  onRemoveProduct,
-}: ProductsTableProps) {
+/**
+ * Today's ledger product table — read-only.
+ * Add / edit / remove products live on the Products page.
+ */
+export function ProductsTable({ rows }: ProductsTableProps) {
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter(
+      (r) =>
+        r.name.toLowerCase().includes(q) || r.unit.toLowerCase().includes(q),
+    );
+  }, [rows, query]);
+
+  const grandTotal = rows.reduce((s, r) => s + (r.amount ?? 0), 0);
+
   return (
-    <Card hoverable={false} className="mb-6 overflow-hidden py-0">
-      <div className="flex items-center justify-between border-b border-border px-5 py-4">
-        <CardTitle className="text-base">Products</CardTitle>
-        <AddProductDialog
-          open={addOpen}
-          onOpenChange={onAddOpenChange}
-          value={newProduct}
-          onChange={onNewProductChange}
-          onSubmit={onAddProduct}
-        />
+    <Card
+      hoverable={false}
+      className="mb-8 overflow-hidden rounded-2xl border border-border/80 py-0 sm:rounded-3xl"
+    >
+      <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle className="text-base font-bold">
+            Today&apos;s products
+          </CardTitle>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            View only — manage catalog on the Products page
+          </p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-56">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search products…"
+              className="h-9 rounded-2xl pl-9"
+              aria-label="Search products"
+            />
+          </div>
+          <Button asChild variant="outline" size="sm" className="rounded-2xl">
+            <Link to="/app/products">
+              View all products
+              <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
+
       <div className="overflow-x-auto">
-        <table className="w-full min-w-215 border-collapse text-sm">
+        <table className="w-full min-w-160 border-collapse text-sm md:min-w-0">
           <thead>
-            <tr className="border-b border-border bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+            <tr className="border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <Th className="text-left">Product</Th>
-              <Th>Unit</Th>
               <Th align="right">Opening</Th>
               <Th align="right">Receipts</Th>
-              <Th align="right">Total</Th>
+              <Th align="right" className="hidden lg:table-cell">
+                Total
+              </Th>
               <Th align="right">Closing</Th>
               <Th align="right">Sales</Th>
-              <Th align="right">Price</Th>
+              <Th align="right" className="hidden sm:table-cell">
+                Price
+              </Th>
               <Th align="right">Amount</Th>
-              <Th />
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr
-                key={r.id}
-                className="border-b border-border/60 last:border-0 hover:bg-muted/30"
-              >
-                <Td className="text-left font-medium text-foreground">
-                  {r.name}
-                </Td>
-                <Td className="text-muted-foreground">{r.unit}</Td>
-                <Td align="right" className="text-muted-foreground">
-                  {r.stock}
-                </Td>
-                <EditableTd
-                  value={r.receiptsRaw}
-                  onChange={(v) => onUpdateEntry(r.id, "receipts", v)}
-                />
-                <Td align="right" className="font-medium text-foreground">
-                  {r.total}
-                </Td>
-                <EditableTd
-                  value={r.closingRaw}
-                  onChange={(v) => onUpdateEntry(r.id, "closing", v)}
-                  placeholder="—"
-                />
-                <Td align="right" className="font-semibold text-primary">
-                  {r.sales ?? "—"}
-                </Td>
-                <EditableTd
-                  value={String(r.price)}
-                  onChange={(v) => onUpdatePrice(r.id, v)}
-                />
-                <Td align="right" className="font-semibold text-foreground">
-                  {nairaFmt(r.amount)}
-                </Td>
-                <Td align="right">
-                  <button
-                    onClick={() => onRemoveProduct(r.id)}
-                    className="text-muted-foreground transition-colors hover:text-destructive"
-                    aria-label={`Remove ${r.name}`}
+            {filtered.map((r) => {
+              const lowStock = r.stock <= LOW_STOCK_THRESHOLD;
+              return (
+                <tr
+                  key={r.id}
+                  className="border-b border-border/50 transition-colors last:border-0 hover:bg-primary/4"
+                >
+                  <Td className="text-left">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-semibold text-foreground">
+                        {r.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {r.unit}
+                        {lowStock && (
+                          <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                            Low stock
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </Td>
+                  <Td
+                    align="right"
+                    className={cn(
+                      "tabular-nums text-muted-foreground",
+                      lowStock &&
+                        "font-semibold text-amber-700 dark:text-amber-400",
+                    )}
                   >
-                    <Trash2 className="size-4" />
-                  </button>
-                </Td>
+                    {fmtInt(r.stock)}
+                  </Td>
+                  <Td align="right" className="tabular-nums text-foreground">
+                    {fmtInt(r.receipts)}
+                  </Td>
+                  <Td
+                    align="right"
+                    className="hidden tabular-nums font-medium text-foreground lg:table-cell"
+                  >
+                    {fmtInt(r.total)}
+                  </Td>
+                  <Td align="right" className="tabular-nums text-foreground">
+                    {r.closing == null ? "—" : fmtInt(r.closing)}
+                  </Td>
+                  <Td
+                    align="right"
+                    className="tabular-nums font-semibold text-foreground"
+                  >
+                    {r.sales == null ? "—" : fmtInt(r.sales)}
+                  </Td>
+                  <Td
+                    align="right"
+                    className="hidden tabular-nums text-muted-foreground sm:table-cell"
+                  >
+                    {nairaFmt(r.price)}
+                  </Td>
+                  <Td
+                    align="right"
+                    className="tabular-nums text-base font-bold text-primary"
+                  >
+                    {nairaFmt(r.amount)}
+                  </Td>
+                </tr>
+              );
+            })}
+            {filtered.length === 0 && (
+              <tr>
+                <td
+                  colSpan={8}
+                  className="px-4 py-10 text-center text-sm text-muted-foreground"
+                >
+                  {query
+                    ? `No products match “${query}”`
+                    : "No products yet — add them on the Products page."}
+                </td>
               </tr>
-            ))}
+            )}
           </tbody>
+          <tfoot>
+            <tr className="border-t border-border bg-muted/30">
+              <Td className="text-left font-bold text-foreground">Day total</Td>
+              <Td />
+              <Td />
+              <Td className="hidden lg:table-cell" />
+              <Td />
+              <Td />
+              <Td className="hidden sm:table-cell" />
+              <Td
+                align="right"
+                className="tabular-nums text-base font-bold text-primary"
+              >
+                {nairaFmt(grandTotal)}
+              </Td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </Card>
-  )
+  );
 }
 
 function Th({
@@ -115,21 +193,21 @@ function Th({
   align = "center",
   className,
 }: {
-  children?: ReactNode
-  align?: "left" | "right" | "center"
-  className?: string
+  children?: ReactNode;
+  align?: "left" | "right" | "center";
+  className?: string;
 }) {
   return (
     <th
       className={cn(
-        "px-3 py-2.5 font-medium",
+        "px-3 py-3.5 font-semibold",
         align === "right" && "text-right",
         className,
       )}
     >
       {children}
     </th>
-  )
+  );
 }
 
 function Td({
@@ -137,41 +215,19 @@ function Td({
   align = "left",
   className,
 }: {
-  children?: ReactNode
-  align?: "left" | "right"
-  className?: string
+  children?: ReactNode;
+  align?: "left" | "right";
+  className?: string;
 }) {
   return (
     <td
       className={cn(
-        "px-3 py-2.5",
+        "px-3 py-3.5",
         align === "right" && "text-right",
         className,
       )}
     >
       {children}
     </td>
-  )
-}
-
-function EditableTd({
-  value,
-  onChange,
-  placeholder = "0",
-}: {
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-}) {
-  return (
-    <td className="px-3 py-2.5 text-right">
-      <input
-        type="number"
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full border-b border-dashed border-border bg-transparent text-right text-sm text-foreground outline-none transition-colors focus:border-solid focus:border-primary"
-      />
-    </td>
-  )
+  );
 }
