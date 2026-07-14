@@ -1,0 +1,71 @@
+package db
+
+import (
+	"database/sql"
+	"embed"
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+
+	_ "modernc.org/sqlite"
+)
+
+//go:embed migrations/*.sql
+var migrations embed.FS
+
+var DB *sql.DB
+
+func Init(dbPath string) error {
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0o755); err != nil {
+		return fmt.Errorf("create data dir: %w", err)
+	}
+
+	var err error
+	DB, err = sql.Open("sqlite", dbPath)
+	if err != nil {
+		return fmt.Errorf("open db: %w", err)
+	}
+
+	DB.SetMaxOpenConns(1)
+	DB.SetMaxIdleConns(1)
+
+	if err := DB.Ping(); err != nil {
+		return fmt.Errorf("ping db: %w", err)
+	}
+
+	if _, err := DB.Exec(`PRAGMA foreign_keys = ON`); err != nil {
+		return fmt.Errorf("pragma foreign_keys: %w", err)
+	}
+
+	if err := migrate(); err != nil {
+		return fmt.Errorf("migrate: %w", err)
+	}
+
+	return nil
+}
+
+func migrate() error {
+	files := []string{
+		"migrations/001_init.sql",
+		"migrations/002_session_revoke.sql",
+	}
+	for _, name := range files {
+		sqlBytes, err := migrations.ReadFile(name)
+		if err != nil {
+			return fmt.Errorf("read migration %s: %w", name, err)
+		}
+		if _, err := DB.Exec(string(sqlBytes)); err != nil {
+			return fmt.Errorf("exec migration %s: %w", name, err)
+		}
+	}
+
+	log.Println("database migrated")
+	return nil
+}
+
+func Close() {
+	if DB != nil {
+		DB.Close()
+	}
+}
