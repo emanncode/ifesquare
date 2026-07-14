@@ -1,18 +1,31 @@
-export default function BrandMark() {
+import { cn } from "@/lib/utils";
+import logo from "@/assets/ifequare.png";
+
+type BrandMarkProps = {
+  className?: string;
+  /** Outer size utility classes, e.g. size-9 or size-11 */
+  sizeClassName?: string;
+};
+
+/** Ifesquare logo mark — uses ifequare.png instead of the old "IS" monogram. */
+export default function BrandMark({
+  className,
+  sizeClassName = "size-11",
+}: BrandMarkProps) {
   return (
-    <div className="relative flex size-11 items-center justify-center">
-      <div
-        className="absolute inset-0 rounded-xl"
-        style={{
-          background:
-            "linear-gradient(145deg, oklch(0.6 0.14 150), oklch(0.4 0.1 150))",
-        }}
+    <div
+      className={cn(
+        "relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl",
+        sizeClassName,
+        className,
+      )}
+    >
+      <img
+        src={logo}
+        alt="Ifesquare"
+        className="size-full object-cover"
+        draggable={false}
       />
-      <div className="relative flex size-8.5 items-center justify-center rounded-[10px] bg-white/95">
-        <span className="text-xs font-bold tracking-tight text-primary">
-          IS
-        </span>
-      </div>
     </div>
   );
 }

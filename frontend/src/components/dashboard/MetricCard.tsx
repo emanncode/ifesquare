@@ -1,30 +1,109 @@
-import { Card, CardContent } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
+import type { LucideIcon } from "lucide-react";
+import { TrendingUp } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 type MetricCardProps = {
-  label: string
-  value: string
-  accent?: boolean
-  small?: boolean
-}
+  label: string;
+  value: string;
+  icon: LucideIcon;
+  accent?: boolean;
+  /** Compact value (e.g. long product names) */
+  small?: boolean;
+  /** e.g. "+12% today" under the main number */
+  trend?: string;
+  /** Optional sparkline values 0–1 (or any relative scale) */
+  sparkline?: number[];
+};
 
-export function MetricCard({ label, value, accent, small }: MetricCardProps) {
+export function MetricCard({
+  label,
+  value,
+  icon: Icon,
+  accent,
+  small,
+  trend,
+  sparkline,
+}: MetricCardProps) {
   return (
     <Card className="py-0">
-      <CardContent className="px-5 py-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {label}
-        </p>
+      <CardContent className="px-6 py-6">
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {label}
+          </p>
+          <div
+            className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-2xl",
+            )}
+          >
+            <Icon className="size-8" strokeWidth={2} />
+          </div>
+        </div>
+
         <p
           className={cn(
-            "mt-1 truncate font-semibold tracking-tight",
+            "mt-3 truncate font-bold tracking-tight",
             accent ? "text-primary" : "text-foreground",
-            small ? "text-lg" : "text-2xl",
+            small ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl",
           )}
         >
           {value}
         </p>
+
+        {(trend || sparkline) && (
+          <div className="mt-3 flex items-center gap-3">
+            {sparkline && sparkline.length > 1 && (
+              <Sparkline values={sparkline} className="h-7 w-16 text-primary" />
+            )}
+            {trend && (
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                <TrendingUp className="size-3.5" />
+                {trend}
+              </span>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
-  )
+  );
+}
+
+function Sparkline({
+  values,
+  className,
+}: {
+  values: number[];
+  className?: string;
+}) {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const w = 64;
+  const h = 28;
+  const pts = values
+    .map((v, i) => {
+      const x = (i / (values.length - 1)) * w;
+      const y = h - ((v - min) / span) * (h - 4) - 2;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      className={cn("overflow-visible", className)}
+      aria-hidden
+    >
+      <polyline
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={pts}
+        opacity={0.9}
+      />
+    </svg>
+  );
 }
