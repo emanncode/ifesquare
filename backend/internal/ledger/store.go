@@ -86,7 +86,15 @@ func ensureEntries(dayDate string) {
 	}
 }
 
-func UpdateEntry(dayDate string, productID int64, receipts *int, closing *int) (*Entry, error) {
+func UpdateEntry(dayDate string, productID int64, opening, receipts, closing, price *int) (*Entry, error) {
+	if opening != nil {
+		if _, err := db.DB.Exec(
+			"UPDATE entries SET opening = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ?",
+			*opening, dayDate, productID,
+		); err != nil {
+			return nil, err
+		}
+	}
 	if receipts != nil {
 		_, err := db.DB.Exec(
 			"UPDATE entries SET receipts = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ?",
@@ -102,6 +110,14 @@ func UpdateEntry(dayDate string, productID int64, receipts *int, closing *int) (
 			*closing, dayDate, productID,
 		)
 		if err != nil {
+			return nil, err
+		}
+	}
+	if price != nil {
+		if _, err := db.DB.Exec(
+			"UPDATE entries SET price = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ?",
+			*price, dayDate, productID,
+		); err != nil {
 			return nil, err
 		}
 	}

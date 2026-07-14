@@ -39,7 +39,41 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	today := getToday()
-	entry, err := UpdateEntry(today, productID, body.Receipts, body.Closing)
+	entry, err := UpdateEntry(today, productID, nil, body.Receipts, body.Closing, nil)
+	if err != nil {
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+	if entry == nil {
+		http.Error(w, `{"error":"entry not found"}`, http.StatusNotFound)
+		return
+	}
+	writeJSON(w, http.StatusOK, entry)
+}
+
+// UpdateEntryHandler handles PATCH /api/ledger/{date}/{productId}
+// to edit opening, receipts, closing, or price on any day.
+func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
+	date := chi.URLParam(r, "date")
+	productIDStr := chi.URLParam(r, "productId")
+	productID, err := strconv.ParseInt(productIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, `{"error":"invalid product id"}`, http.StatusBadRequest)
+		return
+	}
+
+	var body struct {
+		Opening  *int `json:"opening"`
+		Receipts *int `json:"receipts"`
+		Closing  *int `json:"closing"`
+		Price    *int `json:"price"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		return
+	}
+
+	entry, err := UpdateEntry(date, productID, body.Opening, body.Receipts, body.Closing, body.Price)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return

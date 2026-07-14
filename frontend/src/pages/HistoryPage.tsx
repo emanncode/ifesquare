@@ -5,12 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardTitle } from "@/components/ui/card"
 import { fmtInt, nairaFmt } from "@/components/dashboard/format"
 import { useHistory } from "@/hooks/useHistory"
+import { parseCommaInt } from "@/components/dashboard/format"
+import { api } from "@/lib/api"
 import type { ApiHistoryDayDetail } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
-/**
- * History of closed days — GET /api/history and GET /api/history/:date.
- */
 export default function HistoryPage() {
   const { openMobileNav } = useAppShell()
   const { days, loading, error, getDay } = useHistory()
@@ -37,6 +36,21 @@ export default function HistoryPage() {
     } finally {
       setDetailLoading(false)
     }
+  }
+
+  async function patchEntry(
+    productId: number,
+    field: "opening" | "receipts" | "closing" | "price",
+    raw: string,
+  ) {
+    if (!detail) return
+    await api(`/api/ledger/${detail.date}/${productId}`, {
+      method: "PATCH",
+      body: { [field]: parseCommaInt(raw) },
+    })
+    // Refresh detail
+    const data = await getDay(detail.date)
+    setDetail(data)
   }
 
   return (
@@ -89,7 +103,7 @@ export default function HistoryPage() {
       )}
 
       {!loading && days.length > 0 && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
           <Card hoverable={false} className="overflow-hidden py-0">
             <div className="border-b border-border px-5 py-4">
               <CardTitle className="text-base">Closed days</CardTitle>
@@ -155,47 +169,76 @@ export default function HistoryPage() {
               )}
               {detail && !detailLoading && (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[480px] border-collapse text-sm">
+                  <table className="w-full min-w-[560px] border-collapse text-sm">
                     <thead>
                       <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
-                        <th className="px-2 py-2 text-left font-semibold">
-                          Product
-                        </th>
-                        <th className="px-2 py-2 text-right font-semibold">
-                          Sales
-                        </th>
-                        <th className="px-2 py-2 text-right font-semibold">
-                          Amount
-                        </th>
+                        <th className="px-2 py-2 text-left font-semibold">Product</th>
+                        <th className="px-2 py-2 text-right font-semibold">Opening</th>
+                        <th className="px-2 py-2 text-right font-semibold">Receipts</th>
+                        <th className="px-2 py-2 text-right font-semibold">Total</th>
+                        <th className="px-2 py-2 text-right font-semibold">Closing</th>
+                        <th className="px-2 py-2 text-right font-semibold">Sales</th>
+                        <th className="px-2 py-2 text-right font-semibold">Price</th>
+                        <th className="px-2 py-2 text-right font-semibold">Amount</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {detail.entries.map((e) => (
-                        <tr
-                          key={e.id}
-                          className="border-b border-border/50 last:border-0"
-                        >
-                          <td className="px-2 py-3 font-medium text-foreground">
-                            {e.product_name}
-                            <span className="mt-0.5 block text-xs text-muted-foreground">
-                              {e.product_unit}
-                            </span>
-                          </td>
-                          <td className="px-2 py-3 text-right tabular-nums">
-                            {e.sales == null ? "—" : fmtInt(e.sales)}
-                          </td>
-                          <td className="px-2 py-3 text-right font-semibold tabular-nums text-primary">
-                            {nairaFmt(e.amount)}
-                          </td>
-                        </tr>
-                      ))}
+                      {detail.entries.map((e) => {
+                        const total = e.opening + e.receipts
+                        const sales = e.closing != null ? Math.max(0, total - e.closing) : null
+                        const amount = sales != null ? sales * e.price : null
+                        return (
+                          <tr
+                            key={e.id}
+                            className="border-b border-border/50 last:border-0"
+                          >
+                            <td className="px-2 py-3 font-medium text-foreground">
+                              {e.product_name}
+                              <span className="mt-0.5 block text-xs text-muted-foreground">
+                                {e.product_unit}
+                              </span>
+                            </td>
+                            <EditableNumTd
+                              value={e.opening}
+                              onChange={(v) => void patchEntry(e.product_id, "opening", v)}
+                            />
+                            <EditableNumTd
+                              value={e.receipts}
+                              onChange={(v) => void patchEntry(e.product_id, "receipts", v)}
+                            />
+                            <td className="px-2 py-3 text-right tabular-nums font-medium text-foreground">
+                              {fmtInt(total)}
+                            </td>
+                            <EditableNumTd
+                              value={e.closing}
+                              onChange={(v) => void patchEntry(e.product_id, "closing", v)}
+                              placeholder="—"
+                            />
+                            <td className="px-2 py-3 text-right tabular-nums font-semibold text-foreground">
+                              {sales == null ? "—" : fmtInt(sales)}
+                            </td>
+                            <EditableNumTd
+                              value={e.price}
+                              onChange={(v) => void patchEntry(e.product_id, "price", v)}
+                            />
+                            <td className="px-2 py-3 text-right font-semibold tabular-nums text-primary">
+                              {amount == null ? "—" : nairaFmt(amount)}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                     <tfoot>
                       <tr className="border-t border-border bg-muted/30">
                         <td className="px-2 py-3 font-bold">Total</td>
+                        <td />
+                        <td />
+                        <td />
+                        <td />
                         <td className="px-2 py-3 text-right font-bold tabular-nums">
                           {fmtInt(detail.total_units)}
                         </td>
+                        <td />
                         <td className="px-2 py-3 text-right font-bold tabular-nums text-primary">
                           {nairaFmt(detail.total_revenue)}
                         </td>
@@ -209,6 +252,32 @@ export default function HistoryPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function EditableNumTd({
+  value,
+  onChange,
+  placeholder = "0",
+}: {
+  value: number | null
+  onChange: (v: string) => void
+  placeholder?: string
+}) {
+  return (
+    <td className="px-2 py-3 text-right">
+      <input
+        type="text"
+        inputMode="numeric"
+        defaultValue={value != null ? String(value) : ""}
+        placeholder={placeholder}
+        onBlur={(e) => {
+          const v = e.target.value.trim()
+          if (v && v !== String(value)) onChange(v)
+        }}
+        className="h-8 w-full min-w-16 border-b border-dashed border-border bg-transparent text-right text-sm text-foreground outline-none transition-colors focus:border-solid focus:border-primary"
+      />
+    </td>
   )
 }
 

@@ -89,6 +89,7 @@ func main() {
 			r.Patch("/today/{productId}", ledger.UpdateTodayEntryHandler)
 			r.Post("/close", ledger.CloseHandler)
 			r.Post("/sync-from-last-closed", ledger.SyncFromLastClosedHandler)
+			r.Patch("/{date}/{productId}", ledger.UpdateEntryHandler)
 		})
 
 		r.Route("/api/history", func(r chi.Router) {
