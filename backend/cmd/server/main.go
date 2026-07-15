@@ -33,13 +33,20 @@ func main() {
 	}
 	auth.SetJWTSecret(jwtSecret)
 
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "./ifesquare.db"
-	}
-
-	if err := db.Init(dbPath); err != nil {
-		log.Fatalf("failed to init db: %v", err)
+	tursoURL := os.Getenv("TURSO_DATABASE_URL")
+	if tursoURL != "" {
+		authToken := os.Getenv("TURSO_AUTH_TOKEN")
+		if err := db.InitTurso(tursoURL, authToken); err != nil {
+			log.Fatalf("failed to init turso db: %v", err)
+		}
+	} else {
+		dbPath := os.Getenv("DB_PATH")
+		if dbPath == "" {
+			dbPath = "./ifesquare.db"
+		}
+		if err := db.Init(dbPath); err != nil {
+			log.Fatalf("failed to init db: %v", err)
+		}
 	}
 	defer db.Close()
 
@@ -55,8 +62,13 @@ func main() {
 
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
+	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
+	origins := []string{"http://localhost:5173", "http://localhost:3000"}
+	if allowedOrigin != "" {
+		origins = append(origins, allowedOrigin)
+	}
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173", "http://localhost:3000"},
+		AllowedOrigins:   origins,
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,

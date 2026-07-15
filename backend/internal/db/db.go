@@ -5,10 +5,13 @@ import (
 	"embed"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 
 	_ "modernc.org/sqlite"
+
+	_ "github.com/tursodatabase/libsql-client-go/libsql"
 )
 
 //go:embed migrations/*.sql
@@ -40,6 +43,42 @@ func Init(dbPath string) error {
 
 	if err := migrate(); err != nil {
 		return fmt.Errorf("migrate: %w", err)
+	}
+
+	return nil
+}
+
+func InitTurso(dbURL, authToken string) error {
+	if authToken != "" {
+		u, err := url.Parse(dbURL)
+		if err != nil {
+			return fmt.Errorf("parse turso url: %w", err)
+		}
+		q := u.Query()
+		q.Set("authToken", authToken)
+		u.RawQuery = q.Encode()
+		dbURL = u.String()
+	}
+
+	var err error
+	DB, err = sql.Open("libsql", dbURL)
+	if err != nil {
+		return fmt.Errorf("open turso db: %w", err)
+	}
+
+	DB.SetMaxOpenConns(1)
+	DB.SetMaxIdleConns(1)
+
+	if err := DB.Ping(); err != nil {
+		return fmt.Errorf("ping turso db: %w", err)
+	}
+
+	if _, err := DB.Exec(`PRAGMA foreign_keys = ON`); err != nil {
+		return fmt.Errorf("pragma foreign_keys: %w", err)
+	}
+
+	if err := migrate(); err != nil {
+		return fmt.Errorf("migrate turso: %w", err)
 	}
 
 	return nil
