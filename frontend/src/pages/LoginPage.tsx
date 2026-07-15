@@ -77,6 +77,7 @@ export default function LoginPage({ onSubmit }: LoginPageProps) {
                 autoComplete="username"
                 autoFocus
                 required
+                disabled={loading}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
@@ -91,6 +92,7 @@ export default function LoginPage({ onSubmit }: LoginPageProps) {
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   required
+                  disabled={loading}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -98,6 +100,7 @@ export default function LoginPage({ onSubmit }: LoginPageProps) {
                 />
                 <button
                   type="button"
+                  disabled={loading}
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
                   aria-label={showPassword ? "Hide password" : "Show password"}
