@@ -19,7 +19,7 @@ export type ProductsContextValue = {
     productId: number,
     field: "name" | "unit" | "opening" | "receipts" | "closing" | "price",
     value: string,
-  ) => Promise<void>
+  ) => void
   removeProduct: (productId: number) => Promise<void>
 }
 
