@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react"
@@ -54,6 +55,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const [rows, setRows] = useState<CatalogRow[]>([])
   const [loading, setLoading] = useState(isAuthenticated)
   const [error, setError] = useState<string | null>(null)
+  const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   const refresh = useCallback(async () => {
     if (!isAuthenticated) return
@@ -138,30 +140,11 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   )
 
   const patchCatalogField = useCallback(
-    async (
+    (
       productId: number,
       field: "name" | "unit" | "opening" | "receipts" | "closing" | "price",
       value: string,
     ) => {
-      if (field === "receipts" || field === "closing") {
-        const body: Record<string, number> = {}
-        body[field] = parseCommaInt(value)
-        await api(`/api/ledger/today/${productId}`, {
-          method: "PATCH",
-          body,
-        })
-      } else {
-        const body: Record<string, string | number> = {}
-        if (field === "name") body.name = value
-        else if (field === "unit") body.unit = value
-        else if (field === "opening") body.stock = parseCommaInt(value)
-        else if (field === "price") body.price = parseCommaInt(value)
-        await api(`/api/products/${productId}`, {
-          method: "PATCH",
-          body,
-        })
-      }
-      // Optimistic local update
       setRows((prev) =>
         prev.map((r) => {
           if (r.productId !== productId) return r
@@ -172,7 +155,6 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
           else if (field === "receipts") next.receipts = parseCommaInt(value)
           else if (field === "closing") next.closing = parseCommaInt(value) || null
           else if (field === "price") next.price = parseCommaInt(value)
-          // Recompute totals
           next.total = next.opening + next.receipts
           next.sales = next.closing != null ? Math.max(0, next.total - next.closing) : null
           next.amount = next.sales != null ? next.sales * next.price : null
@@ -180,27 +162,48 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         }),
       )
 
-      try {
-        // Re-sync to ensure server state matches
-        const [products, entries] = await Promise.all([
-          api<ApiProduct[]>("/api/products"),
-          api<ApiLedgerEntry[]>("/api/ledger/today"),
-        ])
-        setRows(merge(products ?? [], entries ?? []))
-      } catch {
-        // silent — the optimistic update already applied
-      }
+      const key = `${productId}:${field}`
+      const existing = debounceTimers.current.get(key)
+      if (existing) clearTimeout(existing)
+
+      debounceTimers.current.set(
+        key,
+        setTimeout(async () => {
+          debounceTimers.current.delete(key)
+          try {
+            if (field === "receipts" || field === "closing") {
+              const body: Record<string, number> = {}
+              body[field] = parseCommaInt(value)
+              await api(`/api/ledger/today/${productId}`, {
+                method: "PATCH",
+                body,
+              })
+            } else {
+              const body: Record<string, string | number> = {}
+              if (field === "name") body.name = value
+              else if (field === "unit") body.unit = value
+              else if (field === "opening") body.stock = parseCommaInt(value)
+              else if (field === "price") body.price = parseCommaInt(value)
+              await api(`/api/products/${productId}`, {
+                method: "PATCH",
+                body,
+              })
+            }
+            const [products, entries] = await Promise.all([
+              api<ApiProduct[]>("/api/products"),
+              api<ApiLedgerEntry[]>("/api/ledger/today"),
+            ])
+            setRows(merge(products ?? [], entries ?? []))
+          } catch (err) {
+            if (err instanceof ApiError && err.status === 401) {
+              window.location.href = "/login"
+            }
+          }
+        }, 500),
+      )
     },
     [],
   )
-
-  const syncFromLastClosed = useCallback(async () => {
-    const res = await api<{ synced_from: string }>("/api/ledger/sync-from-last-closed", {
-      method: "POST",
-    })
-    await refresh()
-    return res.synced_from
-  }, [refresh])
 
   const removeProduct = useCallback(
     async (productId: number) => {
@@ -220,9 +223,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       addProducts,
       patchCatalogField,
       removeProduct,
-      syncFromLastClosed,
     }),
-    [rows, loading, error, refresh, addProduct, addProducts, patchCatalogField, removeProduct, syncFromLastClosed],
+    [rows, loading, error, refresh, addProduct, addProducts, patchCatalogField, removeProduct],
   )
 
   return (

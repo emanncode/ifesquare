@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react"
-import { Loader2, RefreshCw, Trash2 } from "lucide-react"
+import { Loader2, Trash2 } from "lucide-react"
 import { Card, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import { fmtInt, nairaFmt } from "./format"
@@ -10,14 +10,11 @@ import type { NewProductForm } from "./types"
 type Field = "name" | "unit" | "opening" | "receipts" | "closing" | "price"
 
 export function ProductsCatalog() {
-  const { rows, loading, error, addProducts, patchCatalogField, removeProduct, syncFromLastClosed } =
+  const { rows, loading, error, addProducts, patchCatalogField, removeProduct } =
     useProducts()
   const [addOpen, setAddOpen] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [syncing, setSyncing] = useState(false)
-  const [syncedOnce, setSyncedOnce] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [syncMsg, setSyncMsg] = useState<string | null>(null)
 
   async function handleAddMany(forms: NewProductForm[]) {
     setBusy(true)
@@ -33,8 +30,6 @@ export function ProductsCatalog() {
 
   async function handlePatch(productId: number, field: Field, value: string) {
     setActionError(null)
-    setSyncMsg(null)
-    setSyncedOnce(false)
     try {
       await patchCatalogField(productId, field, value)
     } catch (err) {
@@ -42,25 +37,8 @@ export function ProductsCatalog() {
     }
   }
 
-  async function handleSync() {
-    setSyncing(true)
-    setActionError(null)
-    setSyncMsg(null)
-    try {
-      const from = await syncFromLastClosed()
-      setSyncedOnce(true)
-      setSyncMsg(`Synced from ${from}`)
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to sync")
-    } finally {
-      setSyncing(false)
-    }
-  }
-
   async function handleRemove(productId: number) {
     setActionError(null)
-    setSyncMsg(null)
-    setSyncedOnce(false)
     try {
       await removeProduct(productId)
     } catch (err) {
@@ -87,15 +65,6 @@ export function ProductsCatalog() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void handleSync()}
-            disabled={syncing || syncedOnce}
-            className="inline-flex h-9 items-center gap-1.5 rounded-2xl border border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
-          >
-            <RefreshCw className={cn("size-3.5", syncing && "animate-spin")} />
-            {syncing ? "Syncing…" : "Sync last closed"}
-          </button>
           <AddProductDialog
             open={addOpen}
             onOpenChange={setAddOpen}
@@ -104,11 +73,6 @@ export function ProductsCatalog() {
         </div>
       </div>
 
-      {syncMsg && (
-        <div className="border-b border-primary/30 bg-primary/8 px-5 py-3 text-sm text-primary">
-          {syncMsg}
-        </div>
-      )}
       {(error || actionError) && (
         <div
           role="alert"

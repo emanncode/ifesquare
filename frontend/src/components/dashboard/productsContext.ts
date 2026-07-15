@@ -21,7 +21,6 @@ export type ProductsContextValue = {
     value: string,
   ) => Promise<void>
   removeProduct: (productId: number) => Promise<void>
-  syncFromLastClosed: () => Promise<string | null>
 }
 
 export const ProductsContext = createContext<ProductsContextValue | null>(null)

@@ -29,12 +29,21 @@ type EntryWithProduct struct {
 func GetTodayEntries() ([]EntryWithProduct, error) {
 	today := time.Now().Format("2006-01-02")
 
-	_, err := db.DB.Exec("INSERT OR IGNORE INTO days (date) VALUES (?)", today)
-	if err != nil {
+	if _, err := db.DB.Exec("INSERT OR IGNORE INTO days (date) VALUES (?)", today); err != nil {
 		return nil, err
 	}
 
+	// Check if today's entries already existed so we know if this is a new day
+	var existing int
+	db.DB.QueryRow("SELECT COUNT(*) FROM entries WHERE day_date = ?", today).Scan(&existing)
+
 	ensureEntries(today)
+
+	// Auto-sync from the last closed day when this day is first opened
+	// Closing values from the most recent closed day become today's opening values
+	if existing == 0 {
+		autoSyncFromLastClosed(today)
+	}
 
 	rows, err := db.DB.Query(`
 		SELECT e.id, e.day_date, e.product_id, e.opening, e.receipts, e.closing, e.price, e.created_at, e.updated_at,
@@ -137,6 +146,49 @@ func getEntry(dayDate string, productID int64) (*Entry, error) {
 		return nil, err
 	}
 	return &e, nil
+}
+
+// autoSyncFromLastClosed silently copies the most recent closed day's closing
+// values into today's entry openings (and product stock). It is called
+// automatically when a new day's entries are first created, replacing the
+// need for a manual "Sync last closed" button. No error is returned when
+// there is no previous closed day — that is a normal state for new shops.
+func autoSyncFromLastClosed(today string) {
+	var prevDate string
+	err := db.DB.QueryRow(`
+		SELECT date FROM days
+		WHERE closed_at IS NOT NULL AND date < ?
+		ORDER BY date DESC
+		LIMIT 1
+	`, today).Scan(&prevDate)
+	if err != nil {
+		return
+	}
+
+	rows, err := db.DB.Query(`
+		SELECT e.product_id, e.closing
+		FROM entries e
+		JOIN products p ON p.id = e.product_id
+		WHERE e.day_date = ? AND e.closing IS NOT NULL
+	`, prevDate)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var productID, closing int64
+		if err := rows.Scan(&productID, &closing); err != nil {
+			return
+		}
+		db.DB.Exec(
+			"UPDATE entries SET opening = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ?",
+			closing, today, productID,
+		)
+		db.DB.Exec(
+			"UPDATE products SET stock = ? WHERE id = ?", closing, productID,
+		)
+	}
 }
 
 // SyncFromLastClosedDay copies closing values from the most recent
