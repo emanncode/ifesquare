@@ -135,7 +135,7 @@ export function ProductsTable({ rows }: ProductsTableProps) {
                     align="right"
                     className="tabular-nums font-semibold text-foreground"
                   >
-                    {r.sales == null ? "—" : fmtInt(r.sales)}
+                    {fmtInt(r.sales)}
                   </Td>
                   <Td
                     align="right"

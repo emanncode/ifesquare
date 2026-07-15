@@ -192,8 +192,8 @@ export default function HistoryPage() {
                     <tbody>
                       {detail.entries.map((e) => {
                         const total = e.opening + e.receipts
-                        const sales = e.closing != null ? Math.max(0, total - e.closing) : null
-                        const amount = sales != null ? sales * e.price : null
+                        const sales = e.closing != null ? Math.max(0, total - e.closing) : 0
+                        const amount = sales * e.price
                         const isToday = detail.date === today
                         return (
                           <tr
@@ -226,7 +226,7 @@ export default function HistoryPage() {
                               <EditableNumTd value={e.closing} onChange={(v) => void patchEntry(e.product_id, "closing", v)} placeholder="—" />
                             )}
                             <td className="px-2 py-3 text-right tabular-nums font-semibold text-foreground">
-                              {sales == null ? "—" : fmtInt(sales)}
+                              {fmtInt(sales)}
                             </td>
                             {isToday ? (
                               <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">{nairaFmt(e.price)}</td>
@@ -234,7 +234,7 @@ export default function HistoryPage() {
                               <EditableNumTd value={e.price} onChange={(v) => void patchEntry(e.product_id, "price", v)} />
                             )}
                             <td className="px-2 py-3 text-right font-semibold tabular-nums text-primary">
-                              {amount == null ? "—" : nairaFmt(amount)}
+                              {nairaFmt(amount)}
                             </td>
                           </tr>
                         )

@@ -33,8 +33,8 @@ function merge(products: ApiProduct[], entries: ApiLedgerEntry[]): CatalogRow[] 
     const closing = e?.closing ?? null
     const price = p.price
     const total = opening + receipts
-    const sales = closing != null ? Math.max(0, total - closing) : null
-    const amount = sales != null ? sales * price : null
+    const sales = closing != null ? Math.max(0, total - closing) : 0
+    const amount = sales * price
     return {
       productId: p.id,
       name: p.name,
@@ -156,8 +156,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
           else if (field === "closing") next.closing = parseCommaInt(value) || null
           else if (field === "price") next.price = parseCommaInt(value)
           next.total = next.opening + next.receipts
-          next.sales = next.closing != null ? Math.max(0, next.total - next.closing) : null
-          next.amount = next.sales != null ? next.sales * next.price : null
+          next.sales = next.closing != null ? Math.max(0, next.total - next.closing) : 0
+          next.amount = next.sales * next.price
           return next
         }),
       )

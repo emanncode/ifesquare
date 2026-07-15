@@ -132,7 +132,7 @@ export function ProductsCatalog() {
                   placeholder="—"
                 />
                 <Td align="right" className="tabular-nums font-semibold text-foreground">
-                  {r.sales == null ? "—" : fmtInt(r.sales)}
+                  {fmtInt(r.sales)}
                 </Td>
                 <NumericTd
                   value={String(r.price)}
