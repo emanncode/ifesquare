@@ -77,7 +77,7 @@ export function InsightsCard({
   return (
     <Card
       hoverable={false}
-      className="rounded-2xl border border-border/80 py-0 sm:rounded-3xl"
+      className="rounded-xl border border-border/80 py-0 sm:rounded-3xl"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
         <CardTitle className="text-base font-bold">Insights</CardTitle>

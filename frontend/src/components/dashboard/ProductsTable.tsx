@@ -37,7 +37,7 @@ export function ProductsTable({ rows }: ProductsTableProps) {
   return (
     <Card
       hoverable={false}
-      className="mb-8 overflow-hidden rounded-2xl border border-border/80 py-0 sm:rounded-3xl"
+      className="mb-8 overflow-hidden rounded-xl border border-border/80 py-0 sm:rounded-3xl"
     >
       <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
