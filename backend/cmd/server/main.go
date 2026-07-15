@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -20,6 +23,7 @@ import (
 )
 
 func main() {
+	email := flag.String("create-user", "", "email for the new user (password prompted on stdin)")
 	logoutAll := flag.Bool("logout-all", false, "invalidate every active session and exit")
 	flag.Parse()
 
@@ -49,6 +53,27 @@ func main() {
 		}
 	}
 	defer db.Close()
+
+	if *email != "" {
+		fmt.Print("Password: ")
+		password, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		if err != nil {
+			log.Fatalf("read password: %v", err)
+		}
+		password = strings.TrimSpace(password)
+		if password == "" {
+			log.Fatal("password cannot be empty")
+		}
+		hash, err := auth.HashPassword(password)
+		if err != nil {
+			log.Fatalf("hash password: %v", err)
+		}
+		if _, err := db.DB.Exec("INSERT INTO users (email, password_hash) VALUES (?, ?)", *email, hash); err != nil {
+			log.Fatalf("create user: %v", err)
+		}
+		log.Printf("user %s created", *email)
+		return
+	}
 
 	if *logoutAll {
 		if err := auth.RevokeAllSessions(); err != nil {
