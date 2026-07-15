@@ -86,7 +86,7 @@ export function DashboardHeader({
             Close &amp; save day
           </Button>
         </DialogTrigger>
-        <DialogContent className="rounded-xl sm:rounded23xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Close &amp; save today&apos;s ledger?</DialogTitle>
             <DialogDescription>
