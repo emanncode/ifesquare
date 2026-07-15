@@ -89,7 +89,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
-    setState((s) => ({ ...s, loading: true, error: null }))
     try {
       const user = await api<User>("/api/auth/login", {
         method: "POST",
@@ -99,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return user
     } catch (err) {
       const message = getLoginErrorMessage(err)
-      setState((s) => ({ ...s, loading: false, error: message }))
+      setState((s) => ({ ...s, error: message }))
       throw new Error(message, { cause: err })
     }
   }, [])
