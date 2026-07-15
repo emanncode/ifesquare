@@ -5,11 +5,19 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import { api } from "@/lib/api"
+import { api, ApiError } from "@/lib/api"
 import type { ApiLedgerEntry, ApiProduct } from "@/lib/types"
 import { parseCommaInt } from "./format"
 import { ProductsContext } from "./productsContext"
 import type { CatalogRow, NewProductForm } from "./types"
+import { useAuth } from "@/hooks/useAuth"
+
+function formatError(err: unknown): string {
+  if (err instanceof ApiError && err.status >= 500) {
+    return "A server error occurred. Please check the server logs and try again."
+  }
+  return err instanceof Error ? err.message : "Failed to load products"
+}
 
 function merge(products: ApiProduct[], entries: ApiLedgerEntry[]): CatalogRow[] {
   const byProduct = new Map<number, ApiLedgerEntry>()
@@ -42,11 +50,13 @@ function merge(products: ApiProduct[], entries: ApiLedgerEntry[]): CatalogRow[] 
 }
 
 export function ProductsProvider({ children }: { children: ReactNode }) {
+  const { isAuthenticated } = useAuth()
   const [rows, setRows] = useState<CatalogRow[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(isAuthenticated)
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
+    if (!isAuthenticated) return
     setLoading(true)
     setError(null)
     try {
@@ -56,14 +66,15 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       ])
       setRows(merge(products ?? [], entries ?? []))
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load products")
+      setError(formatError(err))
       setRows([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [isAuthenticated])
 
   useEffect(() => {
+    if (!isAuthenticated) return
     let cancelled = false
     void (async () => {
       try {
@@ -77,7 +88,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load products")
+          setError(formatError(err))
           setRows([])
         }
       } finally {
@@ -87,7 +98,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [isAuthenticated])
 
   const addProduct = useCallback(
     async (form: NewProductForm) => {

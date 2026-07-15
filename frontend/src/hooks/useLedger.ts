@@ -1,24 +1,28 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { api } from "@/lib/api"
 import { deriveLedgerRow, type ApiLedgerEntry, type LedgerRow } from "@/lib/types"
+import { useAuth } from "@/hooks/useAuth"
 
 /**
  * Today's ledger from GET /api/ledger/today (+ close day).
  * Backend returns a flat array of entries; we derive sales/amount client-side.
  */
 export function useLedger() {
+  const { isAuthenticated } = useAuth()
   const [entries, setEntries] = useState<ApiLedgerEntry[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(isAuthenticated)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState(() => new Date())
 
   const load = useCallback(async () => {
+    if (!isAuthenticated) return
     const data = await api<ApiLedgerEntry[]>("/api/ledger/today")
     setEntries(data ?? [])
     setLastUpdated(new Date())
-  }, [])
+  }, [isAuthenticated])
 
   useEffect(() => {
+    if (!isAuthenticated) return
     let cancelled = false
     void (async () => {
       try {
@@ -40,9 +44,10 @@ export function useLedger() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [isAuthenticated])
 
   const refresh = useCallback(async () => {
+    if (!isAuthenticated) return
     setLoading(true)
     setError(null)
     try {
@@ -52,7 +57,7 @@ export function useLedger() {
     } finally {
       setLoading(false)
     }
-  }, [load])
+  }, [load, isAuthenticated])
 
   const closeDay = useCallback(async () => {
     await api("/api/ledger/close", { method: "POST" })
