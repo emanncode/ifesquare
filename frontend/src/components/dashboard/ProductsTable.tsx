@@ -37,7 +37,7 @@ export function ProductsTable({ rows }: ProductsTableProps) {
   return (
     <Card
       hoverable={false}
-      className="mb-8 overflow-hidden rounded-xl border border-border/80 py-0 sm:rounded-3xl"
+      className="mb-8 overflow-hidden rounded-xl border border-border/80 py-0 sm:rounded-xl"
     >
       <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -55,11 +55,11 @@ export function ProductsTable({ rows }: ProductsTableProps) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search products…"
-              className="h-9 rounded-2xl pl-9"
+              className="h-9 rounded-xl pl-9"
               aria-label="Search products"
             />
           </div>
-          <Button asChild variant="outline" size="sm" className="rounded-2xl">
+          <Button asChild variant="outline" size="sm" className="rounded-xl">
             <Link to="/app/products">
               View all products
               <ArrowRight className="size-4" />
@@ -102,7 +102,7 @@ export function ProductsTable({ rows }: ProductsTableProps) {
                       <span className="text-xs text-muted-foreground">
                         {r.unit}
                         {lowStock && (
-                          <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                          <span className="ml-2 inline-flex items-center rounded-lg bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
                             Low stock
                           </span>
                         )}

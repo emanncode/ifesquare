@@ -17,7 +17,7 @@ export default function ProductsPage() {
           type="button"
           variant="outline"
           size="icon"
-          className="shrink-0 rounded-2xl lg:hidden"
+          className="shrink-0 rounded-xl lg:hidden"
           onClick={openMobileNav}
           aria-label="Open menu"
         >

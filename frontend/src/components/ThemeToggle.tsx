@@ -24,7 +24,7 @@ export function ThemeToggle({
       variant={showLabel ? "outline" : "ghost"}
       size={showLabel ? "sm" : size}
       onClick={toggleTheme}
-      className={cn("rounded-2xl", showLabel && "gap-2", className)}
+      className={cn("rounded-xl", showLabel && "gap-2", className)}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
       title={isDark ? "Light mode" : "Dark mode"}
     >

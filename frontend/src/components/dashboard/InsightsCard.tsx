@@ -73,12 +73,12 @@ export function InsightsCard({
   return (
     <Card
       hoverable={false}
-      className="rounded-xl border border-border/80 py-0 sm:rounded-3xl"
+      className="rounded-xl border border-border/80 py-0 sm:rounded-xl"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
         <CardTitle className="text-base font-bold">Insights</CardTitle>
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-          <TabsList className="rounded-2xl">
+          <TabsList className="rounded-xl">
             <TabsTrigger value="bar" className="gap-1.5 rounded-xl">
               <BarChart3 className="size-3.5" /> Top products
             </TabsTrigger>
@@ -198,7 +198,7 @@ export function InsightsCard({
 
 function SummaryStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-muted/30 px-4 py-3">
+    <div className="rounded-xl border border-border/70 bg-muted/30 px-4 py-3">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
         {label}
       </p>

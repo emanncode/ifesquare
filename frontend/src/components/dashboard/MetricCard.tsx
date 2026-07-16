@@ -34,7 +34,7 @@ export function MetricCard({
           </p>
           <div
             className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-2xl",
+              "flex size-10 shrink-0 items-center justify-center rounded-xl",
             )}
           >
             <Icon className="size-8" strokeWidth={2} />

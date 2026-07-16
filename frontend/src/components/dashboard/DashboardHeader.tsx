@@ -46,7 +46,7 @@ export function DashboardHeader({
             type="button"
             variant="outline"
             size="icon"
-            className="mt-0.5 shrink-0 rounded-2xl lg:hidden"
+            className="mt-0.5 shrink-0 rounded-xl lg:hidden"
             onClick={onMenuClick}
             aria-label="Open menu"
           >
@@ -98,13 +98,13 @@ export function DashboardHeader({
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
-              className="rounded-2xl"
+              className="rounded-xl"
               onClick={() => onCloseOpenChange(false)}
             >
               Cancel
             </Button>
             <Button
-              className="rounded-2xl font-semibold"
+              className="rounded-xl font-semibold"
               onClick={() => {
                 onConfirmClose();
                 onCloseOpenChange(false);

@@ -63,7 +63,7 @@ export default function LoginPage({ onSubmit }: LoginPageProps) {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-7 shadow-sm dark:shadow-none">
+        <div className="rounded-xl border border-border bg-card p-7 shadow-sm dark:shadow-none">
           <form
             onSubmit={handleSubmit}
             noValidate

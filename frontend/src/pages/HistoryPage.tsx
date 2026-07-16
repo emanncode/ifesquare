@@ -61,7 +61,7 @@ export default function HistoryPage() {
           type="button"
           variant="outline"
           size="icon"
-          className="shrink-0 rounded-2xl lg:hidden"
+          className="shrink-0 rounded-xl lg:hidden"
           onClick={openMobileNav}
           aria-label="Open menu"
         >
@@ -86,7 +86,7 @@ export default function HistoryPage() {
       {error && (
         <div
           role="alert"
-          className="mb-6 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          className="mb-6 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
         >
           {error}
         </div>
@@ -95,7 +95,7 @@ export default function HistoryPage() {
       {!loading && !error && days.length === 0 && (
         <Card
           hoverable={false}
-          className="flex min-h-40 items-center justify-center rounded-2xl py-8 sm:rounded-3xl"
+          className="flex min-h-40 items-center justify-center rounded-xl py-8 sm:rounded-xl"
         >
           <p className="text-sm text-muted-foreground">
             No closed days yet. Close today&apos;s ledger to see it here.

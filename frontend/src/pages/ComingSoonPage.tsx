@@ -87,15 +87,15 @@ export default function ComingSoonPage() {
         />
 
         <div
-          className="absolute -left-20 top-1/4 size-72 animate-float rounded-full blur-3xl opacity-70 dark:opacity-40"
+          className="absolute -left-20 top-1/4 size-72 animate-float rounded-lg blur-3xl opacity-70 dark:opacity-40"
           style={{ backgroundColor: `${green[200]}55` }}
         />
         <div
-          className="absolute -right-16 top-1/3 size-80 animate-float-delayed rounded-full blur-3xl opacity-70 dark:opacity-35"
+          className="absolute -right-16 top-1/3 size-80 animate-float-delayed rounded-lg blur-3xl opacity-70 dark:opacity-35"
           style={{ backgroundColor: `${green[100]}99` }}
         />
         <div
-          className="absolute bottom-0 left-1/3 size-64 animate-float-slow rounded-full blur-3xl opacity-70 dark:opacity-30"
+          className="absolute bottom-0 left-1/3 size-64 animate-float-slow rounded-lg blur-3xl opacity-70 dark:opacity-30"
           style={{ backgroundColor: `${green[200]}40` }}
         />
 
@@ -134,7 +134,7 @@ export default function ComingSoonPage() {
         <main className="flex flex-1 flex-col items-center px-6 pb-16 pt-4 sm:px-10">
           <div className="animate-fade-up mx-auto w-full max-w-3xl text-center">
             <div
-              className="mb-8 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium backdrop-blur-sm"
+              className="mb-8 inline-flex items-center gap-2 rounded-lg border px-3.5 py-1.5 text-xs font-medium backdrop-blur-sm"
               style={{
                 borderColor: green[200],
                 backgroundColor: `${green[50]}CC`,
@@ -162,7 +162,7 @@ export default function ComingSoonPage() {
             <div className="mx-auto mt-10 w-full max-w-md">
               {status === "success" ? (
                 <div
-                  className="animate-fade-up rounded-2xl border px-6 py-4 text-sm"
+                  className="animate-fade-up rounded-xl border px-6 py-4 text-sm"
                   style={{
                     borderColor: green[200],
                     backgroundColor: green[50],
@@ -180,7 +180,7 @@ export default function ComingSoonPage() {
                 >
                   <div className="relative flex-1">
                     <div
-                      className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 blur transition-opacity duration-300 group-focus-within:opacity-100"
+                      className="pointer-events-none absolute -inset-px rounded-xl opacity-0 blur transition-opacity duration-300 group-focus-within:opacity-100"
                       style={{
                         background: `linear-gradient(90deg, ${green[400]}, ${green[600]})`,
                       }}
@@ -193,7 +193,7 @@ export default function ComingSoonPage() {
                       placeholder="you@email.com"
                       aria-label="Email address"
                       className={cn(
-                        "relative w-full rounded-2xl border bg-white px-4 py-3 text-sm text-zinc-900",
+                        "relative w-full rounded-xl border bg-white px-4 py-3 text-sm text-zinc-900",
                         "placeholder:text-zinc-400 outline-none shadow-sm",
                         "transition-colors focus:border-transparent"
                       )}
@@ -203,7 +203,7 @@ export default function ComingSoonPage() {
                   <Button
                     type="submit"
                     size="lg"
-                    className="h-11 shrink-0 rounded-2xl px-5 text-sm font-medium text-white shadow-sm hover:opacity-95"
+                    className="h-11 shrink-0 rounded-xl px-5 text-sm font-medium text-white shadow-sm hover:opacity-95"
                     style={{ backgroundColor: green[600] }}
                   >
                     Notify me
@@ -226,7 +226,7 @@ export default function ComingSoonPage() {
             style={{ animationDelay: "100ms" }}
           >
             <div
-              className="rounded-2xl border bg-white p-1 shadow-xl shadow-green-900/5"
+              className="rounded-xl border bg-white p-1 shadow-xl shadow-green-900/5"
               style={{ borderColor: green[100] }}
             >
               <div
@@ -242,15 +242,15 @@ export default function ComingSoonPage() {
                 >
                   <div className="flex gap-1.5">
                     <span
-                      className="size-2 rounded-full"
+                      className="size-2 rounded-lg"
                       style={{ backgroundColor: green[400] }}
                     />
                     <span
-                      className="size-2 rounded-full"
+                      className="size-2 rounded-lg"
                       style={{ backgroundColor: green[200] }}
                     />
                     <span
-                      className="size-2 rounded-full"
+                      className="size-2 rounded-lg"
                       style={{ backgroundColor: green[100] }}
                     />
                   </div>
@@ -360,7 +360,7 @@ export default function ComingSoonPage() {
             {features.map((feature, i) => (
               <div
                 key={feature.title}
-                className="animate-fade-up rounded-2xl border bg-white/80 p-5 text-left shadow-sm backdrop-blur-sm"
+                className="animate-fade-up rounded-xl border bg-white/80 p-5 text-left shadow-sm backdrop-blur-sm"
                 style={{
                   borderColor: green[100],
                   animationDelay: `${150 + i * 60}ms`,
@@ -422,7 +422,7 @@ export default function ComingSoonPage() {
               ].map((item) => (
                 <li
                   key={item.step}
-                  className="rounded-2xl border bg-white/80 px-4 py-4 text-left shadow-sm"
+                  className="rounded-xl border bg-white/80 px-4 py-4 text-left shadow-sm"
                   style={{ borderColor: green[100] }}
                 >
                   <span

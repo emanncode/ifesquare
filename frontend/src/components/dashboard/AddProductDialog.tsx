@@ -82,12 +82,12 @@ export function AddProductDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="lg" className="rounded-2xl">
+        <Button variant="outline" size="lg" className="rounded-xl">
           <Plus className="size-4" />
           Add products
         </Button>
       </DialogTrigger>
-      <DialogContent className="gap-4 sm:max-w-2xl sm:rounded-3xl">
+      <DialogContent className="gap-4 sm:max-w-2xl sm:rounded-xl">
         <DialogHeader>
           <DialogTitle>Add products</DialogTitle>
           <DialogDescription>
@@ -99,7 +99,7 @@ export function AddProductDialog({
           {rows.map((row, index) => (
             <div
               key={row.key}
-              className="rounded-2xl border border-border bg-muted/20 p-4"
+              className="rounded-xl border border-border bg-muted/20 p-4"
             >
               <div className="mb-3 flex items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -173,7 +173,7 @@ export function AddProductDialog({
           <Button
             type="button"
             variant="outline"
-            className="w-full rounded-2xl border-dashed"
+            className="w-full rounded-xl border-dashed"
             onClick={addRow}
           >
             <Plus className="size-4" />
@@ -188,7 +188,7 @@ export function AddProductDialog({
               : `${validCount} product${validCount === 1 ? "" : "s"} ready`}
           </p>
           <Button
-            className="rounded-2xl font-semibold"
+            className="rounded-xl font-semibold"
             onClick={handleSubmit}
             disabled={validCount === 0}
           >
