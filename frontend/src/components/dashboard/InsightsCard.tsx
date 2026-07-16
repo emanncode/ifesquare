@@ -157,10 +157,13 @@ export function InsightsCard({
                     nameKey="name"
                     outerRadius={110}
                     innerRadius={58}
-                    paddingAngle={2}
+                    paddingAngle={0}
                   >
                     {pieData.map((_, i) => (
-                      <Cell key={i} fill={pieColors[i % pieColors.length]} />
+                      <Cell
+                        key={i}
+                        fill={`hsl(${150 + (i / Math.max(pieData.length - 1, 1)) * 60}, 65%, ${65 - (i / Math.max(pieData.length - 1, 1)) * 20}%)`}
+                      />
                     ))}
                   </Pie>
                   <Tooltip formatter={tooltipNaira} />
