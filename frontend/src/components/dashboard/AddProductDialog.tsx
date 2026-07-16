@@ -14,6 +14,9 @@ import { emptyForm } from "./productsContext"
 import type { NewProductForm } from "./types"
 import { formatWithCommas, stripNonDigits } from "./format"
 
+const MAX_PRODUCTS = 16
+const INITIAL_COUNT = 4
+
 type DraftRow = NewProductForm & { key: string }
 
 function newRow(key: string): DraftRow {
@@ -56,32 +59,31 @@ function NumericInput({
 type AddProductDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Called with every row that has a product name filled in. */
   onSubmit: (products: NewProductForm[]) => void
 }
 
-/**
- * Multi-product add dialog — stack several rows, then save them all at once.
- */
 export function AddProductDialog({
   open,
   onOpenChange,
   onSubmit,
 }: AddProductDialogProps) {
   const baseId = useId()
-  const [rows, setRows] = useState<DraftRow[]>(() => [
-    newRow(`${baseId}-0`),
-    newRow(`${baseId}-1`),
-  ])
+  const [rows, setRows] = useState<DraftRow[]>(() =>
+    Array.from({ length: INITIAL_COUNT }, (_, i) => newRow(`${baseId}-${i}`)),
+  )
 
-  // Reset to two empty rows whenever the dialog opens.
   useEffect(() => {
     if (open) {
-      setRows([newRow(`${baseId}-${Date.now()}-a`), newRow(`${baseId}-${Date.now()}-b`)])
+      setRows(
+        Array.from({ length: INITIAL_COUNT }, (_, i) =>
+          newRow(`${baseId}-${Date.now()}-${i}`),
+        ),
+      )
     }
   }, [open, baseId])
 
   const validCount = rows.filter((r) => r.name.trim()).length
+  const atMax = rows.length >= MAX_PRODUCTS
 
   function updateRow(key: string, patch: Partial<NewProductForm>) {
     setRows((prev) =>
@@ -90,6 +92,7 @@ export function AddProductDialog({
   }
 
   function addRow() {
+    if (atMax) return
     setRows((prev) => [...prev, newRow(`${baseId}-${Date.now()}`)])
   }
 
@@ -119,60 +122,78 @@ export function AddProductDialog({
           Add products
         </Button>
       </DialogTrigger>
-      <DialogContent className="gap-4 sm:max-w-2xl sm:rounded-xl">
+      <DialogContent className="gap-4 sm:max-w-5xl sm:rounded-xl">
         <DialogHeader>
           <DialogTitle>Add products</DialogTitle>
           <DialogDescription>
-            Fill in one or more products, then add them all to your catalog.
+            Fill in up to {MAX_PRODUCTS} products, then add them all to your
+            catalog.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 pt-1">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 pt-1">
           {rows.map((row, index) => (
             <div
               key={row.key}
-              className="rounded-xl border border-border bg-muted/20 p-4"
+              className="relative rounded-xl border border-border bg-muted/20 p-3"
             >
-              <div className="mb-3 flex items-center justify-between gap-2">
+              <div className="mb-2 flex items-center justify-between gap-1">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Product {index + 1}
+                  #{index + 1}
                 </p>
                 <button
                   type="button"
                   onClick={() => removeRow(row.key)}
-                  className="rounded-xl p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                  aria-label={`Remove product row ${index + 1}`}
+                  className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  aria-label={`Remove product ${index + 1}`}
                 >
-                  <Trash2 className="size-4" />
+                  <Trash2 className="size-3.5" />
                 </button>
               </div>
 
-              <div className="grid gap-3">
-                <div className="grid gap-1.5">
-                  <Label htmlFor={`${row.key}-name`}>Product name</Label>
+              <div className="grid gap-2">
+                <div className="grid gap-1">
+                  <Label
+                    htmlFor={`${row.key}-name`}
+                    className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                  >
+                    Name
+                  </Label>
                   <Input
                     id={`${row.key}-name`}
                     value={row.name}
                     onChange={(e) =>
                       updateRow(row.key, { name: e.target.value })
                     }
-                    placeholder="e.g. Visco 2000 4L"
+                    placeholder="e.g. Visco 4L"
+                    className="h-8 text-sm"
                   />
                 </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div className="grid gap-1.5">
-                    <Label htmlFor={`${row.key}-unit`}>Unit</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="grid gap-1">
+                    <Label
+                      htmlFor={`${row.key}-unit`}
+                      className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                    >
+                      Unit
+                    </Label>
                     <Input
                       id={`${row.key}-unit`}
                       value={row.unit}
                       onChange={(e) =>
                         updateRow(row.key, { unit: e.target.value })
                       }
-                      placeholder="bottle, drum…"
+                      placeholder="bottle"
+                      className="h-8 text-sm"
                     />
                   </div>
-                  <div className="grid gap-1.5">
-                    <Label htmlFor={`${row.key}-stock`}>Starting stock</Label>
+                  <div className="grid gap-1">
+                    <Label
+                      htmlFor={`${row.key}-stock`}
+                      className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                    >
+                      Stock
+                    </Label>
                     <NumericInput
                       id={`${row.key}-stock`}
                       value={row.stock}
@@ -180,8 +201,13 @@ export function AddProductDialog({
                       placeholder="0"
                     />
                   </div>
-                  <div className="grid gap-1.5">
-                    <Label htmlFor={`${row.key}-price`}>Price (₦)</Label>
+                  <div className="grid gap-1">
+                    <Label
+                      htmlFor={`${row.key}-price`}
+                      className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                    >
+                      Price
+                    </Label>
                     <NumericInput
                       id={`${row.key}-price`}
                       value={row.price}
@@ -193,7 +219,9 @@ export function AddProductDialog({
               </div>
             </div>
           ))}
+        </div>
 
+        {!atMax && (
           <Button
             type="button"
             variant="outline"
@@ -203,13 +231,13 @@ export function AddProductDialog({
             <Plus className="size-4" />
             Add another product
           </Button>
-        </div>
+        )}
 
         <DialogFooter className="gap-2 pt-1 sm:justify-between">
           <p className="text-xs text-muted-foreground sm:self-center">
             {validCount === 0
               ? "Enter at least one product name"
-              : `${validCount} product${validCount === 1 ? "" : "s"} ready`}
+              : `${validCount} of ${MAX_PRODUCTS} product${validCount === 1 ? "" : "s"} ready`}
           </p>
           <Button
             className="rounded-xl font-semibold"
