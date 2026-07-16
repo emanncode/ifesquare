@@ -122,7 +122,7 @@ export function AddProductDialog({
           Add products
         </Button>
       </DialogTrigger>
-      <DialogContent className="gap-4 sm:max-w-5xl sm:rounded-xl">
+      <DialogContent className="gap-4 sm:max-w-7xl sm:rounded-xl">
         <DialogHeader>
           <DialogTitle>Add products</DialogTitle>
           <DialogDescription>
