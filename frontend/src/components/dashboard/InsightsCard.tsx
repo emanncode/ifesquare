@@ -66,7 +66,7 @@ export function InsightsCard({
     };
   }, [isDark]);
 
-  const { brand, grid, tick, label, pieColors } = chartPaint;
+  const { brand, grid, tick, label } = chartPaint;
 
   const avgPrice = useMemo(() => {
     if (totalUnits <= 0) return null;

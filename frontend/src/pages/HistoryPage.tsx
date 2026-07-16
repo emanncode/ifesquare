@@ -1,5 +1,5 @@
 import { motion } from "framer-motion"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Menu, Loader2 } from "lucide-react"
 import { useAppShell } from "@/components/layout/appShell"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,17 @@ import { api } from "@/lib/api"
 import type { ApiHistoryDayDetail } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
+function useBelow(mq: string) {
+  const [match, setMatch] = useState(() => typeof window !== "undefined" && !window.matchMedia(mq).matches)
+  useEffect(() => {
+    const mql = window.matchMedia(mq)
+    const handler = () => setMatch(!mql.matches)
+    mql.addEventListener("change", handler)
+    return () => mql.removeEventListener("change", handler)
+  }, [mq])
+  return match
+}
+
 export default function HistoryPage() {
   const { openMobileNav } = useAppShell()
   const { days, loading, error, getDay } = useHistory()
@@ -22,6 +33,7 @@ export default function HistoryPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
   const today = new Date().toISOString().slice(0, 10)
+  const isBelowLg = useBelow("(min-width: 1024px)")
 
   async function openDay(date: string) {
     if (date === selected) {
@@ -168,20 +180,22 @@ export default function HistoryPage() {
             onClose={() => { setSelected(null); setDetail(null) }}
             className="hidden lg:block"
           />
-          <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setDetail(null) } }}>
-            <DialogContent showCloseButton={false} className="lg:hidden max-h-[90svh] flex flex-col gap-0 p-0 pt-0">
-              <DayDetailPanel
-                selected={selected}
-                detail={detail}
-                detailLoading={detailLoading}
-                detailError={detailError}
-                today={today}
-                patchEntry={patchEntry}
-                onClose={() => { setSelected(null); setDetail(null) }}
-                dialog
-              />
-            </DialogContent>
-          </Dialog>
+          {isBelowLg && (
+            <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setDetail(null) } }}>
+              <DialogContent showCloseButton={false} className="max-h-[90svh] flex flex-col gap-0 p-0 pt-0">
+                <DayDetailPanel
+                  selected={selected}
+                  detail={detail}
+                  detailLoading={detailLoading}
+                  detailError={detailError}
+                  today={today}
+                  patchEntry={patchEntry}
+                  onClose={() => { setSelected(null); setDetail(null) }}
+                  dialog
+                />
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       )}
       </motion.div>
