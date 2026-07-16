@@ -10,9 +10,9 @@ import { DialogFooter } from "@/components/ui/DialogFooter"
 import { DialogHeader } from "@/components/ui/DialogHeader"
 import { DialogTitle } from "@/components/ui/DialogTitle"
 import { DialogTrigger } from "@/components/ui/DialogTrigger"
+import { NumericInput } from "./NumericInput"
 import { emptyForm } from "./productsContext"
 import type { NewProductForm } from "./types"
-import { formatWithCommas, stripNonDigits } from "./format"
 
 const MAX_PRODUCTS = 16
 const INITIAL_COUNT = 4
@@ -21,39 +21,6 @@ type DraftRow = NewProductForm & { key: string }
 
 function newRow(key: string): DraftRow {
   return { key, ...emptyForm }
-}
-
-function NumericInput({
-  value,
-  onChange,
-  placeholder,
-  id,
-}: {
-  value: string
-  onChange: (v: string) => void
-  placeholder: string
-  id: string
-}) {
-  const [display, setDisplay] = useState(() => formatWithCommas(value))
-
-  useEffect(() => {
-    setDisplay(formatWithCommas(value))
-  }, [value])
-
-  return (
-    <Input
-      id={id}
-      type="text"
-      inputMode="numeric"
-      value={display}
-      onChange={(e) => {
-        const digits = stripNonDigits(e.target.value)
-        setDisplay(formatWithCommas(digits))
-        onChange(digits)
-      }}
-      placeholder={placeholder}
-    />
-  )
 }
 
 type AddProductDialogProps = {
