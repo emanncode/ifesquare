@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"os"
 )
 
 type contextKey string
@@ -26,13 +27,14 @@ func Middleware(next http.Handler) http.Handler {
 		revoked, err := TokenIsRevoked(claims)
 		if err != nil || revoked {
 			// Drop the stale cookie so the browser stops sending it.
+			secure := r.TLS != nil || os.Getenv("APP_ENV") == "production"
 			http.SetCookie(w, &http.Cookie{
 				Name:     "token",
 				Value:    "",
 				Path:     "/",
 				HttpOnly: true,
 				SameSite: http.SameSiteLaxMode,
-				Secure:   false,
+				Secure:   secure,
 				MaxAge:   -1,
 			})
 			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
