@@ -1,9 +1,5 @@
-import { useMemo, useState } from "react"
-import {
-  BarChart3,
-  PieChart as PieIcon,
-  TrendingUp,
-} from "lucide-react"
+import { useMemo, useState } from "react";
+import { BarChart3, PieChart as PieIcon, TrendingUp } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -18,10 +14,10 @@ import {
   Tooltip,
   ResponsiveContainer,
   LabelList,
-} from "recharts"
-import { Card, CardContent, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useTheme } from "@/hooks/useTheme"
+} from "recharts";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTheme } from "@/hooks/useTheme";
 import {
   fmtInt,
   getBrandChartColor,
@@ -31,16 +27,16 @@ import {
   getChartTickColor,
   nairaFmt,
   tooltipNaira,
-} from "./format"
-import type { BarDatum, LineDatum, PieDatum } from "./types"
+} from "./format";
+import type { BarDatum, LineDatum, PieDatum } from "./types";
 
 type InsightsCardProps = {
-  barData: BarDatum[]
-  pieData: PieDatum[]
-  lineData: LineDatum[]
-  totalRevenue: number
-  totalUnits: number
-}
+  barData: BarDatum[];
+  pieData: PieDatum[];
+  lineData: LineDatum[];
+  totalRevenue: number;
+  totalUnits: number;
+};
 
 export function InsightsCard({
   barData,
@@ -49,9 +45,9 @@ export function InsightsCard({
   totalRevenue,
   totalUnits,
 }: InsightsCardProps) {
-  const [tab, setTab] = useState<"bar" | "pie" | "line">("bar")
-  const { theme } = useTheme()
-  const isDark = theme === "dark"
+  const [tab, setTab] = useState<"bar" | "pie" | "line">("bar");
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
 
   // Recompute paints when theme flips so Recharts picks up CSS variables.
   const chartPaint = useMemo(() => {
@@ -61,18 +57,18 @@ export function InsightsCard({
       tick: getChartTickColor(),
       label: getChartLabelColor(),
       pieColors: getChartColors(isDark),
-    }
-  }, [isDark])
+    };
+  }, [isDark]);
 
-  const { brand, grid, tick, label, pieColors } = chartPaint
+  const { brand, grid, tick, label, pieColors } = chartPaint;
 
   const avgPrice = useMemo(() => {
-    if (totalUnits <= 0) return null
-    return totalRevenue / totalUnits
-  }, [totalRevenue, totalUnits])
+    if (totalUnits <= 0) return null;
+    return totalRevenue / totalUnits;
+  }, [totalRevenue, totalUnits]);
 
-  const productCount = barData.length
-  const tickStyle = { fontSize: 11, fill: tick }
+  const productCount = barData.length;
+  const tickStyle = { fontSize: 11, fill: tick };
 
   return (
     <Card
@@ -96,10 +92,18 @@ export function InsightsCard({
         </Tabs>
       </div>
       <CardContent className="px-5 py-6">
-        <div className="h-[22rem] sm:h-[26rem]">
-          <ResponsiveContainer>
-            {tab === "bar" ? (
-              barData.length ? (
+        <div className="h-88 sm:h-[104]">
+          {tab === "bar" && !barData.length ? (
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+              No sales recorded yet today
+            </div>
+          ) : tab === "pie" && !pieData.length ? (
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+              No sales recorded yet today
+            </div>
+          ) : (
+            <ResponsiveContainer>
+              {tab === "bar" ? (
                 <BarChart
                   data={barData}
                   margin={{ left: 0, right: 16, top: 28, bottom: 8 }}
@@ -124,9 +128,7 @@ export function InsightsCard({
                       dataKey="Amount"
                       position="top"
                       formatter={(v) =>
-                        typeof v === "number"
-                          ? nairaFmt(v)
-                          : String(v ?? "")
+                        typeof v === "number" ? nairaFmt(v) : String(v ?? "")
                       }
                       style={{
                         fill: label,
@@ -136,11 +138,7 @@ export function InsightsCard({
                     />
                   </Bar>
                 </BarChart>
-              ) : (
-                <EmptyState label="No sales recorded yet today" />
-              )
-            ) : tab === "pie" ? (
-              pieData.length ? (
+              ) : tab === "pie" ? (
                 <PieChart>
                   <Pie
                     data={pieData}
@@ -151,43 +149,38 @@ export function InsightsCard({
                     paddingAngle={2}
                   >
                     {pieData.map((_, i) => (
-                      <Cell
-                        key={i}
-                        fill={pieColors[i % pieColors.length]}
-                      />
+                      <Cell key={i} fill={pieColors[i % pieColors.length]} />
                     ))}
                   </Pie>
                   <Tooltip formatter={tooltipNaira} />
                 </PieChart>
               ) : (
-                <EmptyState label="No sales recorded yet today" />
-              )
-            ) : (
-              <LineChart
-                data={lineData}
-                margin={{ left: 0, right: 16, top: 16, bottom: 8 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke={grid}
-                  vertical={false}
-                />
-                <XAxis dataKey="date" tick={tickStyle} />
-                <YAxis tick={tickStyle} />
-                <Tooltip formatter={tooltipNaira} />
-                <Line
-                  type="monotone"
-                  dataKey="Revenue"
-                  stroke={brand}
-                  strokeWidth={2.5}
-                  dot={{ r: 3, fill: brand }}
-                />
-              </LineChart>
-            )}
-          </ResponsiveContainer>
-        </div>
+                <LineChart
+                  data={lineData}
+                  margin={{ left: 0, right: 16, top: 16, bottom: 8 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={grid}
+                    vertical={false}
+                  />
+                  <XAxis dataKey="date" tick={tickStyle} />
+                  <YAxis tick={tickStyle} />
+                  <Tooltip formatter={tooltipNaira} />
+                  <Line
+                    type="monotone"
+                    dataKey="Revenue"
+                    stroke={brand}
+                    strokeWidth={2.5}
+                    dot={{ r: 3, fill: brand }}
+                  />
+                </LineChart>
+              )}
+            </ResponsiveContainer>
+          )}
 
-        <div className="mt-6 grid grid-cols-1 gap-3 border-t border-border pt-5 sm:grid-cols-3">
+          </div>
+          <div className="mt-6 grid grid-cols-1 gap-3 border-t border-border pt-5 sm:grid-cols-3">
           <SummaryStat label="Total sales" value={nairaFmt(totalRevenue)} />
           <SummaryStat
             label="Average price / unit"
@@ -200,7 +193,7 @@ export function InsightsCard({
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 function SummaryStat({ label, value }: { label: string; value: string }) {
@@ -213,13 +206,6 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
         {value}
       </p>
     </div>
-  )
+  );
 }
 
-function EmptyState({ label }: { label: string }) {
-  return (
-    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-      {label}
-    </div>
-  )
-}
