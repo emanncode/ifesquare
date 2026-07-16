@@ -66,8 +66,8 @@ func InitTurso(dbURL, authToken string) error {
 		return fmt.Errorf("open turso db: %w", err)
 	}
 
-	DB.SetMaxOpenConns(1)
-	DB.SetMaxIdleConns(1)
+	DB.SetMaxOpenConns(10)
+	DB.SetMaxIdleConns(10)
 
 	if err := DB.Ping(); err != nil {
 		return fmt.Errorf("ping turso db: %w", err)

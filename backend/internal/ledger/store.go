@@ -29,19 +29,37 @@ type EntryWithProduct struct {
 func GetTodayEntries() ([]EntryWithProduct, error) {
 	today := time.Now().Format("2006-01-02")
 
-	if _, err := db.DB.Exec("INSERT OR IGNORE INTO days (date) VALUES (?)", today); err != nil {
+	// Check if today has entries before we insert any
+	var hadEntries bool
+	db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM entries WHERE day_date = ?)", today).Scan(&hadEntries)
+
+	// Batch setup in a single transaction
+	tx, err := db.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec("INSERT OR IGNORE INTO days (date) VALUES (?)", today); err != nil {
 		return nil, err
 	}
 
-	// Check if today's entries already existed so we know if this is a new day
-	var existing int
-	db.DB.QueryRow("SELECT COUNT(*) FROM entries WHERE day_date = ?", today).Scan(&existing)
+	// Insert entries for any active products that don't have one for today
+	if _, err := tx.Exec(`
+		INSERT OR IGNORE INTO entries (day_date, product_id, opening, price)
+		SELECT ?, p.id, p.stock, p.price
+		FROM products p
+		WHERE p.archived_at IS NULL
+	`, today); err != nil {
+		return nil, err
+	}
 
-	ensureEntries(today)
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 
 	// Auto-sync from the last closed day when this day is first opened
-	// Closing values from the most recent closed day become today's opening values
-	if existing == 0 {
+	if !hadEntries {
 		autoSyncFromLastClosed(today)
 	}
 
@@ -65,6 +83,9 @@ func GetTodayEntries() ([]EntryWithProduct, error) {
 			return nil, err
 		}
 		entries = append(entries, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return entries, nil
 }

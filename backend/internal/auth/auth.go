@@ -4,12 +4,20 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/emanncode/ifesquare/backend/internal/db"
+)
+
+var (
+	revocationMu       sync.RWMutex
+	revocationCutoff   time.Time
+	revocationQueriedAt time.Time
+	revocationCacheTTL = 30 * time.Second
 )
 
 var jwtSecret []byte
@@ -115,9 +123,34 @@ func SessionsRevokedBefore() (time.Time, error) {
 	return t, nil
 }
 
+// cachedRevocationCutoff returns the cached cutoff, refreshing from DB
+// at most once per revocationCacheTTL.
+func cachedRevocationCutoff() (time.Time, error) {
+	revocationMu.RLock()
+	cached := revocationCutoff
+	age := time.Since(revocationQueriedAt)
+	revocationMu.RUnlock()
+
+	if age < revocationCacheTTL {
+		return cached, nil
+	}
+
+	cutoff, err := SessionsRevokedBefore()
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	revocationMu.Lock()
+	revocationCutoff = cutoff
+	revocationQueriedAt = time.Now()
+	revocationMu.Unlock()
+
+	return cutoff, nil
+}
+
 // TokenIsRevoked reports whether claims were issued before the global logout cutoff.
 func TokenIsRevoked(claims *Claims) (bool, error) {
-	cutoff, err := SessionsRevokedBefore()
+	cutoff, err := cachedRevocationCutoff()
 	if err != nil {
 		return false, err
 	}
