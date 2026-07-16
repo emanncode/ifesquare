@@ -30,8 +30,10 @@ func GetTodayEntries() ([]EntryWithProduct, error) {
 	today := time.Now().Format("2006-01-02")
 
 	// Check if today has entries before we insert any
-	var hadEntries bool
-	db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM entries WHERE day_date = ?)", today).Scan(&hadEntries)
+	var hadEntries int
+	if err := db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM entries WHERE day_date = ?)", today).Scan(&hadEntries); err != nil {
+		hadEntries = 0
+	}
 
 	// Batch setup in a single transaction
 	tx, err := db.DB.Begin()
@@ -59,7 +61,7 @@ func GetTodayEntries() ([]EntryWithProduct, error) {
 	}
 
 	// Auto-sync from the last closed day when this day is first opened
-	if !hadEntries {
+	if hadEntries == 0 {
 		autoSyncFromLastClosed(today)
 	}
 
