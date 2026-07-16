@@ -1,7 +1,9 @@
 package history
 
 import (
+	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -88,6 +90,60 @@ func GetByDateHandler(w http.ResponseWriter, r *http.Request) {
 		"total_revenue": totalRevenue,
 		"total_units":   totalUnits,
 	})
+}
+
+func ExportCSVHandler(w http.ResponseWriter, r *http.Request) {
+	days, err := ListClosedDays(9999)
+	if err != nil {
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=ifesquare-history.csv")
+
+	wr := csv.NewWriter(w)
+	wr.Write([]string{"Date", "Product", "Unit", "Opening", "Receipts", "Total", "Closing", "Sales", "Price (NGN)", "Amount (NGN)"})
+
+	for _, d := range days {
+		entries, err := GetByDate(d.Date)
+		if err != nil {
+			continue
+		}
+		for _, e := range entries {
+			total := e.Opening + e.Receipts
+			var closing, sales, amount string
+			if e.Closing != nil {
+				closing = fmt.Sprintf("%d", *e.Closing)
+				s := total - *e.Closing
+				if s < 0 {
+					s = 0
+				}
+				sales = fmt.Sprintf("%d", s)
+				amount = fmt.Sprintf("%d", s*e.Price)
+			} else {
+				closing = ""
+				sales = ""
+				amount = ""
+			}
+			wr.Write([]string{
+				d.Date,
+				e.ProductName,
+				e.ProductUnit,
+				fmt.Sprintf("%d", e.Opening),
+				fmt.Sprintf("%d", e.Receipts),
+				fmt.Sprintf("%d", total),
+				closing,
+				sales,
+				fmt.Sprintf("%d", e.Price),
+				amount,
+			})
+		}
+	}
+	wr.Flush()
+	if err := wr.Error(); err != nil {
+		http.Error(w, `{"error":"csv write error"}`, http.StatusInternalServerError)
+	}
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {

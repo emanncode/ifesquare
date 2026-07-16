@@ -1,6 +1,6 @@
 import { motion } from "framer-motion"
 import { useState } from "react"
-import { Loader2, Menu } from "lucide-react"
+import { Download, Loader2, Menu } from "lucide-react"
 import { useAppShell } from "@/components/layout/appShell"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/Card"
@@ -56,6 +56,13 @@ export default function HistoryPage() {
     setDetail(data)
   }
 
+  function handleExport() {
+    const a = document.createElement("a")
+    a.href = "/api/history/export"
+    a.download = "ifesquare-history.csv"
+    a.click()
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -75,7 +82,7 @@ export default function HistoryPage() {
         >
           <Menu className="size-5" />
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             History
           </h1>
@@ -83,6 +90,15 @@ export default function HistoryPage() {
             Past closed ledger days from the server
           </p>
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="shrink-0 gap-2 rounded-xl"
+          onClick={handleExport}
+        >
+          <Download className="size-4" />
+          Export CSV
+        </Button>
       </div>
 
       {loading && (

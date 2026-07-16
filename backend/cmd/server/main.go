@@ -160,6 +160,7 @@ func main() {
 
 		r.Route("/api/history", func(r chi.Router) {
 			r.Get("/", history.ListHandler)
+			r.Get("/export", history.ExportCSVHandler)
 			r.Get("/{date}", history.GetByDateHandler)
 		})
 	})
