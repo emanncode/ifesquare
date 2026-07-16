@@ -61,6 +61,20 @@ func (s *Store) Get(key string) ([]byte, string, bool) {
 	return e.data, e.contentType, true
 }
 
+func (s *Store) Invalidate(keys ...string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, key := range keys {
+		delete(s.items, key)
+	}
+}
+
+func (s *Store) InvalidateAll() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.items = make(map[string]*entry)
+}
+
 func Serve(w http.ResponseWriter, key string) bool {
 	data, ctype, ok := Default.Get(key)
 	if !ok {
@@ -69,6 +83,10 @@ func Serve(w http.ResponseWriter, key string) bool {
 	w.Header().Set("Content-Type", ctype)
 	w.Write(data)
 	return true
+}
+
+func Get(key string) ([]byte, string, bool) {
+	return Default.Get(key)
 }
 
 func Set(key string, v interface{}) error {
