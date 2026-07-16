@@ -103,7 +103,7 @@ export function InsightsCard({
         </Tabs>
       </div>
       <CardContent className="px-5 py-6">
-        <div className="h-88 sm:h-[104]">
+        <div className="h-[22rem] sm:h-[26rem]">
           {tab === "bar" && !barData.length ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               No sales recorded yet today
