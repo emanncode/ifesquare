@@ -1,14 +1,12 @@
 import { Menu, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/Dialog";
+import { DialogContent } from "@/components/ui/DialogContent";
+import { DialogDescription } from "@/components/ui/DialogDescription";
+import { DialogFooter } from "@/components/ui/DialogFooter";
+import { DialogHeader } from "@/components/ui/DialogHeader";
+import { DialogTitle } from "@/components/ui/DialogTitle";
+import { DialogTrigger } from "@/components/ui/DialogTrigger";
 
 type DashboardHeaderProps = {
   lastUpdated: Date;

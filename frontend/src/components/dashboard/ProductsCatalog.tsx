@@ -1,10 +1,14 @@
-import { useState, type ReactNode } from "react"
+import { useState } from "react"
 import { Loader2, Trash2 } from "lucide-react"
-import { Card, CardTitle } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
+import { Card } from "@/components/ui/Card"
+import { CardTitle } from "@/components/ui/CardTitle"
 import { fmtInt, nairaFmt } from "./format"
 import { AddProductDialog } from "./AddProductDialog"
 import { useProducts } from "./useProducts"
+import { CatalogTh } from "./CatalogTh"
+import { CatalogTd } from "./CatalogTd"
+import { CatalogNumericTd } from "./CatalogNumericTd"
+import { CatalogEditableTextTd } from "./CatalogEditableTextTd"
 import type { NewProductForm } from "./types"
 
 type Field = "name" | "unit" | "opening" | "receipts" | "closing" | "price"
@@ -86,16 +90,16 @@ export function ProductsCatalog() {
         <table className="w-full min-w-[960px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-              <Th className="text-left">Product</Th>
-              <Th className="text-left">Unit</Th>
-              <Th align="right">Opening</Th>
-              <Th align="right">Receipts</Th>
-              <Th align="right">Total</Th>
-              <Th align="right">Closing</Th>
-              <Th align="right">Sales</Th>
-              <Th align="right">Price</Th>
-              <Th align="right">Amount</Th>
-              <Th />
+              <CatalogTh className="text-left">Product</CatalogTh>
+              <CatalogTh className="text-left">Unit</CatalogTh>
+              <CatalogTh align="right">Opening</CatalogTh>
+              <CatalogTh align="right">Receipts</CatalogTh>
+              <CatalogTh align="right">Total</CatalogTh>
+              <CatalogTh align="right">Closing</CatalogTh>
+              <CatalogTh align="right">Sales</CatalogTh>
+              <CatalogTh align="right">Price</CatalogTh>
+              <CatalogTh align="right">Amount</CatalogTh>
+              <CatalogTh />
             </tr>
           </thead>
           <tbody>
@@ -104,44 +108,44 @@ export function ProductsCatalog() {
                 key={r.productId}
                 className="border-b border-border/60 last:border-0 hover:bg-muted/30"
               >
-                <EditableTextTd
+                <CatalogEditableTextTd
                   value={r.name}
                   onChange={(v) => void handlePatch(r.productId, "name", v)}
                   className="text-left font-medium text-foreground"
                   align="left"
                 />
-                <EditableTextTd
+                <CatalogEditableTextTd
                   value={r.unit}
                   onChange={(v) => void handlePatch(r.productId, "unit", v)}
                   className="text-muted-foreground"
                 />
-                <NumericTd
+                <CatalogNumericTd
                   value={String(r.opening)}
                   onChange={(v) => void handlePatch(r.productId, "opening", v)}
                 />
-                <NumericTd
+                <CatalogNumericTd
                   value={String(r.receipts)}
                   onChange={(v) => void handlePatch(r.productId, "receipts", v)}
                 />
-                <Td align="right" className="tabular-nums font-medium text-foreground">
+                <CatalogTd align="right" className="tabular-nums font-medium text-foreground">
                   {fmtInt(r.total)}
-                </Td>
-                <NumericTd
+                </CatalogTd>
+                <CatalogNumericTd
                   value={r.closing != null ? String(r.closing) : ""}
                   onChange={(v) => void handlePatch(r.productId, "closing", v)}
                   placeholder="—"
                 />
-                <Td align="right" className="tabular-nums font-semibold text-foreground">
+                <CatalogTd align="right" className="tabular-nums font-semibold text-foreground">
                   {fmtInt(r.sales)}
-                </Td>
-                <NumericTd
+                </CatalogTd>
+                <CatalogNumericTd
                   value={String(r.price)}
                   onChange={(v) => void handlePatch(r.productId, "price", v)}
                 />
-                <Td align="right" className="tabular-nums font-bold text-primary">
+                <CatalogTd align="right" className="tabular-nums font-bold text-primary">
                   {r.amount == null ? "—" : nairaFmt(r.amount)}
-                </Td>
-                <Td align="right">
+                </CatalogTd>
+                <CatalogTd align="right">
                   <button
                     type="button"
                     onClick={() => void handleRemove(r.productId)}
@@ -150,7 +154,7 @@ export function ProductsCatalog() {
                   >
                     <Trash2 className="size-4" />
                   </button>
-                </Td>
+                </CatalogTd>
               </tr>
             ))}
             {rows.length === 0 && (
@@ -167,108 +171,5 @@ export function ProductsCatalog() {
         </table>
       </div>
     </Card>
-  )
-}
-
-function Th({
-  children,
-  align = "center",
-  className,
-}: {
-  children?: ReactNode
-  align?: "left" | "right" | "center"
-  className?: string
-}) {
-  return (
-    <th
-      className={cn(
-        "h-14 px-4 py-4 font-medium",
-        align === "right" && "text-right",
-        align === "left" && "text-left",
-        className,
-      )}
-    >
-      {children}
-    </th>
-  )
-}
-
-function Td({
-  children,
-  align = "left",
-  className,
-}: {
-  children?: ReactNode
-  align?: "left" | "right"
-  className?: string
-}) {
-  return (
-    <td
-      className={cn(
-        "h-14 px-4 py-4",
-        align === "right" && "text-right",
-        className,
-      )}
-    >
-      {children}
-    </td>
-  )
-}
-
-function NumericTd({
-  value,
-  onChange,
-  placeholder = "0",
-}: {
-  value: string
-  onChange: (v: string) => void
-  placeholder?: string
-}) {
-  return (
-    <td className="h-14 px-4 py-4 text-right">
-      <input
-        type="text"
-        inputMode="numeric"
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-full border-b border-dashed border-border bg-transparent text-right text-sm text-foreground outline-none transition-colors focus:border-solid focus:border-primary"
-      />
-    </td>
-  )
-}
-
-function EditableTextTd({
-  value,
-  onChange,
-  className,
-  align = "center",
-}: {
-  value: string
-  onChange: (v: string) => void
-  className?: string
-  align?: "left" | "right" | "center"
-}) {
-  return (
-    <td
-      className={cn(
-        "h-14 px-4 py-4",
-        align === "right" && "text-right",
-        align === "left" && "text-left",
-        className,
-      )}
-    >
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={cn(
-          "h-9 w-full min-w-24 border-b border-dashed border-border bg-transparent text-sm outline-none transition-colors focus:border-solid focus:border-primary",
-          align === "right" && "text-right",
-          align === "left" && "text-left",
-          align === "center" && "text-center",
-        )}
-      />
-    </td>
   )
 }

@@ -3,10 +3,11 @@ import { useState } from "react"
 import { Loader2, Menu } from "lucide-react"
 import { useAppShell } from "@/components/layout/appShell"
 import { Button } from "@/components/ui/button"
-import { Card, CardTitle } from "@/components/ui/card"
-import { fmtInt, nairaFmt } from "@/components/dashboard/format"
+import { Card } from "@/components/ui/Card"
+import { CardTitle } from "@/components/ui/CardTitle"
+import { fmtInt, nairaFmt, parseCommaInt } from "@/components/dashboard/format"
+import { HistoryEditableTd } from "@/components/dashboard/HistoryEditableTd"
 import { useHistory } from "@/hooks/useHistory"
-import { parseCommaInt } from "@/components/dashboard/format"
 import { api } from "@/lib/api"
 import type { ApiHistoryDayDetail } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -220,8 +221,8 @@ export default function HistoryPage() {
                               </>
                             ) : (
                               <>
-                                <EditableNumTd value={e.opening} onChange={(v) => void patchEntry(e.product_id, "opening", v)} />
-                                <EditableNumTd value={e.receipts} onChange={(v) => void patchEntry(e.product_id, "receipts", v)} />
+                                <HistoryEditableTd value={e.opening} onChange={(v) => void patchEntry(e.product_id, "opening", v)} />
+                                <HistoryEditableTd value={e.receipts} onChange={(v) => void patchEntry(e.product_id, "receipts", v)} />
                               </>
                             )}
                             <td className="px-2 py-3 text-right tabular-nums font-medium text-foreground">
@@ -230,7 +231,7 @@ export default function HistoryPage() {
                             {isToday ? (
                               <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">{e.closing == null ? "—" : fmtInt(e.closing)}</td>
                             ) : (
-                              <EditableNumTd value={e.closing} onChange={(v) => void patchEntry(e.product_id, "closing", v)} placeholder="—" />
+                              <HistoryEditableTd value={e.closing} onChange={(v) => void patchEntry(e.product_id, "closing", v)} placeholder="—" />
                             )}
                             <td className="px-2 py-3 text-right tabular-nums font-semibold text-foreground">
                               {fmtInt(sales)}
@@ -238,7 +239,7 @@ export default function HistoryPage() {
                             {isToday ? (
                               <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">{nairaFmt(e.price)}</td>
                             ) : (
-                              <EditableNumTd value={e.price} onChange={(v) => void patchEntry(e.product_id, "price", v)} />
+                              <HistoryEditableTd value={e.price} onChange={(v) => void patchEntry(e.product_id, "price", v)} />
                             )}
                             <td className="px-2 py-3 text-right font-semibold tabular-nums text-primary">
                               {nairaFmt(amount)}
@@ -274,31 +275,6 @@ export default function HistoryPage() {
     )
   }
 
-function EditableNumTd({
-  value,
-  onChange,
-  placeholder = "0",
-}: {
-  value: number | null
-  onChange: (v: string) => void
-  placeholder?: string
-}) {
-  return (
-    <td className="px-2 py-3 text-right">
-      <input
-        type="text"
-        inputMode="numeric"
-        defaultValue={value != null ? String(value) : ""}
-        placeholder={placeholder}
-        onBlur={(e) => {
-          const v = e.target.value.trim()
-          if (v && v !== String(value)) onChange(v)
-        }}
-        className="h-8 w-full min-w-16 border-b border-dashed border-border bg-transparent text-right text-sm text-foreground outline-none transition-colors focus:border-solid focus:border-primary"
-      />
-    </td>
-  )
-}
 
 function formatDate(iso: string) {
   const d = new Date(iso + "T12:00:00")

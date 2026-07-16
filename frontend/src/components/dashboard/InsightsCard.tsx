@@ -16,8 +16,12 @@ import {
   ResponsiveContainer,
   LabelList,
 } from "recharts";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/Card";
+import { CardContent } from "@/components/ui/CardContent";
+import { CardTitle } from "@/components/ui/CardTitle";
+import { Tabs } from "@/components/ui/Tabs";
+import { TabsList } from "@/components/ui/TabsList";
+import { TabsTrigger } from "@/components/ui/TabsTrigger";
 import { useTheme } from "@/hooks/useTheme";
 import {
   fmtInt,
@@ -29,6 +33,7 @@ import {
   nairaFmt,
   tooltipNaira,
 } from "./format";
+import { SummaryStat } from "./SummaryStat";
 import type { BarDatum, LineDatum, PieDatum } from "./types";
 
 type InsightsCardProps = {
@@ -203,16 +208,5 @@ export function InsightsCard({
   );
 }
 
-function SummaryStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border/70 bg-muted/30 px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 text-lg font-bold tracking-tight text-foreground">
-        {value}
-      </p>
-    </div>
-  );
-}
+
 

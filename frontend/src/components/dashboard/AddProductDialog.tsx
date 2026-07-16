@@ -1,17 +1,15 @@
 import { useEffect, useId, useState } from "react"
 import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogTrigger,
-  DialogDescription,
-} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Dialog } from "@/components/ui/Dialog"
+import { DialogContent } from "@/components/ui/DialogContent"
+import { DialogDescription } from "@/components/ui/DialogDescription"
+import { DialogFooter } from "@/components/ui/DialogFooter"
+import { DialogHeader } from "@/components/ui/DialogHeader"
+import { DialogTitle } from "@/components/ui/DialogTitle"
+import { DialogTrigger } from "@/components/ui/DialogTrigger"
 import { emptyForm } from "./productsContext"
 import type { NewProductForm } from "./types"
 

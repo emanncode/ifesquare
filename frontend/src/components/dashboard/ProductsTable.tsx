@@ -1,12 +1,15 @@
 import { motion } from "framer-motion"
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Search } from "lucide-react";
-import { Card, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/Card";
+import { CardTitle } from "@/components/ui/CardTitle";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { fmtInt, nairaFmt } from "./format";
+import { ProductsTableTh } from "./ProductsTableTh";
+import { ProductsTableTd } from "./ProductsTableTd";
 import type { LedgerRow } from "./types";
 
 /** Opening stock at or below this is flagged as low. */
@@ -73,18 +76,18 @@ export function ProductsTable({ rows }: ProductsTableProps) {
         <table className="w-full min-w-160 border-collapse text-sm md:min-w-0">
           <thead>
             <tr className="border-b border-border bg-muted/40 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <Th className="text-left">Product</Th>
-              <Th align="right">Opening</Th>
-              <Th align="right">Receipts</Th>
-              <Th align="right" className="hidden lg:table-cell">
+              <ProductsTableTh className="text-left">Product</ProductsTableTh>
+              <ProductsTableTh align="right">Opening</ProductsTableTh>
+              <ProductsTableTh align="right">Receipts</ProductsTableTh>
+              <ProductsTableTh align="right" className="hidden lg:table-cell">
                 Total
-              </Th>
-              <Th align="right">Closing</Th>
-              <Th align="right">Sales</Th>
-              <Th align="right" className="hidden sm:table-cell">
+              </ProductsTableTh>
+              <ProductsTableTh align="right">Closing</ProductsTableTh>
+              <ProductsTableTh align="right">Sales</ProductsTableTh>
+              <ProductsTableTh align="right" className="hidden sm:table-cell">
                 Price
-              </Th>
-              <Th align="right">Amount</Th>
+              </ProductsTableTh>
+              <ProductsTableTh align="right">Amount</ProductsTableTh>
             </tr>
           </thead>
           <tbody>
@@ -99,7 +102,7 @@ export function ProductsTable({ rows }: ProductsTableProps) {
                   whileHover={{ backgroundColor: "var(--primary) / 0.04" }}
                   className="border-b border-border/50 last:border-0"
                 >
-                  <Td className="text-left">
+                  <ProductsTableTd className="text-left">
                     <div className="flex flex-col gap-0.5">
                       <span className="font-semibold text-foreground">
                         {r.name}
@@ -113,8 +116,8 @@ export function ProductsTable({ rows }: ProductsTableProps) {
                         )}
                       </span>
                     </div>
-                  </Td>
-                  <Td
+                  </ProductsTableTd>
+                  <ProductsTableTd
                     align="right"
                     className={cn(
                       "tabular-nums text-muted-foreground",
@@ -123,37 +126,37 @@ export function ProductsTable({ rows }: ProductsTableProps) {
                     )}
                   >
                     {fmtInt(r.stock)}
-                  </Td>
-                  <Td align="right" className="tabular-nums text-foreground">
+                  </ProductsTableTd>
+                  <ProductsTableTd align="right" className="tabular-nums text-foreground">
                     {fmtInt(r.receipts)}
-                  </Td>
-                  <Td
+                  </ProductsTableTd>
+                  <ProductsTableTd
                     align="right"
                     className="hidden tabular-nums font-medium text-foreground lg:table-cell"
                   >
                     {fmtInt(r.total)}
-                  </Td>
-                  <Td align="right" className="tabular-nums text-foreground">
+                  </ProductsTableTd>
+                  <ProductsTableTd align="right" className="tabular-nums text-foreground">
                     {r.closing == null ? "—" : fmtInt(r.closing)}
-                  </Td>
-                  <Td
+                  </ProductsTableTd>
+                  <ProductsTableTd
                     align="right"
                     className="tabular-nums font-semibold text-foreground"
                   >
                     {fmtInt(r.sales)}
-                  </Td>
-                  <Td
+                  </ProductsTableTd>
+                  <ProductsTableTd
                     align="right"
                     className="hidden tabular-nums text-muted-foreground sm:table-cell"
                   >
                     {nairaFmt(r.price)}
-                  </Td>
-                  <Td
+                  </ProductsTableTd>
+                  <ProductsTableTd
                     align="right"
                     className="tabular-nums text-base font-bold text-primary"
                   >
                     {nairaFmt(r.amount)}
-                  </Td>
+                  </ProductsTableTd>
                 </motion.tr>
               );
             })}
@@ -172,19 +175,19 @@ export function ProductsTable({ rows }: ProductsTableProps) {
           </tbody>
           <tfoot>
             <tr className="border-t border-border bg-muted/30">
-              <Td className="text-left font-bold text-foreground">Day total</Td>
-              <Td />
-              <Td />
-              <Td className="hidden lg:table-cell" />
-              <Td />
-              <Td />
-              <Td className="hidden sm:table-cell" />
-              <Td
+              <ProductsTableTd className="text-left font-bold text-foreground">Day total</ProductsTableTd>
+              <ProductsTableTd />
+              <ProductsTableTd />
+              <ProductsTableTd className="hidden lg:table-cell" />
+              <ProductsTableTd />
+              <ProductsTableTd />
+              <ProductsTableTd className="hidden sm:table-cell" />
+              <ProductsTableTd
                 align="right"
                 className="tabular-nums text-base font-bold text-primary"
               >
                 {nairaFmt(grandTotal)}
-              </Td>
+              </ProductsTableTd>
             </tr>
           </tfoot>
         </table>
@@ -193,46 +196,4 @@ export function ProductsTable({ rows }: ProductsTableProps) {
   );
 }
 
-function Th({
-  children,
-  align = "center",
-  className,
-}: {
-  children?: ReactNode;
-  align?: "left" | "right" | "center";
-  className?: string;
-}) {
-  return (
-    <th
-      className={cn(
-        "px-3 py-3.5 font-semibold",
-        align === "right" && "text-right",
-        className,
-      )}
-    >
-      {children}
-    </th>
-  );
-}
 
-function Td({
-  children,
-  align = "left",
-  className,
-}: {
-  children?: ReactNode;
-  align?: "left" | "right";
-  className?: string;
-}) {
-  return (
-    <td
-      className={cn(
-        "px-3 py-3.5",
-        align === "right" && "text-right",
-        className,
-      )}
-    >
-      {children}
-    </td>
-  );
-}
