@@ -1,0 +1,32 @@
+name: Daily DB Backup
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # daily 06:00 UTC
+  workflow_dispatch: # manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Turso CLI
+        run: |
+          curl -sSfL https://get.turso.tech | sh
+          echo "$HOME/.turso" >> "$GITHUB_PATH"
+
+      - name: Auth Turso
+        run: turso auth token --token "${{ secrets.TURSO_AUTH_TOKEN }}"
+
+      - name: Dump database
+        run: |
+          mkdir -p backup-output
+          turso db shell ifesquare ".dump" > "backup-output/ifesquare-$(date -u +%Y-%m-%dT%H-%M-%SZ).sql"
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: backup-output/
+          retention-days: 30
