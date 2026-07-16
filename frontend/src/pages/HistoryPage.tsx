@@ -1,12 +1,14 @@
 import { motion } from "framer-motion"
 import { useState } from "react"
-import { Download, Loader2, Menu } from "lucide-react"
+import { Menu, Loader2 } from "lucide-react"
 import { useAppShell } from "@/components/layout/appShell"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/Card"
 import { CardTitle } from "@/components/ui/CardTitle"
+import { Dialog } from "@/components/ui/Dialog"
+import { DialogContent } from "@/components/ui/DialogContent"
+import { DayDetailPanel, formatDate } from "@/components/dashboard/DayDetailPanel"
 import { fmtInt, nairaFmt, parseCommaInt } from "@/components/dashboard/format"
-import { HistoryEditableTd } from "@/components/dashboard/HistoryEditableTd"
 import { useHistory } from "@/hooks/useHistory"
 import { api } from "@/lib/api"
 import type { ApiHistoryDayDetail } from "@/lib/types"
@@ -156,136 +158,30 @@ export default function HistoryPage() {
             </ul>
           </Card>
 
-          <Card hoverable={false} className="overflow-hidden py-0">
-            <div className="flex items-center justify-between border-b border-border px-5 py-4">
-              <CardTitle className="text-base">
-                {selected ? formatDate(selected) : "Day detail"}
-              </CardTitle>
-              {selected && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 rounded-lg text-xs"
-                  onClick={() => {
-                    const a = document.createElement("a")
-                    a.href = `/api/history/${selected}/export`
-                    a.download = `ifesquare-${selected}.csv`
-                    a.click()
-                  }}
-                >
-                  <Download className="size-3.5" />
-                  Export
-                </Button>
-              )}
-            </div>
-            <div className="p-5">
-              {!selected && (
-                <p className="text-sm text-muted-foreground">
-                  Select a closed day to see line items.
-                </p>
-              )}
-              {detailLoading && (
-                <div className="flex justify-center py-10">
-                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
-                </div>
-              )}
-              {detailError && (
-                <p className="text-sm text-destructive">{detailError}</p>
-              )}
-              {detail && !detailLoading && (
-                <div className="overflow-x-auto">
-                  {detail.date === today && (
-                    <p className="mb-3 text-xs text-muted-foreground">
-                      This is today&apos;s closed ledger. Edit values on the{" "}
-                      <a href="/app/products" className="underline hover:text-foreground">Products</a> page.
-                    </p>
-                  )}
-                  <table className="w-full min-w-[560px] border-collapse text-sm">
-                    <thead>
-                      <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
-                        <th className="px-2 py-2 text-left font-semibold">Product</th>
-                        <th className="px-2 py-2 text-right font-semibold">Opening</th>
-                        <th className="px-2 py-2 text-right font-semibold">Receipts</th>
-                        <th className="px-2 py-2 text-right font-semibold">Total</th>
-                        <th className="px-2 py-2 text-right font-semibold">Closing</th>
-                        <th className="px-2 py-2 text-right font-semibold">Sales</th>
-                        <th className="px-2 py-2 text-right font-semibold">Price</th>
-                        <th className="px-2 py-2 text-right font-semibold">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.entries.map((e) => {
-                        const total = e.opening + e.receipts
-                        const sales = e.closing != null && e.closing > 0 ? Math.max(0, total - e.closing) : 0
-                        const amount = sales * e.price
-                        const isToday = detail.date === today
-                        return (
-                          <tr
-                            key={e.id}
-                            className="border-b border-border/50 last:border-0"
-                          >
-                            <td className="px-2 py-3 font-medium text-foreground">
-                              {e.product_name}
-                              <span className="mt-0.5 block text-xs text-muted-foreground">
-                                {e.product_unit}
-                              </span>
-                            </td>
-                            {isToday ? (
-                              <>
-                                <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">{fmtInt(e.opening)}</td>
-                                <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">{fmtInt(e.receipts)}</td>
-                              </>
-                            ) : (
-                              <>
-                                <HistoryEditableTd value={e.opening} onChange={(v) => void patchEntry(e.product_id, "opening", v)} />
-                                <HistoryEditableTd value={e.receipts} onChange={(v) => void patchEntry(e.product_id, "receipts", v)} />
-                              </>
-                            )}
-                            <td className="px-2 py-3 text-right tabular-nums font-medium text-foreground">
-                              {fmtInt(total)}
-                            </td>
-                            {isToday ? (
-                              <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">{e.closing == null ? "—" : fmtInt(e.closing)}</td>
-                            ) : (
-                              <HistoryEditableTd value={e.closing} onChange={(v) => void patchEntry(e.product_id, "closing", v)} placeholder="—" />
-                            )}
-                            <td className="px-2 py-3 text-right tabular-nums font-semibold text-foreground">
-                              {fmtInt(sales)}
-                            </td>
-                            {isToday ? (
-                              <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">{nairaFmt(e.price)}</td>
-                            ) : (
-                              <HistoryEditableTd value={e.price} onChange={(v) => void patchEntry(e.product_id, "price", v)} />
-                            )}
-                            <td className="px-2 py-3 text-right font-semibold tabular-nums text-primary">
-                              {nairaFmt(amount)}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                    <tfoot>
-                      <tr className="border-t border-border bg-muted/30">
-                        <td className="px-2 py-3 font-bold">Total</td>
-                        <td />
-                        <td />
-                        <td />
-                        <td />
-                        <td className="px-2 py-3 text-right font-bold tabular-nums">
-                          {fmtInt(detail.total_units)}
-                        </td>
-                        <td />
-                        <td className="px-2 py-3 text-right font-bold tabular-nums text-primary">
-                          {nairaFmt(detail.total_revenue)}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              )}
-            </div>
-          </Card>
+          <DayDetailPanel
+            selected={selected}
+            detail={detail}
+            detailLoading={detailLoading}
+            detailError={detailError}
+            today={today}
+            patchEntry={patchEntry}
+            onClose={() => { setSelected(null); setDetail(null) }}
+            className="hidden lg:block"
+          />
+          <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setDetail(null) } }}>
+            <DialogContent showCloseButton={false} className="lg:hidden max-h-[90svh] flex flex-col gap-0 p-0 pt-0">
+              <DayDetailPanel
+                selected={selected}
+                detail={detail}
+                detailLoading={detailLoading}
+                detailError={detailError}
+                today={today}
+                patchEntry={patchEntry}
+                onClose={() => { setSelected(null); setDetail(null) }}
+                dialog
+              />
+            </DialogContent>
+          </Dialog>
         </div>
       )}
       </motion.div>
@@ -293,12 +189,4 @@ export default function HistoryPage() {
   }
 
 
-function formatDate(iso: string) {
-  const d = new Date(iso + "T12:00:00")
-  return d.toLocaleDateString("en-NG", {
-    weekday: "short",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  })
-}
+
