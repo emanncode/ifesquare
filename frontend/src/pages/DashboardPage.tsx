@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { motion } from "framer-motion"
 import { Wallet, Package, Cylinder, Loader2 } from "lucide-react"
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
 import { MetricCard } from "@/components/dashboard/MetricCard"
@@ -78,7 +79,13 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto p-[5%] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -12 }}
+      transition={{ duration: 0.3 }}
+      className="mx-auto p-[5%] px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
+    >
       <DashboardHeader
         lastUpdated={lastUpdated}
         closeOpen={closeOpen}
@@ -132,6 +139,6 @@ export default function DashboardPage() {
         totalRevenue={totalRevenue}
         totalUnits={totalUnits}
       />
-    </div>
+    </motion.div>
   )
 }

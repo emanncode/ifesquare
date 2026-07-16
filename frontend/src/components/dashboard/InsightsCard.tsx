@@ -1,3 +1,4 @@
+import { motion } from "framer-motion"
 import { useMemo, useState } from "react";
 import { BarChart3, PieChart as PieIcon, TrendingUp } from "lucide-react";
 import {
@@ -71,8 +72,13 @@ export function InsightsCard({
   const tickStyle = { fontSize: 11, fill: tick };
 
   return (
-    <Card
-      hoverable={false}
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: 0.1 }}
+    >
+      <Card
+        hoverable={false}
       className="rounded-xl border border-border/80 py-0 sm:rounded-xl"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
@@ -192,7 +198,8 @@ export function InsightsCard({
           />
         </div>
       </CardContent>
-    </Card>
+      </Card>
+    </motion.div>
   );
 }
 

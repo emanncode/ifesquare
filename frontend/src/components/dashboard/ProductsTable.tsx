@@ -1,3 +1,4 @@
+import { motion } from "framer-motion"
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Search } from "lucide-react";
@@ -87,12 +88,16 @@ export function ProductsTable({ rows }: ProductsTableProps) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((r) => {
+            {filtered.map((r, i) => {
               const lowStock = r.stock <= LOW_STOCK_THRESHOLD;
               return (
-                <tr
+                <motion.tr
                   key={r.id}
-                  className="border-b border-border/50 transition-colors last:border-0 hover:bg-primary/4"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: i * 0.03 }}
+                  whileHover={{ backgroundColor: "var(--primary) / 0.04" }}
+                  className="border-b border-border/50 last:border-0"
                 >
                   <Td className="text-left">
                     <div className="flex flex-col gap-0.5">
@@ -149,7 +154,7 @@ export function ProductsTable({ rows }: ProductsTableProps) {
                   >
                     {nairaFmt(r.amount)}
                   </Td>
-                </tr>
+                </motion.tr>
               );
             })}
             {filtered.length === 0 && (

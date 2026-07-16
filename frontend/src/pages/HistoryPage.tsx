@@ -1,3 +1,4 @@
+import { motion } from "framer-motion"
 import { useState } from "react"
 import { Loader2, Menu } from "lucide-react"
 import { useAppShell } from "@/components/layout/appShell"
@@ -55,7 +56,13 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="mx-auto p-[5%] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -12 }}
+      transition={{ duration: 0.3 }}
+      className="mx-auto p-[5%] px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
+    >
       <div className="mb-6 flex items-center gap-3">
         <Button
           type="button"
@@ -263,9 +270,9 @@ export default function HistoryPage() {
           </Card>
         </div>
       )}
-    </div>
-  )
-}
+      </motion.div>
+    )
+  }
 
 function EditableNumTd({
   value,

@@ -1,3 +1,4 @@
+import { motion } from "framer-motion"
 import type { LucideIcon } from "lucide-react";
 import { TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,33 +27,39 @@ export function MetricCard({
   sparkline,
 }: MetricCardProps) {
   return (
-    <Card className="py-0">
-      <CardContent className="px-6 py-6">
-        <div className="flex items-start justify-between gap-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {label}
-          </p>
-          <div
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      whileHover={{ y: -2 }}
+      className="h-full"
+    >
+      <Card className="flex h-full flex-col py-0">
+        <CardContent className="flex flex-1 flex-col px-6 py-6">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {label}
+            </p>
+            <div
+              className={cn(
+                "flex size-10 shrink-0 items-center justify-center rounded-xl",
+              )}
+            >
+              <Icon className="size-8" strokeWidth={2} />
+            </div>
+          </div>
+
+          <p
             className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-xl",
+              "mt-3 truncate font-bold tracking-tight",
+              accent ? "text-primary" : "text-foreground",
+              small ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl",
             )}
           >
-            <Icon className="size-8" strokeWidth={2} />
-          </div>
-        </div>
+            {value}
+          </p>
 
-        <p
-          className={cn(
-            "mt-3 truncate font-bold tracking-tight",
-            accent ? "text-primary" : "text-foreground",
-            small ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl",
-          )}
-        >
-          {value}
-        </p>
-
-        {(trend || sparkline) && (
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-auto flex items-center gap-3">
             {sparkline && sparkline.length > 1 && (
               <Sparkline values={sparkline} className="h-7 w-16 text-primary" />
             )}
@@ -63,9 +70,9 @@ export function MetricCard({
               </span>
             )}
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
 

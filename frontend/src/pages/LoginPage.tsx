@@ -1,3 +1,4 @@
+import { motion } from "framer-motion"
 import { useState, type FormEvent } from "react";
 import { Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,12 @@ export default function LoginPage({ onSubmit }: LoginPageProps) {
         }}
       />
 
-      <div className="animate-fade-up relative z-10 w-full max-w-95">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="relative z-10 w-full max-w-95"
+      >
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
           <BrandMark />
           <div>
@@ -148,7 +154,7 @@ export default function LoginPage({ onSubmit }: LoginPageProps) {
         <p className="mt-6 text-center text-xs text-muted-foreground">
           One shop. One login.
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }
