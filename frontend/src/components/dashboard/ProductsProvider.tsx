@@ -109,7 +109,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         method: "POST",
         body: {
           name: form.name.trim(),
-          unit: form.unit.trim() || "unit",
+          unit: form.unit?.trim() || "",
           stock: parseCommaInt(form.stock),
           price: parseCommaInt(form.price),
         },
@@ -128,7 +128,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         body: {
           products: valid.map((f) => ({
             name: f.name.trim(),
-            unit: f.unit.trim() || "unit",
+            unit: f.unit?.trim() || "",
             stock: parseCommaInt(f.stock),
             price: parseCommaInt(f.price),
           })),

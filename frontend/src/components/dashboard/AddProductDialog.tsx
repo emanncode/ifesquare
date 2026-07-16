@@ -146,7 +146,7 @@ export function AddProductDialog({
                     </Label>
                     <Input
                       id={`${row.key}-unit`}
-                      value={row.unit}
+                      value={row.unit ?? ""}
                       onChange={(e) =>
                         updateRow(row.key, { unit: e.target.value })
                       }

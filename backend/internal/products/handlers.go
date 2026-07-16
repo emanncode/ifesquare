@@ -51,8 +51,8 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		for _, p := range products {
-			if p.Name == "" || p.Unit == "" {
-				http.Error(w, `{"error":"name and unit are required"}`, http.StatusBadRequest)
+			if p.Name == "" {
+				http.Error(w, `{"error":"name is required"}`, http.StatusBadRequest)
 				return
 			}
 			if p.Price < 0 {
@@ -83,8 +83,8 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
 		return
 	}
-	if pData.Name == "" || pData.Unit == "" {
-		http.Error(w, `{"error":"name and unit are required"}`, http.StatusBadRequest)
+	if pData.Name == "" {
+		http.Error(w, `{"error":"name is required"}`, http.StatusBadRequest)
 		return
 	}
 	if pData.Price < 0 {

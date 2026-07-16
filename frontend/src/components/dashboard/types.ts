@@ -23,7 +23,7 @@ export type CatalogRow = {
 
 export type NewProductForm = {
   name: string
-  unit: string
+  unit?: string
   stock: string
   price: string
 }
