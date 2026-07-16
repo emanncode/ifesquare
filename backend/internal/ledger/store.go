@@ -216,7 +216,13 @@ func autoSyncFromLastClosed(today string) {
 
 // SyncFromLastClosedDay copies closing values from the most recent
 // previous closed day into today's entry openings (and product stock).
-// Returns the date we synced from, or an error if no previous closed day exists.
+//
+// Safety guard: if today already has user-entered data (non-zero receipts or
+// non-null closing on any entry), the sync is rejected to prevent silently
+// overwriting openings the user may have already adjusted.
+//
+// Returns the date we synced from, or an error if no previous closed day exists
+// or if today already has data.
 func SyncFromLastClosedDay(today string) (string, error) {
 	var prevDate string
 	err := db.DB.QueryRow(`
@@ -230,6 +236,17 @@ func SyncFromLastClosedDay(today string) (string, error) {
 	}
 	if err != nil {
 		return "", err
+	}
+
+	var hasData int
+	if err := db.DB.QueryRow(`
+		SELECT COUNT(*) FROM entries
+		WHERE day_date = ? AND (receipts != 0 OR closing IS NOT NULL)
+	`, today).Scan(&hasData); err != nil {
+		return "", err
+	}
+	if hasData > 0 {
+		return "", fmt.Errorf("today already has entries with data; sync only works on a fresh day")
 	}
 
 	// Ensure today has entries for all active products
