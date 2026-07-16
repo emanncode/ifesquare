@@ -16,6 +16,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/emanncode/ifesquare/backend/internal/auth"
+	"github.com/emanncode/ifesquare/backend/internal/cache"
 	"github.com/emanncode/ifesquare/backend/internal/db"
 	"github.com/emanncode/ifesquare/backend/internal/history"
 	"github.com/emanncode/ifesquare/backend/internal/ledger"
@@ -53,6 +54,22 @@ func main() {
 		}
 	}
 	defer db.Close()
+
+	// Pre-load cache so first requests are served from memory
+	go func() {
+		if p, err := products.List(); err == nil {
+			if p == nil {
+				p = []products.Product{}
+			}
+			cache.Set("/api/products", p)
+		}
+		if e, err := ledger.GetTodayEntries(); err == nil {
+			if e == nil {
+				e = []ledger.EntryWithProduct{}
+			}
+			cache.Set("/api/ledger/today", e)
+		}
+	}()
 
 	if *email != "" {
 		fmt.Print("Password: ")

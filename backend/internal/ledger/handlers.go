@@ -7,9 +7,15 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/emanncode/ifesquare/backend/internal/cache"
 )
 
+const cacheKey = "/api/ledger/today"
+
 func TodayHandler(w http.ResponseWriter, r *http.Request) {
+	if cache.Serve(w, cacheKey) {
+		return
+	}
 	entries, err := GetTodayEntries()
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
@@ -18,6 +24,7 @@ func TodayHandler(w http.ResponseWriter, r *http.Request) {
 	if entries == nil {
 		entries = []EntryWithProduct{}
 	}
+	cache.Set(cacheKey, entries)
 	writeJSON(w, http.StatusOK, entries)
 }
 
@@ -48,6 +55,7 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"entry not found"}`, http.StatusNotFound)
 		return
 	}
+	cache.Invalidate(cacheKey)
 	writeJSON(w, http.StatusOK, entry)
 }
 
@@ -82,6 +90,7 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"entry not found"}`, http.StatusNotFound)
 		return
 	}
+	cache.Invalidate(cacheKey)
 	writeJSON(w, http.StatusOK, entry)
 }
 
@@ -91,6 +100,7 @@ func CloseHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
+	cache.Invalidate(cacheKey)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "day closed"})
 }
 
@@ -101,6 +111,7 @@ func SyncFromLastClosedHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
 		return
 	}
+	cache.Invalidate(cacheKey)
 	writeJSON(w, http.StatusOK, map[string]string{
 		"message":   "synced",
 		"synced_from": prevDate,

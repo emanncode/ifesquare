@@ -7,9 +7,13 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/emanncode/ifesquare/backend/internal/cache"
 )
 
 func ListHandler(w http.ResponseWriter, r *http.Request) {
+	if cache.Serve(w, "/api/products") {
+		return
+	}
 	products, err := List()
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
@@ -18,6 +22,7 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 	if products == nil {
 		products = []Product{}
 	}
+	cache.Set("/api/products", products)
 	writeJSON(w, http.StatusOK, products)
 }
 
@@ -55,6 +60,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+		cache.Invalidate("/api/products")
 		writeJSON(w, http.StatusCreated, map[string]string{"message": "products created"})
 		return
 	}
@@ -79,6 +85,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
+	cache.Invalidate("/api/products")
 	writeJSON(w, http.StatusCreated, p)
 }
 
@@ -113,6 +120,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
 		return
 	}
+	cache.Invalidate("/api/products")
 	writeJSON(w, http.StatusOK, p)
 }
 
@@ -128,6 +136,7 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
+	cache.Invalidate("/api/products")
 	writeJSON(w, http.StatusOK, map[string]string{"message": "archived"})
 }
 
