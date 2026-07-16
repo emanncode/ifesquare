@@ -55,6 +55,14 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, `{"error":"name and unit are required"}`, http.StatusBadRequest)
 				return
 			}
+			if p.Price < 0 {
+				http.Error(w, `{"error":"price cannot be negative"}`, http.StatusBadRequest)
+				return
+			}
+			if p.Stock < 0 {
+				http.Error(w, `{"error":"stock cannot be negative"}`, http.StatusBadRequest)
+				return
+			}
 			if _, err := Create(p.Name, p.Unit, p.Price, p.Stock); err != nil {
 				http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 				return
@@ -77,6 +85,14 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if pData.Name == "" || pData.Unit == "" {
 		http.Error(w, `{"error":"name and unit are required"}`, http.StatusBadRequest)
+		return
+	}
+	if pData.Price < 0 {
+		http.Error(w, `{"error":"price cannot be negative"}`, http.StatusBadRequest)
+		return
+	}
+	if pData.Stock < 0 {
+		http.Error(w, `{"error":"stock cannot be negative"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -108,6 +124,25 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	for k, v := range body {
 		if allowed[k] {
 			fields[k] = v
+		}
+	}
+
+	if name, ok := fields["name"]; ok && name == "" {
+		http.Error(w, `{"error":"name cannot be empty"}`, http.StatusBadRequest)
+		return
+	}
+	if price, ok := fields["price"]; ok {
+		pf, ok2 := toFloat(price)
+		if !ok2 || pf < 0 {
+			http.Error(w, `{"error":"price cannot be negative"}`, http.StatusBadRequest)
+			return
+		}
+	}
+	if stock, ok := fields["stock"]; ok {
+		sf, ok2 := toFloat(stock)
+		if !ok2 || sf < 0 {
+			http.Error(w, `{"error":"stock cannot be negative"}`, http.StatusBadRequest)
+			return
 		}
 	}
 
@@ -144,4 +179,20 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
+}
+
+func toFloat(v interface{}) (float64, bool) {
+	switch n := v.(type) {
+	case float64:
+		return n, true
+	case int:
+		return float64(n), true
+	case int64:
+		return float64(n), true
+	case json.Number:
+		f, err := n.Float64()
+		return f, err == nil
+	default:
+		return 0, false
+	}
 }
