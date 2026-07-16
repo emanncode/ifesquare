@@ -2,7 +2,7 @@ import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import "./index.css"
 import App from "./App.tsx"
-import { ThemeProvider } from "@/hooks/useTheme"
+import { ThemeProvider } from "@/components/ThemeProvider"
 import * as Sentry from "@sentry/react"
 
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN
