@@ -1,6 +1,7 @@
 import { BrowserRouter } from "react-router-dom"
 import { AuthProvider } from "@/hooks/useAuth"
 import { AppRoutes } from "@/components/AppRoutes"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 
 /**
  * While the product is under construction, `/` is the public coming-soon page.
@@ -8,10 +9,12 @@ import { AppRoutes } from "@/components/AppRoutes"
  */
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }
