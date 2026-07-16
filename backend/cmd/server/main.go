@@ -27,6 +27,7 @@ import (
 
 func main() {
 	email := flag.String("create-user", "", "email for the new user (password prompted on stdin)")
+	resetEmail := flag.String("reset-password", "", "email whose password to reset (new password prompted on stdin)")
 	logoutAll := flag.Bool("logout-all", false, "invalidate every active session and exit")
 	flag.Parse()
 
@@ -104,6 +105,31 @@ func main() {
 		return
 	}
 
+	if *resetEmail != "" {
+		var exists int
+		if err := db.DB.QueryRow("SELECT COUNT(*) FROM users WHERE email = ?", *resetEmail).Scan(&exists); err != nil || exists == 0 {
+			log.Fatalf("user %s not found", *resetEmail)
+		}
+		fmt.Print("New password: ")
+		password, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		if err != nil {
+			log.Fatalf("read password: %v", err)
+		}
+		password = strings.TrimSpace(password)
+		if password == "" {
+			log.Fatal("password cannot be empty")
+		}
+		hash, err := auth.HashPassword(password)
+		if err != nil {
+			log.Fatalf("hash password: %v", err)
+		}
+		if _, err := db.DB.Exec("UPDATE users SET password_hash = ? WHERE email = ?", hash, *resetEmail); err != nil {
+			log.Fatalf("reset password: %v", err)
+		}
+		log.Printf("password reset for %s", *resetEmail)
+		return
+	}
+
 	if *logoutAll {
 		if err := auth.RevokeAllSessions(); err != nil {
 			log.Fatalf("failed to logout all sessions: %v", err)
@@ -138,6 +164,7 @@ func main() {
 		r.Post("/login", auth.Login)
 		r.Post("/logout", auth.Logout)
 		r.With(auth.Middleware).Get("/me", auth.Me)
+		r.With(auth.Middleware).Post("/change-password", auth.ChangePassword)
 	})
 
 	r.Group(func(r chi.Router) {
