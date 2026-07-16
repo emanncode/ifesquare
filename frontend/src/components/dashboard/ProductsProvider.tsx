@@ -28,10 +28,10 @@ function merge(products: ApiProduct[], entries: ApiLedgerEntry[]): CatalogRow[] 
 
   return products.map((p) => {
     const e = byProduct.get(p.id)
-    const opening = p.stock
+    const opening = e?.opening ?? p.stock
     const receipts = e?.receipts ?? 0
     const closing = e?.closing ?? null
-    const price = p.price
+    const price = e?.price ?? p.price
     const total = opening + receipts
     const sales = closing != null && closing > 0 ? Math.max(0, total - closing) : 0
     const amount = sales * price
@@ -171,7 +171,18 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         setTimeout(async () => {
           debounceTimers.current.delete(key)
           try {
-            if (field === "receipts" || field === "closing") {
+            if (field === "opening" || field === "price") {
+              await Promise.all([
+                api(`/api/ledger/today/${productId}`, {
+                  method: "PATCH",
+                  body: { [field]: parseCommaInt(value) },
+                }),
+                api(`/api/products/${productId}`, {
+                  method: "PATCH",
+                  body: field === "opening" ? { stock: parseCommaInt(value) } : { price: parseCommaInt(value) },
+                }),
+              ])
+            } else if (field === "receipts" || field === "closing") {
               const body: Record<string, number> = {}
               body[field] = parseCommaInt(value)
               await api(`/api/ledger/today/${productId}`, {
@@ -182,8 +193,6 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
               const body: Record<string, string | number> = {}
               if (field === "name") body.name = value
               else if (field === "unit") body.unit = value
-              else if (field === "opening") body.stock = parseCommaInt(value)
-              else if (field === "price") body.price = parseCommaInt(value)
               await api(`/api/products/${productId}`, {
                 method: "PATCH",
                 body,

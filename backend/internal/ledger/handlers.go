@@ -37,20 +37,30 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
+		Opening  *int `json:"opening"`
 		Receipts *int `json:"receipts"`
 		Closing  *int `json:"closing"`
+		Price    *int `json:"price"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
 		return
 	}
 
+	if body.Opening != nil && *body.Opening < 0 {
+		http.Error(w, `{"error":"opening cannot be negative"}`, http.StatusBadRequest)
+		return
+	}
 	if body.Receipts != nil && *body.Receipts < 0 {
 		http.Error(w, `{"error":"receipts cannot be negative"}`, http.StatusBadRequest)
 		return
 	}
 	if body.Closing != nil && *body.Closing < 0 {
 		http.Error(w, `{"error":"closing cannot be negative"}`, http.StatusBadRequest)
+		return
+	}
+	if body.Price != nil && *body.Price < 0 {
+		http.Error(w, `{"error":"price cannot be negative"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -63,7 +73,15 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if current != nil {
-			total := current.Opening + current.Receipts
+			opening := current.Opening
+			if body.Opening != nil {
+				opening = *body.Opening
+			}
+			receipts := current.Receipts
+			if body.Receipts != nil {
+				receipts = *body.Receipts
+			}
+			total := opening + receipts
 			if *body.Closing > total {
 				http.Error(w, `{"error":"closing cannot exceed total (opening + receipts)"}`, http.StatusBadRequest)
 				return
@@ -71,7 +89,7 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	entry, err := UpdateEntry(today, productID, nil, body.Receipts, body.Closing, nil)
+	entry, err := UpdateEntry(today, productID, body.Opening, body.Receipts, body.Closing, body.Price)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
