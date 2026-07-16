@@ -1,5 +1,5 @@
 import { BrowserRouter } from "react-router-dom"
-import { AuthProvider } from "@/hooks/useAuth"
+import { AuthProvider } from "@/components/AuthProvider"
 import { AppRoutes } from "@/components/AppRoutes"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 
