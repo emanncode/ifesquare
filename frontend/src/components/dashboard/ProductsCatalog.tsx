@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { Loader2, Trash2 } from "lucide-react"
+import { useMemo, useState } from "react"
+import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, Trash2 } from "lucide-react"
 import { Card } from "@/components/ui/Card"
 import { CardTitle } from "@/components/ui/CardTitle"
 import { fmtInt, nairaFmt } from "./format"
@@ -9,9 +9,38 @@ import { CatalogTh } from "./CatalogTh"
 import { CatalogTd } from "./CatalogTd"
 import { CatalogNumericTd } from "./CatalogNumericTd"
 import { CatalogEditableTextTd } from "./CatalogEditableTextTd"
-import type { NewProductForm } from "./types"
+import { cn } from "@/lib/utils"
+import type { CatalogRow, NewProductForm } from "./types"
 
 type Field = "name" | "unit" | "opening" | "receipts" | "closing" | "price"
+
+type SortKey = keyof CatalogRow
+type SortDir = "asc" | "desc"
+
+function sortRows(data: CatalogRow[], key: SortKey, dir: SortDir): CatalogRow[] {
+  return [...data].sort((a, b) => {
+    const va = a[key]
+    const vb = b[key]
+    const an = va ?? (typeof va === "number" ? 0 : "")
+    const bn = vb ?? (typeof vb === "number" ? 0 : "")
+    const cmp = typeof an === "number" && typeof bn === "number"
+      ? an - bn
+      : String(an).localeCompare(String(bn))
+    return dir === "asc" ? cmp : -cmp
+  })
+}
+
+const SORTABLE_COLUMNS: { key: SortKey; label: string; align?: "left" | "right" }[] = [
+  { key: "name", label: "Product", align: "left" },
+  { key: "unit", label: "Unit", align: "left" },
+  { key: "opening", label: "Opening", align: "right" },
+  { key: "receipts", label: "Receipts", align: "right" },
+  { key: "total", label: "Total", align: "right" },
+  { key: "closing", label: "Closing", align: "right" },
+  { key: "sales", label: "Sales", align: "right" },
+  { key: "price", label: "Price", align: "right" },
+  { key: "amount", label: "Amount", align: "right" },
+]
 
 export function ProductsCatalog() {
   const { rows, loading, error, addProducts, patchCatalogField, removeProduct } =
@@ -19,6 +48,19 @@ export function ProductsCatalog() {
   const [addOpen, setAddOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [sortKey, setSortKey] = useState<SortKey>("name")
+  const [sortDir, setSortDir] = useState<SortDir>("asc")
+
+  const sorted = useMemo(() => sortRows(rows, sortKey, sortDir), [rows, sortKey, sortDir])
+
+  function toggleSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+    } else {
+      setSortKey(key)
+      setSortDir("asc")
+    }
+  }
 
   async function handleAddMany(forms: NewProductForm[]) {
     setBusy(true)
@@ -90,20 +132,30 @@ export function ProductsCatalog() {
         <table className="w-full min-w-[960px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-              <CatalogTh className="text-left">Product</CatalogTh>
-              <CatalogTh className="text-left">Unit</CatalogTh>
-              <CatalogTh align="right">Opening</CatalogTh>
-              <CatalogTh align="right">Receipts</CatalogTh>
-              <CatalogTh align="right">Total</CatalogTh>
-              <CatalogTh align="right">Closing</CatalogTh>
-              <CatalogTh align="right">Sales</CatalogTh>
-              <CatalogTh align="right">Price</CatalogTh>
-              <CatalogTh align="right">Amount</CatalogTh>
+              {SORTABLE_COLUMNS.map((col) => {
+                const active = sortKey === col.key
+                const Icon = active ? (sortDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown
+                return (
+                  <CatalogTh key={col.key} className={col.align === "left" ? "text-left" : ""}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSort(col.key)}
+                      className={cn(
+                        "inline-flex items-center gap-1 transition-colors hover:text-foreground",
+                        active && "text-foreground",
+                      )}
+                    >
+                      {col.label}
+                      <Icon className="size-3" />
+                    </button>
+                  </CatalogTh>
+                )
+              })}
               <CatalogTh />
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {sorted.map((r) => (
               <tr
                 key={r.productId}
                 className="border-b border-border/60 last:border-0 hover:bg-muted/30"
