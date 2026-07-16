@@ -63,7 +63,7 @@ export function ProductsTable({ rows }: ProductsTableProps) {
               aria-label="Search products"
             />
           </div>
-          <Button asChild variant="outline" size="sm" className="rounded-xl">
+          <Button asChild variant="outline" size="lg" className="rounded-xl">
             <Link to="/app/products">
               View all products
               <ArrowRight className="size-4" />

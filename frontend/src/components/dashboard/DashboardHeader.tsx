@@ -94,14 +94,14 @@ export function DashboardHeader({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button
+            <Button size='lg'
               variant="outline"
               className="rounded-xl"
               onClick={() => onCloseOpenChange(false)}
             >
               Cancel
             </Button>
-            <Button
+            <Button size='lg'
               className="rounded-xl font-semibold"
               onClick={() => {
                 onConfirmClose();
