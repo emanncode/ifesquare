@@ -93,53 +93,59 @@ func GetByDateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ExportCSVHandler(w http.ResponseWriter, r *http.Request) {
-	days, err := ListClosedDays(9999)
+	date := chi.URLParam(r, "date")
+	if date == "" {
+		http.Error(w, `{"error":"date required"}`, http.StatusBadRequest)
+		return
+	}
+
+	entries, err := GetByDate(date)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", "attachment; filename=ifesquare-history.csv")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="ifesquare-%s.csv"`, date))
 
 	wr := csv.NewWriter(w)
-	wr.Write([]string{"Date", "Product", "Unit", "Opening", "Receipts", "Total", "Closing", "Sales", "Price (NGN)", "Amount (NGN)"})
+	wr.Write([]string{"Product", "Opening", "Receipts", "Total", "Closing", "Sales", "Price", "Amount"})
 
-	for _, d := range days {
-		entries, err := GetByDate(d.Date)
-		if err != nil {
-			continue
-		}
-		for _, e := range entries {
-			total := e.Opening + e.Receipts
-			var closing, sales, amount string
-			if e.Closing != nil {
-				closing = fmt.Sprintf("%d", *e.Closing)
-				s := total - *e.Closing
-				if s < 0 {
-					s = 0
-				}
-				sales = fmt.Sprintf("%d", s)
-				amount = fmt.Sprintf("%d", s*e.Price)
-			} else {
-				closing = ""
-				sales = ""
-				amount = ""
+	totalUnits := 0
+	totalRevenue := 0
+
+	for _, e := range entries {
+		total := e.Opening + e.Receipts
+		var closing, sales, amount string
+		if e.Closing != nil {
+			closing = fmt.Sprintf("%d", *e.Closing)
+			s := total - *e.Closing
+			if s < 0 {
+				s = 0
 			}
-			wr.Write([]string{
-				d.Date,
-				e.ProductName,
-				e.ProductUnit,
-				fmt.Sprintf("%d", e.Opening),
-				fmt.Sprintf("%d", e.Receipts),
-				fmt.Sprintf("%d", total),
-				closing,
-				sales,
-				fmt.Sprintf("%d", e.Price),
-				amount,
-			})
+			sales = fmt.Sprintf("%d", s)
+			amount = fmt.Sprintf("%d", s*e.Price)
+			totalUnits += s
+			totalRevenue += s * e.Price
+		} else {
+			closing = ""
+			sales = ""
+			amount = ""
 		}
+		wr.Write([]string{
+			e.ProductName,
+			fmt.Sprintf("%d", e.Opening),
+			fmt.Sprintf("%d", e.Receipts),
+			fmt.Sprintf("%d", total),
+			closing,
+			sales,
+			fmt.Sprintf("%d", e.Price),
+			amount,
+		})
 	}
+
+	wr.Write([]string{"Total", "", "", "", "", fmt.Sprintf("%d", totalUnits), "", fmt.Sprintf("%d", totalRevenue)})
+
 	wr.Flush()
 	if err := wr.Error(); err != nil {
 		http.Error(w, `{"error":"csv write error"}`, http.StatusInternalServerError)

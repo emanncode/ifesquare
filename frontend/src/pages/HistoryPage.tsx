@@ -56,13 +56,6 @@ export default function HistoryPage() {
     setDetail(data)
   }
 
-  function handleExport() {
-    const a = document.createElement("a")
-    a.href = "/api/history/export"
-    a.download = "ifesquare-history.csv"
-    a.click()
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -90,15 +83,6 @@ export default function HistoryPage() {
             Past closed ledger days from the server
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="shrink-0 gap-2 rounded-xl"
-          onClick={handleExport}
-        >
-          <Download className="size-4" />
-          Export CSV
-        </Button>
       </div>
 
       {loading && (
@@ -173,10 +157,27 @@ export default function HistoryPage() {
           </Card>
 
           <Card hoverable={false} className="overflow-hidden py-0">
-            <div className="border-b border-border px-5 py-4">
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <CardTitle className="text-base">
                 {selected ? formatDate(selected) : "Day detail"}
               </CardTitle>
+              {selected && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 rounded-lg text-xs"
+                  onClick={() => {
+                    const a = document.createElement("a")
+                    a.href = `/api/history/${selected}/export`
+                    a.download = `ifesquare-${selected}.csv`
+                    a.click()
+                  }}
+                >
+                  <Download className="size-3.5" />
+                  Export
+                </Button>
+              )}
             </div>
             <div className="p-5">
               {!selected && (
