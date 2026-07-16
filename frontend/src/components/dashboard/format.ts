@@ -42,6 +42,16 @@ export function formatWithCommas(raw: string): string {
 	return Number(digits).toLocaleString("en-NG")
 }
 
+export function formatDate(iso: string) {
+  const d = new Date(iso + "T12:00:00")
+  return d.toLocaleDateString("en-NG", {
+    weekday: "short",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
 /** Recharts Tooltip formatter — value may be undefined or a non-number. */
 export function tooltipNaira(
   value: number | string | ReadonlyArray<number | string> | undefined,

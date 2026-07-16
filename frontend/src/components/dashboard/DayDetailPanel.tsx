@@ -2,20 +2,10 @@ import { Download, Loader2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/Card"
 import { CardTitle } from "@/components/ui/CardTitle"
-import { fmtInt, nairaFmt } from "./format"
+import { fmtInt, formatDate, nairaFmt } from "./format"
 import { HistoryEditableTd } from "./HistoryEditableTd"
 import type { ApiHistoryDayDetail } from "@/lib/types"
 import { cn } from "@/lib/utils"
-
-export function formatDate(iso: string) {
-  const d = new Date(iso + "T12:00:00")
-  return d.toLocaleDateString("en-NG", {
-    weekday: "short",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  })
-}
 
 export function DayDetailPanel({
   selected, detail, detailLoading, detailError, today, patchEntry, onClose, dialog, className,
