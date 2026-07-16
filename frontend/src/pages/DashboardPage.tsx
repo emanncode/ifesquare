@@ -108,7 +108,7 @@ export default function DashboardPage() {
         <p className="mb-4 text-sm text-muted-foreground">Closing day…</p>
       )}
 
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
+      <div className="mb-8 flex flex-col gap-4 sm:grid sm:grid-cols-3 sm:gap-5">
         <MetricCard
           label="Today's revenue"
           value={nairaFmt(totalRevenue)}
