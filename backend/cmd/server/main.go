@@ -9,11 +9,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
+	"github.com/getsentry/sentry-go"
 
 	"github.com/emanncode/ifesquare/backend/internal/auth"
 	"github.com/emanncode/ifesquare/backend/internal/cache"
@@ -30,6 +32,16 @@ func main() {
 
 	if err := godotenv.Load(); err != nil {
 		log.Println("no .env file found, using environment variables")
+	}
+
+	if dsn := os.Getenv("SENTRY_DSN"); dsn != "" {
+		if err := sentry.Init(sentry.ClientOptions{
+			Dsn:         dsn,
+			Environment: os.Getenv("APP_ENV"),
+		}); err != nil {
+			log.Printf("sentry init: %v", err)
+		}
+		defer sentry.Flush(2 * time.Second)
 	}
 
 	jwtSecret := os.Getenv("JWT_SECRET")
