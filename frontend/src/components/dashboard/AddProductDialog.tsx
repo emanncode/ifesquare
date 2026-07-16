@@ -12,11 +12,45 @@ import { DialogTitle } from "@/components/ui/DialogTitle"
 import { DialogTrigger } from "@/components/ui/DialogTrigger"
 import { emptyForm } from "./productsContext"
 import type { NewProductForm } from "./types"
+import { formatWithCommas, stripNonDigits } from "./format"
 
 type DraftRow = NewProductForm & { key: string }
 
 function newRow(key: string): DraftRow {
   return { key, ...emptyForm }
+}
+
+function NumericInput({
+  value,
+  onChange,
+  placeholder,
+  id,
+}: {
+  value: string
+  onChange: (v: string) => void
+  placeholder: string
+  id: string
+}) {
+  const [display, setDisplay] = useState(() => formatWithCommas(value))
+
+  useEffect(() => {
+    setDisplay(formatWithCommas(value))
+  }, [value])
+
+  return (
+    <Input
+      id={id}
+      type="text"
+      inputMode="numeric"
+      value={display}
+      onChange={(e) => {
+        const digits = stripNonDigits(e.target.value)
+        setDisplay(formatWithCommas(digits))
+        onChange(digits)
+      }}
+      placeholder={placeholder}
+    />
+  )
 }
 
 type AddProductDialogProps = {
@@ -139,27 +173,19 @@ export function AddProductDialog({
                   </div>
                   <div className="grid gap-1.5">
                     <Label htmlFor={`${row.key}-stock`}>Starting stock</Label>
-                    <Input
+                    <NumericInput
                       id={`${row.key}-stock`}
-                      type="text"
-                      inputMode="numeric"
                       value={row.stock}
-                      onChange={(e) =>
-                        updateRow(row.key, { stock: e.target.value })
-                      }
+                      onChange={(v) => updateRow(row.key, { stock: v })}
                       placeholder="0"
                     />
                   </div>
                   <div className="grid gap-1.5">
                     <Label htmlFor={`${row.key}-price`}>Price (₦)</Label>
-                    <Input
+                    <NumericInput
                       id={`${row.key}-price`}
-                      type="text"
-                      inputMode="numeric"
                       value={row.price}
-                      onChange={(e) =>
-                        updateRow(row.key, { price: e.target.value })
-                      }
+                      onChange={(v) => updateRow(row.key, { price: v })}
                       placeholder="0"
                     />
                   </div>

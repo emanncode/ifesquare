@@ -27,7 +27,19 @@ export function nairaFmt(n: number | null) {
 }
 
 export function parseCommaInt(s: string): number {
-  return Number(s.replace(/,/g, "")) || 0
+	return Number(s.replace(/,/g, "")) || 0
+}
+
+/** Strips all non-digit characters (for internal use before sending to API). */
+export function stripNonDigits(s: string): string {
+	return s.replace(/\D/g, "")
+}
+
+/** Formats a numeric string with thousand separators as the user types. */
+export function formatWithCommas(raw: string): string {
+	const digits = raw.replace(/\D/g, "")
+	if (!digits) return ""
+	return Number(digits).toLocaleString("en-NG")
 }
 
 /** Recharts Tooltip formatter — value may be undefined or a non-number. */
