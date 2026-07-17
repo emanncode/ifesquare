@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite"
 
@@ -96,6 +97,12 @@ func migrate() error {
 			return fmt.Errorf("read migration %s: %w", name, err)
 		}
 		if _, err := DB.Exec(string(sqlBytes)); err != nil {
+			// 003_low_stock.sql is ALTER TABLE ADD COLUMN, not idempotent.
+			// If the column already exists, skip the error.
+			if name == "migrations/003_low_stock.sql" && strings.Contains(err.Error(), "duplicate column") {
+				log.Printf("migration %s: column already exists, skipping", name)
+				continue
+			}
 			return fmt.Errorf("exec migration %s: %w", name, err)
 		}
 	}
