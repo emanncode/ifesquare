@@ -1,4 +1,4 @@
-import { motion } from "framer-motion"
+import { AnimatePresence, motion } from "framer-motion"
 import { useMemo, useState } from "react";
 import { BarChart3, PieChart as PieIcon, TrendingUp } from "lucide-react";
 import {
@@ -104,95 +104,101 @@ export function InsightsCard({
       </div>
       <CardContent className="px-5 py-6">
         <div className="h-[22rem] sm:h-[26rem]">
-          {tab === "bar" && !barData.length ? (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              No sales recorded yet today
-            </div>
-          ) : tab === "pie" && !pieData.length ? (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              No sales recorded yet today
-            </div>
-          ) : (
-            <ResponsiveContainer>
-              {tab === "bar" ? (
-                <BarChart
-                  data={barData}
-                  margin={{ left: 0, right: 16, top: 28, bottom: 8 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={grid}
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="name"
-                    tick={tickStyle}
-                    interval={0}
-                    angle={-12}
-                    textAnchor="end"
-                    height={54}
-                  />
-                  <YAxis tick={tickStyle} />
-                  <Tooltip formatter={tooltipNaira} />
-                  <Bar dataKey="Amount" fill={brand} radius={[6, 6, 0, 0]}>
-                    <LabelList
-                      dataKey="Amount"
-                      position="top"
-                      formatter={(v) =>
-                        typeof v === "number" ? nairaFmt(v) : String(v ?? "")
-                      }
-                      style={{
-                        fill: label,
-                        fontSize: 10,
-                        fontWeight: 600,
-                      }}
-                    />
-                  </Bar>
-                </BarChart>
-              ) : tab === "pie" ? (
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    outerRadius={110}
-                    innerRadius={58}
-                    paddingAngle={0}
-                  >
-                    {pieData.map((_, i) => (
-                      <Cell
-                        key={i}
-                        fill={`hsl(${150 + (i / Math.max(pieData.length - 1, 1)) * 60}, 65%, ${65 - (i / Math.max(pieData.length - 1, 1)) * 20}%)`}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={tooltipNaira} />
-                </PieChart>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
+              className="h-full"
+            >
+              {(tab === "bar" && !barData.length) || (tab === "pie" && !pieData.length) ? (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  No sales recorded yet today
+                </div>
               ) : (
-                <LineChart
-                  data={lineData}
-                  margin={{ left: 0, right: 16, top: 16, bottom: 8 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={grid}
-                    vertical={false}
-                  />
-                  <XAxis dataKey="date" tick={tickStyle} />
-                  <YAxis tick={tickStyle} />
-                  <Tooltip formatter={tooltipNaira} />
-                  <Line
-                    type="monotone"
-                    dataKey="Revenue"
-                    stroke={brand}
-                    strokeWidth={2.5}
-                    dot={{ r: 3, fill: brand }}
-                  />
-                </LineChart>
+                <ResponsiveContainer>
+                  {tab === "bar" ? (
+                    <BarChart
+                      data={barData}
+                      margin={{ left: 0, right: 16, top: 28, bottom: 8 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke={grid}
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="name"
+                        tick={tickStyle}
+                        interval={0}
+                        angle={-12}
+                        textAnchor="end"
+                        height={54}
+                      />
+                      <YAxis tick={tickStyle} />
+                      <Tooltip formatter={tooltipNaira} />
+                      <Bar dataKey="Amount" fill={brand} radius={[6, 6, 0, 0]}>
+                        <LabelList
+                          dataKey="Amount"
+                          position="top"
+                          formatter={(v) =>
+                            typeof v === "number" ? nairaFmt(v) : String(v ?? "")
+                          }
+                          style={{
+                            fill: label,
+                            fontSize: 10,
+                            fontWeight: 600,
+                          }}
+                        />
+                      </Bar>
+                    </BarChart>
+                  ) : tab === "pie" ? (
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        dataKey="value"
+                        nameKey="name"
+                        outerRadius={110}
+                        innerRadius={58}
+                        paddingAngle={0}
+                      >
+                        {pieData.map((_, i) => (
+                          <Cell
+                            key={i}
+                            fill={`hsl(${150 + (i / Math.max(pieData.length - 1, 1)) * 60}, 65%, ${65 - (i / Math.max(pieData.length - 1, 1)) * 20}%)`}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={tooltipNaira} />
+                    </PieChart>
+                  ) : (
+                    <LineChart
+                      data={lineData}
+                      margin={{ left: 0, right: 16, top: 16, bottom: 8 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke={grid}
+                        vertical={false}
+                      />
+                      <XAxis dataKey="date" tick={tickStyle} />
+                      <YAxis tick={tickStyle} />
+                      <Tooltip formatter={tooltipNaira} />
+                      <Line
+                        type="monotone"
+                        dataKey="Revenue"
+                        stroke={brand}
+                        strokeWidth={2.5}
+                        dot={{ r: 3, fill: brand }}
+                      />
+                    </LineChart>
+                  )}
+                </ResponsiveContainer>
               )}
-            </ResponsiveContainer>
-          )}
-
+            </motion.div>
+          </AnimatePresence>
           </div>
           <div className="mt-6 grid grid-cols-1 gap-3 border-t border-border pt-5 sm:grid-cols-3">
           <SummaryStat label="Total sales" value={nairaFmt(totalRevenue)} />
