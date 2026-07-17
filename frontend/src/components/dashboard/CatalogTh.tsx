@@ -13,7 +13,7 @@ export function CatalogTh({
   return (
     <th
       className={cn(
-        "h-14 px-4 py-4 font-medium",
+        "h-14 border-r border-border/60 px-4 py-4 font-medium",
         align === "right" && "text-right",
         align === "left" && "text-left",
         className,

@@ -14,7 +14,7 @@ export function CatalogEditableTextTd({
   return (
     <td
       className={cn(
-        "h-14 px-4 py-4",
+        "h-14 border-r border-border/60 px-4 py-4",
         align === "right" && "text-right",
         align === "left" && "text-left",
         className,
@@ -25,7 +25,7 @@ export function CatalogEditableTextTd({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
-          "h-9 w-full min-w-24 border-b border-dashed border-border bg-transparent text-sm outline-none transition-colors focus:border-solid focus:border-primary",
+          "h-9 w-28 border-b border-dashed border-border bg-transparent text-sm outline-none transition-colors focus:border-solid focus:border-primary",
           align === "right" && "text-right",
           align === "left" && "text-left",
           align === "center" && "text-center",

@@ -17,7 +17,7 @@ export function CatalogNumericTd({
   }, [value])
 
   return (
-    <td className="h-14 px-4 py-4 text-right">
+    <td className="h-14 border-r border-border/60 px-4 py-4 text-right">
       <input
         type="text"
         inputMode="numeric"
@@ -29,7 +29,7 @@ export function CatalogNumericTd({
           setDisplay(formatWithCommas(digits))
           onChange(digits)
         }}
-        className="h-9 w-full border-b border-dashed border-border bg-transparent text-right text-sm text-foreground outline-none transition-colors focus:border-solid focus:border-primary"
+        className="h-9 w-24 border-b border-dashed border-border bg-transparent text-right text-sm text-foreground outline-none transition-colors focus:border-solid focus:border-primary"
       />
     </td>
   )

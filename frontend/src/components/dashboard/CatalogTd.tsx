@@ -13,7 +13,7 @@ export function CatalogTd({
   return (
     <td
       className={cn(
-        "h-14 px-4 py-4",
+        "h-14 border-r border-border/60 px-4 py-4",
         align === "right" && "text-right",
         className,
       )}
