@@ -1,5 +1,5 @@
 import { useContext, useEffect } from "react";
-import { motion } from "framer-motion";
+import { LayoutGroup, motion } from "framer-motion";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { BookOpen, Package, History, LogOut, X, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -109,36 +109,48 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         </div>
 
         <nav className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to + item.label}
-              to={item.to}
-              end={item.end}
-              onClick={onClose}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-xl px-3.5 py-3 text-base transition-colors",
-                  isActive
-                    ? "bg-primary/10 font-semibold text-primary"
-                    : "font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
-                )
-              }
-            >
-              <item.icon className="size-5 shrink-0" strokeWidth={2} />
-              {item.label}
-              {item.label === "Products" && lowStockCount > 0 && (
-                <motion.span
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  className="ml-auto inline-flex items-center gap-1 rounded-lg bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400"
-                >
-                  <AlertTriangle className="size-3" />
-                  {lowStockCount}
-                </motion.span>
-              )}
-            </NavLink>
-          ))}
+          <LayoutGroup>
+            {navItems.map((item) => (
+              <NavLink
+                key={item.to + item.label}
+                to={item.to}
+                end={item.end}
+                onClick={onClose}
+              >
+                {({ isActive }) => (
+                  <span className={cn(
+                    "relative flex items-center gap-3 rounded-xl px-3.5 py-3 text-base transition-colors",
+                    isActive
+                      ? "font-semibold text-primary"
+                      : "font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}>
+                    {isActive && (
+                      <motion.div
+                        layoutId="sidebar-active-pill"
+                        className="absolute inset-0 rounded-xl bg-primary/10"
+                        transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-3">
+                      <item.icon className="size-5 shrink-0" strokeWidth={2} />
+                      {item.label}
+                      {item.label === "Products" && lowStockCount > 0 && (
+                        <motion.span
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                          className="ml-auto inline-flex items-center gap-1 rounded-lg bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400"
+                        >
+                          <AlertTriangle className="size-3" />
+                          {lowStockCount}
+                        </motion.span>
+                      )}
+                    </span>
+                  </span>
+                )}
+              </NavLink>
+            ))}
+          </LayoutGroup>
         </nav>
 
         <div className="mt-4 shrink-0 space-y-2 border-t border-border pt-4">
