@@ -6,6 +6,7 @@ export const emptyForm: NewProductForm = {
   unit: "",
   stock: "",
   price: "",
+  lowStockThreshold: "",
 }
 
 export type ProductsContextValue = {
@@ -17,7 +18,7 @@ export type ProductsContextValue = {
   addProducts: (forms: NewProductForm[]) => Promise<void>
   patchCatalogField: (
     productId: number,
-    field: "name" | "unit" | "opening" | "receipts" | "closing" | "price",
+    field: "name" | "unit" | "opening" | "receipts" | "closing" | "price" | "low_stock_threshold",
     value: string,
   ) => void
   removeProduct: (productId: number) => Promise<void>

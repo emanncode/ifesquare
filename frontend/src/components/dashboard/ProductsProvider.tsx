@@ -47,6 +47,10 @@ function merge(products: ApiProduct[], entries: ApiLedgerEntry[]): CatalogRow[] 
       total,
       sales,
       amount,
+      lowStockThreshold: p.low_stock_threshold,
+      effectiveThreshold: e?.effective_threshold ?? 10,
+      currentStock: e?.current_stock ?? 0,
+      isLowStock: e?.is_low_stock ?? false,
     }
   })
 }
@@ -107,14 +111,18 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const addProduct = useCallback(
     async (form: NewProductForm) => {
       if (!form.name.trim()) return
+      const body: Record<string, unknown> = {
+        name: form.name.trim(),
+        unit: form.unit?.trim() || "",
+        stock: parseCommaInt(form.stock),
+        price: parseCommaInt(form.price),
+      }
+      if (form.lowStockThreshold) {
+        body.low_stock_threshold = parseCommaInt(form.lowStockThreshold)
+      }
       await api<ApiProduct>("/api/products", {
         method: "POST",
-        body: {
-          name: form.name.trim(),
-          unit: form.unit?.trim() || "",
-          stock: parseCommaInt(form.stock),
-          price: parseCommaInt(form.price),
-        },
+        body,
       })
       await refresh()
     },
@@ -128,12 +136,18 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       await api("/api/products", {
         method: "POST",
         body: {
-          products: valid.map((f) => ({
-            name: f.name.trim(),
-            unit: f.unit?.trim() || "",
-            stock: parseCommaInt(f.stock),
-            price: parseCommaInt(f.price),
-          })),
+          products: valid.map((f) => {
+            const p: Record<string, unknown> = {
+              name: f.name.trim(),
+              unit: f.unit?.trim() || "",
+              stock: parseCommaInt(f.stock),
+              price: parseCommaInt(f.price),
+            }
+            if (f.lowStockThreshold) {
+              p.low_stock_threshold = parseCommaInt(f.lowStockThreshold)
+            }
+            return p
+          }),
         },
       })
       await refresh()
@@ -144,7 +158,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const patchCatalogField = useCallback(
     (
       productId: number,
-      field: "name" | "unit" | "opening" | "receipts" | "closing" | "price",
+      field: "name" | "unit" | "opening" | "receipts" | "closing" | "price" | "low_stock_threshold",
       value: string,
     ) => {
       setRows((prev) =>
@@ -157,6 +171,12 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
           else if (field === "receipts") next.receipts = parseCommaInt(value)
           else if (field === "closing") next.closing = parseCommaInt(value) || null
           else if (field === "price") next.price = parseCommaInt(value)
+          else if (field === "low_stock_threshold") {
+            const n = parseCommaInt(value)
+            next.lowStockThreshold = value === "" ? null : n
+            next.effectiveThreshold = value === "" ? 10 : n
+            next.isLowStock = next.currentStock <= next.effectiveThreshold
+          }
           next.total = next.opening + next.receipts
           next.sales = next.closing != null && next.closing > 0 ? Math.max(0, next.total - next.closing) : 0
           next.amount = next.sales * next.price
@@ -173,7 +193,14 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         setTimeout(async () => {
           debounceTimers.current.delete(key)
           try {
-            if (field === "opening" || field === "price") {
+            if (field === "low_stock_threshold") {
+              const body: Record<string, number | null> = {}
+              body.low_stock_threshold = value === "" ? null : parseCommaInt(value)
+              await api(`/api/products/${productId}`, {
+                method: "PATCH",
+                body,
+              })
+            } else if (field === "opening" || field === "price") {
               await Promise.all([
                 api(`/api/ledger/today/${productId}`, {
                   method: "PATCH",

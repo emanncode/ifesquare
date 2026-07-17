@@ -19,6 +19,10 @@ export type CatalogRow = {
   total: number
   sales: number | null
   amount: number | null
+  lowStockThreshold: number | null
+  effectiveThreshold: number
+  currentStock: number
+  isLowStock: boolean
 }
 
 export type NewProductForm = {
@@ -26,6 +30,7 @@ export type NewProductForm = {
   unit?: string
   stock: string
   price: string
+  lowStockThreshold?: string
 }
 
 /** Re-export ledger row used by the view-only table. */

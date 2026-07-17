@@ -12,6 +12,7 @@ export type ApiProduct = {
   unit: string
   price: number
   stock: number
+  low_stock_threshold: number | null
   archived_at?: string | null
   created_at: string
 }
@@ -27,6 +28,9 @@ export type ApiLedgerEntry = {
   receipts: number
   closing: number | null
   price: number
+  effective_threshold: number
+  current_stock: number
+  is_low_stock: boolean
   created_at?: string
   updated_at?: string
 }
@@ -66,6 +70,9 @@ export type LedgerRow = {
   total: number
   sales: number | null
   amount: number | null
+  effectiveThreshold: number
+  currentStock: number
+  isLowStock: boolean
 }
 
 export function deriveLedgerRow(e: ApiLedgerEntry): LedgerRow {
@@ -85,5 +92,8 @@ export function deriveLedgerRow(e: ApiLedgerEntry): LedgerRow {
     total,
     sales,
     amount,
+    effectiveThreshold: e.effective_threshold,
+    currentStock: e.current_stock,
+    isLowStock: e.is_low_stock,
   }
 }
