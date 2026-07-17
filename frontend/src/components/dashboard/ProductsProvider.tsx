@@ -9,6 +9,7 @@ import {
 import { api, ApiError } from "@/lib/api"
 import type { ApiLedgerEntry, ApiProduct } from "@/lib/types"
 import { parseCommaInt } from "./format"
+import { useToast } from "@/hooks/useToast"
 import { ProductsContext } from "./productsContext"
 import type { CatalogRow, NewProductForm } from "./types"
 import { useAuth } from "@/hooks/useAuth"
@@ -52,6 +53,7 @@ function merge(products: ApiProduct[], entries: ApiLedgerEntry[]): CatalogRow[] 
 
 export function ProductsProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
+  const { toast } = useToast()
   const [rows, setRows] = useState<CatalogRow[]>([])
   const [loading, setLoading] = useState(isAuthenticated)
   const [error, setError] = useState<string | null>(null)
@@ -206,7 +208,9 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
           } catch (err) {
             if (err instanceof ApiError && err.status === 401) {
               window.location.href = "/login"
+              return
             }
+            toast(formatError(err))
           }
         }, 500),
       )
