@@ -12,9 +12,6 @@ import { ProductsTableTh } from "./ProductsTableTh";
 import { ProductsTableTd } from "./ProductsTableTd";
 import type { LedgerRow } from "./types";
 
-/** Opening stock at or below this is flagged as low. */
-const LOW_STOCK_THRESHOLD = 8;
-
 type ProductsTableProps = {
   /** View-only ledger rows for today's sales. */
   rows: LedgerRow[];
@@ -92,7 +89,6 @@ export function ProductsTable({ rows }: ProductsTableProps) {
           </thead>
           <tbody>
             {filtered.map((r, i) => {
-              const lowStock = r.stock <= LOW_STOCK_THRESHOLD;
               return (
                 <motion.tr
                   key={r.id}
@@ -100,7 +96,10 @@ export function ProductsTable({ rows }: ProductsTableProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, delay: i * 0.03 }}
                   whileHover={{ backgroundColor: "var(--primary) / 0.04" }}
-                  className="border-b border-border/50 last:border-0"
+                  className={cn(
+                    "border-b border-border/50 last:border-0",
+                    r.isLowStock && "border-l-2 border-l-amber-500 bg-amber-500/4",
+                  )}
                 >
                   <ProductsTableTd className="text-left">
                     <div className="flex flex-col gap-0.5">
@@ -109,7 +108,7 @@ export function ProductsTable({ rows }: ProductsTableProps) {
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {r.unit}
-                        {lowStock && (
+                        {r.isLowStock && (
                           <span className="ml-2 inline-flex items-center rounded-lg bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
                             Low stock
                           </span>
@@ -121,7 +120,7 @@ export function ProductsTable({ rows }: ProductsTableProps) {
                     align="right"
                     className={cn(
                       "tabular-nums text-muted-foreground",
-                      lowStock &&
+                      r.isLowStock &&
                         "font-semibold text-amber-700 dark:text-amber-400",
                     )}
                   >

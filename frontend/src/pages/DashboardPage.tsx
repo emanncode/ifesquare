@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Wallet, Package, Cylinder, Loader2 } from "lucide-react"
+import { Wallet, Package, Cylinder, AlertTriangle, Loader2 } from "lucide-react"
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
 import { MetricCard } from "@/components/dashboard/MetricCard"
 import { ProductsTable } from "@/components/dashboard/ProductsTable"
@@ -16,6 +17,7 @@ export default function DashboardPage() {
   const { toast } = useToast()
   const [closeOpen, setCloseOpen] = useState(false)
   const [closing, setClosing] = useState(false)
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (error) toast(error)
@@ -27,6 +29,7 @@ export default function DashboardPage() {
     (top, r) => ((r.amount ?? 0) > (top?.amount ?? 0) ? r : top),
     rows[0],
   )
+  const lowStockCount = rows.filter((r) => r.isLowStock).length
 
   async function handleRefresh() {
     await refresh()
@@ -108,7 +111,7 @@ export default function DashboardPage() {
         <p className="mb-4 text-sm text-muted-foreground">Closing day…</p>
       )}
 
-      <div className="mb-8 flex flex-col gap-4 sm:grid sm:grid-cols-3 sm:gap-5">
+      <div className="mb-8 flex flex-col gap-4 sm:grid sm:grid-cols-4 sm:gap-5">
         <MetricCard
           label="Today's revenue"
           value={nairaFmt(totalRevenue)}
@@ -127,6 +130,14 @@ export default function DashboardPage() {
           value={topProduct?.amount ? topProduct.name : "—"}
           icon={Cylinder}
           small
+        />
+        <MetricCard
+          label="Low stock"
+          value={lowStockCount > 0 ? String(lowStockCount) : "All stocked"}
+          icon={AlertTriangle}
+          accent={lowStockCount > 0}
+          trend={lowStockCount > 0 ? "Products need attention" : undefined}
+          onClick={() => navigate("/app/products?filter=low-stock")}
         />
       </div>
 

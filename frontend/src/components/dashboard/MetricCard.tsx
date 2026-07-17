@@ -17,6 +17,8 @@ type MetricCardProps = {
   trend?: string;
   /** Optional sparkline values 0–1 (or any relative scale) */
   sparkline?: number[];
+  /** Optional click handler — makes the card clickable */
+  onClick?: () => void;
 };
 
 export function MetricCard({
@@ -27,6 +29,7 @@ export function MetricCard({
   small,
   trend,
   sparkline,
+  onClick,
 }: MetricCardProps) {
   return (
     <motion.div
@@ -34,9 +37,9 @@ export function MetricCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
       whileHover={{ y: -2 }}
-      className="h-full"
+      className={cn("h-full", onClick && "cursor-pointer")}
     >
-      <Card className="flex h-full flex-col py-0">
+      <Card className={cn("flex h-full flex-col py-0", onClick && "hover:bg-muted/20")} onClick={onClick}>
         <CardContent className="flex flex-1 flex-col px-6 py-6">
           <div className="flex items-start justify-between gap-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
