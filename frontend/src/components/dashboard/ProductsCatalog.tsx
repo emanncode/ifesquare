@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
-import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, Trash2 } from "lucide-react"
+import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, Trash2, AlertTriangle, X } from "lucide-react"
+import { useSearchParams } from "react-router-dom"
 import { Card } from "@/components/ui/Card"
 import { CardTitle } from "@/components/ui/CardTitle"
-import { fmtInt, nairaFmt } from "./format"
+import { fmtInt, nairaFmt, formatWithCommas, stripNonDigits } from "./format"
 import { AddProductDialog } from "./AddProductDialog"
 import { useProducts } from "./useProducts"
 import { CatalogTh } from "./CatalogTh"
@@ -13,7 +14,7 @@ import { useToast } from "@/hooks/useToast"
 import { cn } from "@/lib/utils"
 import type { CatalogRow, NewProductForm } from "./types"
 
-type Field = "name" | "unit" | "opening" | "receipts" | "closing" | "price"
+type Field = "name" | "unit" | "opening" | "receipts" | "closing" | "price" | "low_stock_threshold"
 
 type SortKey = keyof CatalogRow
 type SortDir = "asc" | "desc"
@@ -41,6 +42,7 @@ const SORTABLE_COLUMNS: { key: SortKey; label: string; align?: "left" | "right" 
   { key: "sales", label: "Sales", align: "right" },
   { key: "price", label: "Price", align: "right" },
   { key: "amount", label: "Amount", align: "right" },
+  { key: "lowStockThreshold", label: "Alert at", align: "right" },
 ]
 
 export function ProductsCatalog() {
@@ -51,12 +53,34 @@ export function ProductsCatalog() {
   const [busy, setBusy] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>("name")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [lowStockOnly, setLowStockOnly] = useState(() => searchParams.get("filter") === "low-stock")
+
+  useEffect(() => {
+    if (searchParams.get("filter") === "low-stock") {
+      setLowStockOnly(true)
+    }
+  }, [searchParams])
+
+  function toggleLowStockFilter() {
+    const next = !lowStockOnly
+    setLowStockOnly(next)
+    if (next) {
+      setSearchParams({ filter: "low-stock" })
+    } else {
+      setSearchParams({})
+    }
+  }
 
   useEffect(() => {
     if (error) toast(error)
   }, [error, toast])
 
-  const sorted = useMemo(() => sortRows(rows, sortKey, sortDir), [rows, sortKey, sortDir])
+  const filteredRows = useMemo(
+    () => (lowStockOnly ? rows.filter((r) => r.isLowStock) : rows),
+    [rows, lowStockOnly],
+  )
+  const sorted = useMemo(() => sortRows(filteredRows, sortKey, sortDir), [filteredRows, sortKey, sortDir])
 
   function toggleSort(key: SortKey) {
     if (key === sortKey) {
@@ -105,22 +129,35 @@ export function ProductsCatalog() {
 
   return (
     <Card hoverable={false} className="overflow-hidden py-0">
-      <div className="flex items-center justify-between border-b border-border px-5 py-4">
-        <div>
-          <CardTitle className="text-base">Products</CardTitle>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Synced with the server catalog
-            {busy ? " · saving…" : ""}
-          </p>
+        <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="text-base">Products</CardTitle>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Synced with the server catalog
+              {busy ? " · saving…" : ""}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleLowStockFilter}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors",
+                lowStockOnly
+                  ? "bg-amber-500/12 text-amber-700 dark:text-amber-400"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80",
+              )}
+            >
+              <AlertTriangle className="size-3.5" />
+              Low stock only
+            </button>
+            <AddProductDialog
+              open={addOpen}
+              onOpenChange={setAddOpen}
+              onSubmit={(forms) => void handleAddMany(forms)}
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <AddProductDialog
-            open={addOpen}
-            onOpenChange={setAddOpen}
-            onSubmit={(forms) => void handleAddMany(forms)}
-          />
-        </div>
-      </div>
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[960px] border-collapse text-sm">
@@ -152,14 +189,26 @@ export function ProductsCatalog() {
             {sorted.map((r) => (
               <tr
                 key={r.productId}
-                className="border-b border-border/60 last:border-0 hover:bg-muted/30"
+                className={cn(
+                  "border-b border-border/60 last:border-0 hover:bg-muted/30",
+                  r.isLowStock && "border-l-2 border-l-amber-500 bg-amber-500/4",
+                )}
               >
-                <CatalogEditableTextTd
-                  value={r.name}
-                  onChange={(v) => void handlePatch(r.productId, "name", v)}
-                  className="text-left font-medium text-foreground"
-                  align="left"
-                />
+                <CatalogTd className="text-left font-medium text-foreground">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={r.name}
+                      onChange={(e) => void handlePatch(r.productId, "name", e.target.value)}
+                      className="h-9 min-w-24 border-b border-dashed border-border bg-transparent text-sm font-medium text-foreground outline-none transition-colors focus:border-solid focus:border-primary"
+                    />
+                    {r.isLowStock && (
+                      <span className="inline-flex shrink-0 items-center rounded-lg bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                        Low stock
+                      </span>
+                    )}
+                  </div>
+                </CatalogTd>
                 <CatalogEditableTextTd
                   value={r.unit}
                   onChange={(v) => void handlePatch(r.productId, "unit", v)}
@@ -192,6 +241,14 @@ export function ProductsCatalog() {
                   {r.amount == null ? "—" : nairaFmt(r.amount)}
                 </CatalogTd>
                 <CatalogTd align="right">
+                  <AlertAtInput
+                    productId={r.productId}
+                    lowStockThreshold={r.lowStockThreshold}
+                    effectiveThreshold={r.effectiveThreshold}
+                    onChange={(v) => void handlePatch(r.productId, "low_stock_threshold", v)}
+                  />
+                </CatalogTd>
+                <CatalogTd align="right">
                   <button
                     type="button"
                     onClick={() => void handleRemove(r.productId)}
@@ -206,7 +263,7 @@ export function ProductsCatalog() {
             {rows.length === 0 && (
               <tr>
                 <td
-                  colSpan={10}
+                  colSpan={11}
                   className="px-4 py-10 text-center text-sm text-muted-foreground"
                 >
                   No products yet. Add your first product.
@@ -217,5 +274,53 @@ export function ProductsCatalog() {
         </table>
       </div>
     </Card>
+  )
+}
+
+function AlertAtInput({
+  lowStockThreshold,
+  effectiveThreshold,
+  onChange,
+}: {
+  lowStockThreshold: number | null
+  effectiveThreshold: number
+  onChange: (v: string) => void
+}) {
+  const [display, setDisplay] = useState(() => String(effectiveThreshold))
+
+  useEffect(() => {
+    setDisplay(lowStockThreshold != null ? String(lowStockThreshold) : String(effectiveThreshold))
+  }, [lowStockThreshold, effectiveThreshold])
+
+  return (
+    <div className="inline-flex items-center gap-1">
+      <input
+        type="text"
+        inputMode="numeric"
+        value={display}
+        onFocus={(e) => e.target.select()}
+        onChange={(e) => {
+          const digits = stripNonDigits(e.target.value)
+          setDisplay(digits)
+          onChange(digits)
+        }}
+        className={cn(
+          "h-9 w-16 border-b border-dashed border-border bg-transparent text-right text-sm outline-none transition-colors focus:border-solid focus:border-primary",
+          lowStockThreshold == null ? "text-muted-foreground" : "text-foreground",
+        )}
+      />
+      {lowStockThreshold == null ? (
+        <span className="text-[10px] text-muted-foreground">(default)</span>
+      ) : (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className="text-muted-foreground transition-colors hover:text-foreground"
+          aria-label="Reset to default"
+        >
+          <X className="size-3.5" />
+        </button>
+      )}
+    </div>
   )
 }
