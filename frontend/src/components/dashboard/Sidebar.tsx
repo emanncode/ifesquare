@@ -1,11 +1,13 @@
-import { useEffect } from "react";
+import { useContext, useEffect } from "react";
+import { motion } from "framer-motion";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { BookOpen, Package, History, LogOut, X } from "lucide-react";
+import { BookOpen, Package, History, LogOut, X, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import BrandMark from "@/components/login/brandmark";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
+import { ProductsContext } from "@/components/dashboard/productsContext";
 
 type SidebarProps = {
   open?: boolean;
@@ -25,6 +27,8 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const productsCtx = useContext(ProductsContext)
+  const lowStockCount = productsCtx ? productsCtx.rows.filter((r) => r.isLowStock).length : 0
 
   // Close the mobile drawer after navigation
   useEffect(() => {
@@ -122,6 +126,17 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             >
               <item.icon className="size-5 shrink-0" strokeWidth={2} />
               {item.label}
+              {item.label === "Products" && lowStockCount > 0 && (
+                <motion.span
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  className="ml-auto inline-flex items-center gap-1 rounded-lg bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400"
+                >
+                  <AlertTriangle className="size-3" />
+                  {lowStockCount}
+                </motion.span>
+              )}
             </NavLink>
           ))}
         </nav>
