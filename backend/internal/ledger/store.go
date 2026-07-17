@@ -8,6 +8,12 @@ import (
 	"github.com/emanncode/ifesquare/backend/internal/db"
 )
 
+var defaultThreshold = 10
+
+func SetDefaultThreshold(n int) {
+	defaultThreshold = n
+}
+
 type Entry struct {
 	ID        int64  `json:"id"`
 	DayDate   string `json:"day_date"`
@@ -24,6 +30,9 @@ type EntryWithProduct struct {
 	Entry
 	ProductName string `json:"product_name"`
 	ProductUnit string `json:"product_unit"`
+	EffectiveThreshold int  `json:"effective_threshold"`
+	CurrentStock       int  `json:"current_stock"`
+	IsLowStock         bool `json:"is_low_stock"`
 }
 
 func GetTodayEntries() ([]EntryWithProduct, error) {
@@ -67,7 +76,7 @@ func GetTodayEntries() ([]EntryWithProduct, error) {
 
 	rows, err := db.DB.Query(`
 		SELECT e.id, e.day_date, e.product_id, e.opening, e.receipts, e.closing, e.price, e.created_at, e.updated_at,
-		       p.name, p.unit
+		       p.name, p.unit, p.low_stock_threshold, p.stock
 		FROM entries e
 		JOIN products p ON p.id = e.product_id
 		WHERE e.day_date = ?
@@ -81,9 +90,23 @@ func GetTodayEntries() ([]EntryWithProduct, error) {
 	var entries []EntryWithProduct
 	for rows.Next() {
 		var e EntryWithProduct
-		if err := rows.Scan(&e.ID, &e.DayDate, &e.ProductID, &e.Opening, &e.Receipts, &e.Closing, &e.Price, &e.CreatedAt, &e.UpdatedAt, &e.ProductName, &e.ProductUnit); err != nil {
+		var lowStockThreshold *int
+		var productStock int
+		if err := rows.Scan(&e.ID, &e.DayDate, &e.ProductID, &e.Opening, &e.Receipts, &e.Closing, &e.Price, &e.CreatedAt, &e.UpdatedAt, &e.ProductName, &e.ProductUnit, &lowStockThreshold, &productStock); err != nil {
 			return nil, err
 		}
+		effectiveThreshold := defaultThreshold
+		if lowStockThreshold != nil {
+			effectiveThreshold = *lowStockThreshold
+		}
+		if e.Closing != nil && *e.Closing > 0 {
+			e.CurrentStock = *e.Closing
+			e.IsLowStock = *e.Closing <= effectiveThreshold
+		} else {
+			e.CurrentStock = 0
+			e.IsLowStock = false
+		}
+		e.EffectiveThreshold = effectiveThreshold
 		entries = append(entries, e)
 	}
 	if err := rows.Err(); err != nil {

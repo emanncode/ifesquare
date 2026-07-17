@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -67,6 +68,14 @@ func main() {
 		}
 	}
 	defer db.Close()
+
+	lowStockDefault := 10
+	if v := os.Getenv("LOW_STOCK_DEFAULT_THRESHOLD"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			lowStockDefault = n
+		}
+	}
+	ledger.SetDefaultThreshold(lowStockDefault)
 
 	// Pre-load cache so first requests are served from memory
 	go func() {
