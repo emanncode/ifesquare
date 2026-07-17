@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
-import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, Trash2, AlertTriangle, X } from "lucide-react"
+import { motion } from "framer-motion"
+import { ArrowUp, ArrowUpDown, Loader2, Trash2, AlertTriangle, X } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
 import { Card } from "@/components/ui/Card"
 import { CardTitle } from "@/components/ui/CardTitle"
@@ -43,6 +44,7 @@ const SORTABLE_COLUMNS: { key: SortKey; label: string; align?: "left" | "right" 
   { key: "price", label: "Price", align: "right" },
   { key: "amount", label: "Amount", align: "right" },
   { key: "lowStockThreshold", label: "Alert at", align: "right" },
+  { key: "isLowStock", label: "Low stock", align: "center" },
 ]
 
 export function ProductsCatalog() {
@@ -55,6 +57,14 @@ export function ProductsCatalog() {
   const [sortDir, setSortDir] = useState<SortDir>("asc")
   const [searchParams, setSearchParams] = useSearchParams()
   const [lowStockOnly, setLowStockOnly] = useState(() => searchParams.get("filter") === "low-stock")
+  const [justSaved, setJustSaved] = useState<Set<string>>(new Set())
+
+  function flashRow(id: string) {
+    setJustSaved((prev) => new Set(prev).add(id));
+    setTimeout(() => {
+      setJustSaved((prev) => { const next = new Set(prev); next.delete(id); return next; });
+    }, 700);
+  }
 
   useEffect(() => {
     if (searchParams.get("filter") === "low-stock") {
@@ -106,6 +116,7 @@ export function ProductsCatalog() {
   async function handlePatch(productId: number, field: Field, value: string) {
     try {
       await patchCatalogField(productId, field, value)
+      flashRow(String(productId))
     } catch (err) {
       toast(err instanceof Error ? err.message : "Failed to update")
     }
@@ -165,7 +176,6 @@ export function ProductsCatalog() {
             <tr className="border-b border-border bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
               {SORTABLE_COLUMNS.map((col) => {
                 const active = sortKey === col.key
-                const Icon = active ? (sortDir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown
                 return (
                   <CatalogTh key={col.key} className={col.align === "left" ? "text-left" : ""}>
                     <button
@@ -177,7 +187,16 @@ export function ProductsCatalog() {
                       )}
                     >
                       {col.label}
-                      <Icon className="size-3" />
+                      {active ? (
+                        <motion.span
+                          animate={{ rotate: sortDir === "desc" ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ArrowUp className="size-3" />
+                        </motion.span>
+                      ) : (
+                        <ArrowUpDown className="size-3 text-muted-foreground/50" />
+                      )}
                     </button>
                   </CatalogTh>
                 )
@@ -187,27 +206,22 @@ export function ProductsCatalog() {
           </thead>
           <tbody>
             {sorted.map((r) => (
-              <tr
+              <motion.tr
                 key={r.productId}
+                animate={{ boxShadow: justSaved.has(String(r.productId)) ? "inset 0 0 0 9999px rgba(34,197,94,0.10)" : "inset 0 0 0 9999px rgba(34,197,94,0)" }}
+                transition={{ duration: 0.6 }}
                 className={cn(
                   "border-b border-border/60 last:border-0 hover:bg-muted/30",
                   r.isLowStock && "border-l-2 border-l-amber-500 bg-amber-500/4",
                 )}
               >
                 <CatalogTd className="text-left font-medium text-foreground">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={r.name}
-                      onChange={(e) => void handlePatch(r.productId, "name", e.target.value)}
-                      className="h-9 min-w-24 border-b border-dashed border-border bg-transparent text-sm font-medium text-foreground outline-none transition-colors focus:border-solid focus:border-primary"
-                    />
-                    {r.isLowStock && (
-                      <span className="inline-flex shrink-0 items-center rounded-lg bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
-                        Low stock
-                      </span>
-                    )}
-                  </div>
+                  <input
+                    type="text"
+                    value={r.name}
+                    onChange={(e) => void handlePatch(r.productId, "name", e.target.value)}
+                    className="h-9 min-w-24 border-b border-dashed border-border bg-transparent text-sm font-medium text-foreground outline-none transition-colors focus:border-solid focus:border-primary"
+                  />
                 </CatalogTd>
                 <CatalogEditableTextTd
                   value={r.unit}
@@ -248,6 +262,13 @@ export function ProductsCatalog() {
                     onChange={(v) => void handlePatch(r.productId, "low_stock_threshold", v)}
                   />
                 </CatalogTd>
+                <CatalogTd align="center">
+                  {r.isLowStock && (
+                    <span className="inline-flex items-center rounded-lg bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                      Low stock
+                    </span>
+                  )}
+                </CatalogTd>
                 <CatalogTd align="right">
                   <button
                     type="button"
@@ -258,12 +279,12 @@ export function ProductsCatalog() {
                     <Trash2 className="size-4" />
                   </button>
                 </CatalogTd>
-              </tr>
+              </motion.tr>
             ))}
             {rows.length === 0 && (
               <tr>
                 <td
-                  colSpan={11}
+                  colSpan={12}
                   className="px-4 py-10 text-center text-sm text-muted-foreground"
                 >
                   No products yet. Add your first product.
