@@ -6,6 +6,7 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
 import { MetricCard } from "@/components/dashboard/MetricCard"
 import { ProductsTable } from "@/components/dashboard/ProductsTable"
 import { InsightsCard } from "@/components/dashboard/InsightsCard"
+import { AnimatedNumber } from "@/components/AnimatedNumber"
 import { fmtInt, nairaFmt } from "@/components/dashboard/format"
 import { useAppShell } from "@/components/layout/appShell"
 import { useLedger } from "@/hooks/useLedger"
@@ -114,7 +115,7 @@ export default function DashboardPage() {
       <div className="mb-8 flex flex-col gap-4 sm:grid sm:grid-cols-4 sm:gap-5">
         <MetricCard
           label="Today's revenue"
-          value={nairaFmt(totalRevenue)}
+          value={<AnimatedNumber value={totalRevenue} format={nairaFmt} />}
           icon={Wallet}
           accent
           trend={totalRevenue > 0 ? "From closed counts" : "No sales yet"}
@@ -122,7 +123,7 @@ export default function DashboardPage() {
         />
         <MetricCard
           label="Units sold"
-          value={fmtInt(totalUnits)}
+          value={<AnimatedNumber value={totalUnits} format={(n) => String(Math.round(n))} />}
           icon={Package}
         />
         <MetricCard

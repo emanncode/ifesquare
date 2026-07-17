@@ -1,5 +1,6 @@
 import { motion } from "framer-motion"
 import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { CardContent } from "@/components/ui/CardContent";
@@ -8,7 +9,7 @@ import { Sparkline } from "./Sparkline";
 
 type MetricCardProps = {
   label: string;
-  value: string;
+  value: string | ReactNode;
   icon: LucideIcon;
   accent?: boolean;
   /** Compact value (e.g. long product names) */
