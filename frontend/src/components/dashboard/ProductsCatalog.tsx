@@ -171,9 +171,9 @@ export function ProductsCatalog() {
         </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[960px] border-collapse text-sm">
+        <table className="w-full min-w-[960px] border-collapse text-sm [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
           <thead>
-            <tr className="border-b border-border bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+            <tr className="border-b border-border/60 bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
               {SORTABLE_COLUMNS.map((col) => {
                 const active = sortKey === col.key
                 return (
