@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Wallet, Package, Cylinder, Loader2 } from "lucide-react"
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
@@ -8,12 +8,18 @@ import { InsightsCard } from "@/components/dashboard/InsightsCard"
 import { fmtInt, nairaFmt } from "@/components/dashboard/format"
 import { useAppShell } from "@/components/layout/appShell"
 import { useLedger } from "@/hooks/useLedger"
+import { useToast } from "@/hooks/useToast"
 
 export default function DashboardPage() {
   const { openMobileNav } = useAppShell()
   const { rows, loading, error, lastUpdated, refresh, closeDay } = useLedger()
+  const { toast } = useToast()
   const [closeOpen, setCloseOpen] = useState(false)
   const [closing, setClosing] = useState(false)
+
+  useEffect(() => {
+    if (error) toast(error)
+  }, [error, toast])
 
   const totalRevenue = rows.reduce((s, r) => s + (r.amount ?? 0), 0)
   const totalUnits = rows.reduce((s, r) => s + (r.sales ?? 0), 0)
@@ -31,6 +37,9 @@ export default function DashboardPage() {
     try {
       await closeDay()
       setCloseOpen(false)
+      toast("Day closed successfully", "success")
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Failed to close day")
     } finally {
       setClosing(false)
     }
@@ -94,15 +103,6 @@ export default function DashboardPage() {
         onRefresh={() => void handleRefresh()}
         onMenuClick={openMobileNav}
       />
-
-      {error && (
-        <div
-          role="alert"
-          className="mb-6 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-        >
-          {error}
-        </div>
-      )}
 
       {closing && (
         <p className="mb-4 text-sm text-muted-foreground">Closing day…</p>
