@@ -10,6 +10,7 @@ import { DialogContent } from "@/components/ui/DialogContent"
 import { DayDetailPanel } from "@/components/dashboard/DayDetailPanel"
 import { fmtInt, formatDate, nairaFmt, parseCommaInt } from "@/components/dashboard/format"
 import { useHistory } from "@/hooks/useHistory"
+import { useToast } from "@/hooks/useToast"
 import { api } from "@/lib/api"
 import type { ApiHistoryDayDetail } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -28,12 +29,21 @@ function useBelow(mq: string) {
 export default function HistoryPage() {
   const { openMobileNav } = useAppShell()
   const { days, loading, error, getDay } = useHistory()
+  const { toast } = useToast()
   const [selected, setSelected] = useState<string | null>(null)
   const [detail, setDetail] = useState<ApiHistoryDayDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
   const today = new Date().toISOString().slice(0, 10)
   const isBelowLg = useBelow("(min-width: 1024px)")
+
+  useEffect(() => {
+    if (error) toast(error)
+  }, [error, toast])
+
+  useEffect(() => {
+    if (detailError) toast(detailError)
+  }, [detailError, toast])
 
   async function openDay(date: string) {
     if (date === selected) {
@@ -102,15 +112,6 @@ export default function HistoryPage() {
       {loading && (
         <div className="flex min-h-40 items-center justify-center">
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
-        </div>
-      )}
-
-      {error && (
-        <div
-          role="alert"
-          className="mb-6 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-        >
-          {error}
         </div>
       )}
 
