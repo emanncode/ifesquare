@@ -88,6 +88,7 @@ func migrate() error {
 	files := []string{
 		"migrations/001_init.sql",
 		"migrations/002_session_revoke.sql",
+		"migrations/003_low_stock.sql",
 	}
 	for _, name := range files {
 		sqlBytes, err := migrations.ReadFile(name)

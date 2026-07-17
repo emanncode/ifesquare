@@ -8,17 +8,18 @@ import (
 )
 
 type Product struct {
-	ID         int64      `json:"id"`
-	Name       string     `json:"name"`
-	Unit       string     `json:"unit"`
-	Price      int        `json:"price"`
-	Stock      int        `json:"stock"`
-	ArchivedAt *time.Time `json:"archived_at,omitempty"`
-	CreatedAt  time.Time  `json:"created_at"`
+	ID                 int64      `json:"id"`
+	Name               string     `json:"name"`
+	Unit               string     `json:"unit"`
+	Price              int        `json:"price"`
+	Stock              int        `json:"stock"`
+	LowStockThreshold  *int       `json:"low_stock_threshold,omitempty"`
+	ArchivedAt         *time.Time `json:"archived_at,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
 }
 
 func List() ([]Product, error) {
-	rows, err := db.DB.Query("SELECT id, name, unit, price, stock, archived_at, created_at FROM products WHERE archived_at IS NULL ORDER BY name ASC")
+	rows, err := db.DB.Query("SELECT id, name, unit, price, stock, low_stock_threshold, archived_at, created_at FROM products WHERE archived_at IS NULL ORDER BY name ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +28,7 @@ func List() ([]Product, error) {
 	var products []Product
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.Name, &p.Unit, &p.Price, &p.Stock, &p.ArchivedAt, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.Unit, &p.Price, &p.Stock, &p.LowStockThreshold, &p.ArchivedAt, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		products = append(products, p)
@@ -35,10 +36,10 @@ func List() ([]Product, error) {
 	return products, nil
 }
 
-func Create(name, unit string, price, stock int) (*Product, error) {
+func Create(name, unit string, price, stock int, lowStockThreshold *int) (*Product, error) {
 	res, err := db.DB.Exec(
-		"INSERT INTO products (name, unit, price, stock) VALUES (?, ?, ?, ?)",
-		name, unit, price, stock,
+		"INSERT INTO products (name, unit, price, stock, low_stock_threshold) VALUES (?, ?, ?, ?, ?)",
+		name, unit, price, stock, lowStockThreshold,
 	)
 	if err != nil {
 		return nil, err
@@ -50,8 +51,8 @@ func Create(name, unit string, price, stock int) (*Product, error) {
 func Get(id int64) (*Product, error) {
 	var p Product
 	err := db.DB.QueryRow(
-		"SELECT id, name, unit, price, stock, archived_at, created_at FROM products WHERE id = ?", id,
-	).Scan(&p.ID, &p.Name, &p.Unit, &p.Price, &p.Stock, &p.ArchivedAt, &p.CreatedAt)
+		"SELECT id, name, unit, price, stock, low_stock_threshold, archived_at, created_at FROM products WHERE id = ?", id,
+	).Scan(&p.ID, &p.Name, &p.Unit, &p.Price, &p.Stock, &p.LowStockThreshold, &p.ArchivedAt, &p.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

@@ -41,10 +41,11 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	if productsRaw, ok := raw["products"]; ok {
 		var products []struct {
-			Name  string `json:"name"`
-			Unit  string `json:"unit"`
-			Price int    `json:"price"`
-			Stock int    `json:"stock"`
+			Name              string `json:"name"`
+			Unit              string `json:"unit"`
+			Price             int    `json:"price"`
+			Stock             int    `json:"stock"`
+			LowStockThreshold *int   `json:"low_stock_threshold"`
 		}
 		if err := json.Unmarshal(productsRaw, &products); err != nil {
 			http.Error(w, `{"error":"invalid products array"}`, http.StatusBadRequest)
@@ -63,21 +64,26 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, `{"error":"stock cannot be negative"}`, http.StatusBadRequest)
 				return
 			}
-			if _, err := Create(p.Name, p.Unit, p.Price, p.Stock); err != nil {
+			if p.LowStockThreshold != nil && *p.LowStockThreshold < 0 {
+				http.Error(w, `{"error":"low_stock_threshold cannot be negative"}`, http.StatusBadRequest)
+				return
+			}
+			if _, err := Create(p.Name, p.Unit, p.Price, p.Stock, p.LowStockThreshold); err != nil {
 				http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 				return
 			}
 		}
-		cache.Invalidate("/api/products")
+		cache.Invalidate("/api/products", "/api/ledger/today")
 		writeJSON(w, http.StatusCreated, map[string]string{"message": "products created"})
 		return
 	}
 
 	var pData struct {
-		Name  string `json:"name"`
-		Unit  string `json:"unit"`
-		Price int    `json:"price"`
-		Stock int    `json:"stock"`
+		Name              string `json:"name"`
+		Unit              string `json:"unit"`
+		Price             int    `json:"price"`
+		Stock             int    `json:"stock"`
+		LowStockThreshold *int   `json:"low_stock_threshold"`
 	}
 	if err := json.Unmarshal(body, &pData); err != nil {
 		http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
@@ -95,13 +101,17 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"stock cannot be negative"}`, http.StatusBadRequest)
 		return
 	}
+	if pData.LowStockThreshold != nil && *pData.LowStockThreshold < 0 {
+		http.Error(w, `{"error":"low_stock_threshold cannot be negative"}`, http.StatusBadRequest)
+		return
+	}
 
-	p, err := Create(pData.Name, pData.Unit, pData.Price, pData.Stock)
+	p, err := Create(pData.Name, pData.Unit, pData.Price, pData.Stock, pData.LowStockThreshold)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
-	cache.Invalidate("/api/products")
+	cache.Invalidate("/api/products", "/api/ledger/today")
 	writeJSON(w, http.StatusCreated, p)
 }
 
@@ -119,7 +129,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	allowed := map[string]bool{"name": true, "unit": true, "price": true, "stock": true}
+	allowed := map[string]bool{"name": true, "unit": true, "price": true, "stock": true, "low_stock_threshold": true}
 	fields := make(map[string]interface{})
 	for k, v := range body {
 		if allowed[k] {
@@ -145,6 +155,18 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if threshold, ok := fields["low_stock_threshold"]; ok {
+		if threshold != nil {
+			tf, ok2 := toFloat(threshold)
+			if !ok2 || tf < 0 {
+				http.Error(w, `{"error":"low_stock_threshold cannot be negative"}`, http.StatusBadRequest)
+				return
+			}
+			fields["low_stock_threshold"] = int(tf)
+		} else {
+			fields["low_stock_threshold"] = nil
+		}
+	}
 
 	p, err := Update(id, fields)
 	if err != nil {
@@ -155,7 +177,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
 		return
 	}
-	cache.Invalidate("/api/products")
+	cache.Invalidate("/api/products", "/api/ledger/today")
 	writeJSON(w, http.StatusOK, p)
 }
 
