@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var Default = New(30 * time.Second)
+var Default = New(60 * time.Second)
 
 type entry struct {
 	data       []byte

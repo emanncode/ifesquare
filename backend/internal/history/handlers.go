@@ -7,11 +7,17 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/emanncode/ifesquare/backend/internal/cache"
 	"github.com/emanncode/ifesquare/backend/internal/ledger"
 	"github.com/go-chi/chi/v5"
 )
 
 func ListHandler(w http.ResponseWriter, r *http.Request) {
+	key := r.URL.RequestURI()
+	if cache.Serve(w, key) {
+		return
+	}
+
 	limitStr := r.URL.Query().Get("limit")
 	limit := 30
 	if limitStr != "" {
@@ -28,6 +34,7 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 	if days == nil {
 		days = []DaySummary{}
 	}
+	cache.Set(key, days)
 	writeJSON(w, http.StatusOK, days)
 }
 
@@ -35,6 +42,11 @@ func GetByDateHandler(w http.ResponseWriter, r *http.Request) {
 	date := chi.URLParam(r, "date")
 	if date == "" {
 		http.Error(w, `{"error":"date required"}`, http.StatusBadRequest)
+		return
+	}
+
+	key := r.URL.Path
+	if cache.Serve(w, key) {
 		return
 	}
 
@@ -84,12 +96,14 @@ func GetByDateHandler(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	result := map[string]interface{}{
 		"date":          date,
 		"entries":       out,
 		"total_revenue": totalRevenue,
 		"total_units":   totalUnits,
-	})
+	}
+	cache.Set(key, result)
+	writeJSON(w, http.StatusOK, result)
 }
 
 func ExportCSVHandler(w http.ResponseWriter, r *http.Request) {

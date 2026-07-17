@@ -84,6 +84,14 @@ func main() {
 		}
 	}()
 
+	// Keep Turso connection warm — ping every 30s to prevent cold starts
+	go func() {
+		for {
+			time.Sleep(30 * time.Second)
+			db.DB.Exec("SELECT 1")
+		}
+	}()
+
 	if *email != "" {
 		fmt.Print("Password: ")
 		password, err := bufio.NewReader(os.Stdin).ReadString('\n')
