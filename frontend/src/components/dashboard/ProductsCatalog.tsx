@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ArrowDown, ArrowUp, ArrowUpDown, Loader2, Trash2 } from "lucide-react"
 import { Card } from "@/components/ui/Card"
 import { CardTitle } from "@/components/ui/CardTitle"
@@ -9,6 +9,7 @@ import { CatalogTh } from "./CatalogTh"
 import { CatalogTd } from "./CatalogTd"
 import { CatalogNumericTd } from "./CatalogNumericTd"
 import { CatalogEditableTextTd } from "./CatalogEditableTextTd"
+import { useToast } from "@/hooks/useToast"
 import { cn } from "@/lib/utils"
 import type { CatalogRow, NewProductForm } from "./types"
 
@@ -45,11 +46,15 @@ const SORTABLE_COLUMNS: { key: SortKey; label: string; align?: "left" | "right" 
 export function ProductsCatalog() {
   const { rows, loading, error, addProducts, patchCatalogField, removeProduct } =
     useProducts()
+  const { toast } = useToast()
   const [addOpen, setAddOpen] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [actionError, setActionError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>("name")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
+
+  useEffect(() => {
+    if (error) toast(error)
+  }, [error, toast])
 
   const sorted = useMemo(() => sortRows(rows, sortKey, sortDir), [rows, sortKey, sortDir])
 
@@ -64,31 +69,29 @@ export function ProductsCatalog() {
 
   async function handleAddMany(forms: NewProductForm[]) {
     setBusy(true)
-    setActionError(null)
     try {
       await addProducts(forms)
+      toast("Products added", "success")
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to add products")
+      toast(err instanceof Error ? err.message : "Failed to add products")
     } finally {
       setBusy(false)
     }
   }
 
   async function handlePatch(productId: number, field: Field, value: string) {
-    setActionError(null)
     try {
       await patchCatalogField(productId, field, value)
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to update")
+      toast(err instanceof Error ? err.message : "Failed to update")
     }
   }
 
   async function handleRemove(productId: number) {
-    setActionError(null)
     try {
       await removeProduct(productId)
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to remove")
+      toast(err instanceof Error ? err.message : "Failed to remove")
     }
   }
 
@@ -118,15 +121,6 @@ export function ProductsCatalog() {
           />
         </div>
       </div>
-
-      {(error || actionError) && (
-        <div
-          role="alert"
-          className="border-b border-destructive/30 bg-destructive/10 px-5 py-3 text-sm text-destructive"
-        >
-          {actionError ?? error}
-        </div>
-      )}
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[960px] border-collapse text-sm">
