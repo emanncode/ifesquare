@@ -75,7 +75,11 @@ export function AddProductDialog({
   function handleSubmit() {
     const filled = rows
       .filter((r) => r.name.trim())
-      .map(({ name, unit, stock, price }) => ({ name, unit, stock, price }))
+      .map(({ name, unit, stock, price, lowStockThreshold }) => {
+        const p: NewProductForm = { name, unit, stock, price }
+        if (lowStockThreshold) p.lowStockThreshold = lowStockThreshold
+        return p
+      })
     if (filled.length === 0) return
     onSubmit(filled)
     onOpenChange(false)
@@ -136,53 +140,67 @@ export function AddProductDialog({
                     className="h-8 text-sm"
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="grid gap-1">
-                    <Label
-                      htmlFor={`${row.key}-unit`}
-                      className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                      Unit
-                    </Label>
-                    <Input
-                      id={`${row.key}-unit`}
-                      value={row.unit ?? ""}
-                      onChange={(e) =>
-                        updateRow(row.key, { unit: e.target.value })
-                      }
-                      placeholder="bottle"
-                      className="h-8 text-sm"
-                    />
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="grid gap-1">
+                      <Label
+                        htmlFor={`${row.key}-unit`}
+                        className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                      >
+                        Unit
+                      </Label>
+                      <Input
+                        id={`${row.key}-unit`}
+                        value={row.unit ?? ""}
+                        onChange={(e) =>
+                          updateRow(row.key, { unit: e.target.value })
+                        }
+                        placeholder="bottle"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="grid gap-1">
+                      <Label
+                        htmlFor={`${row.key}-stock`}
+                        className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                      >
+                        Stock
+                      </Label>
+                      <NumericInput
+                        id={`${row.key}-stock`}
+                        value={row.stock}
+                        onChange={(v) => updateRow(row.key, { stock: v })}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="grid gap-1">
+                      <Label
+                        htmlFor={`${row.key}-price`}
+                        className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                      >
+                        Price
+                      </Label>
+                      <NumericInput
+                        id={`${row.key}-price`}
+                        value={row.price}
+                        onChange={(v) => updateRow(row.key, { price: v })}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="grid gap-1">
+                      <Label
+                        htmlFor={`${row.key}-alert`}
+                        className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                      >
+                        Alert below
+                      </Label>
+                      <NumericInput
+                        id={`${row.key}-alert`}
+                        value={row.lowStockThreshold ?? ""}
+                        onChange={(v) => updateRow(row.key, { lowStockThreshold: v })}
+                        placeholder="10 (default)"
+                      />
+                    </div>
                   </div>
-                  <div className="grid gap-1">
-                    <Label
-                      htmlFor={`${row.key}-stock`}
-                      className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                      Stock
-                    </Label>
-                    <NumericInput
-                      id={`${row.key}-stock`}
-                      value={row.stock}
-                      onChange={(v) => updateRow(row.key, { stock: v })}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div className="grid gap-1">
-                    <Label
-                      htmlFor={`${row.key}-price`}
-                      className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-                    >
-                      Price
-                    </Label>
-                    <NumericInput
-                      id={`${row.key}-price`}
-                      value={row.price}
-                      onChange={(v) => updateRow(row.key, { price: v })}
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
               </div>
             </div>
           ))}
