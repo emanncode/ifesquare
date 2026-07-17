@@ -1,5 +1,6 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
+import { MotionConfig } from "framer-motion"
 import "./index.css"
 import App from "./App.tsx"
 import { ThemeProvider } from "@/components/ThemeProvider"
@@ -18,7 +19,9 @@ if (SENTRY_DSN) {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
-      <App />
+      <MotionConfig reducedMotion="user">
+        <App />
+      </MotionConfig>
     </ThemeProvider>
   </StrictMode>,
 )
