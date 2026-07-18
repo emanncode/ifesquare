@@ -32,40 +32,36 @@ type Entry struct {
 
 type EntryWithProduct struct {
 	Entry
-	ProductName string `json:"product_name"`
-	ProductUnit string `json:"product_unit"`
-	EffectiveThreshold int  `json:"effective_threshold"`
-	CurrentStock       int  `json:"current_stock"`
-	IsLowStock         bool `json:"is_low_stock"`
+	ProductName       string `json:"product_name"`
+	EffectiveThreshold int   `json:"effective_threshold"`
+	CurrentStock      int    `json:"current_stock"`
+	IsLowStock        bool   `json:"is_low_stock"`
 }
 
-func GetTodayEntries() ([]EntryWithProduct, error) {
+func GetTodayEntries(userID int64) ([]EntryWithProduct, error) {
 	today := time.Now().Format("2006-01-02")
 
-	// Check if today has entries before we insert any
 	var hadEntries int
-	if err := db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM entries WHERE day_date = ?)", today).Scan(&hadEntries); err != nil {
+	if err := db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM entries WHERE day_date = ? AND user_id = ?)", today, userID).Scan(&hadEntries); err != nil {
 		hadEntries = 0
 	}
 
-	// Batch setup in a single transaction
 	tx, err := db.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.Exec("INSERT OR IGNORE INTO days (date) VALUES (?)", today); err != nil {
+	if _, err := tx.Exec("INSERT OR IGNORE INTO days (user_id, date) VALUES (?, ?)", userID, today); err != nil {
 		return nil, err
 	}
 
-	// Insert entries for any active products that don't have one for today
 	if _, err := tx.Exec(`
-		INSERT OR IGNORE INTO entries (day_date, product_id, opening, price)
-		SELECT ?, p.id, p.stock, p.price
+		INSERT OR IGNORE INTO entries (user_id, day_date, product_id, opening, price)
+		SELECT ?, ?, p.id, p.stock, p.price
 		FROM products p
-		WHERE p.archived_at IS NULL
-	`, today); err != nil {
+		WHERE p.archived_at IS NULL AND p.user_id = ?
+	`, userID, today, userID); err != nil {
 		return nil, err
 	}
 
@@ -73,19 +69,18 @@ func GetTodayEntries() ([]EntryWithProduct, error) {
 		return nil, err
 	}
 
-	// Auto-sync from the last closed day when this day is first opened
 	if hadEntries == 0 {
-		autoSyncFromLastClosed(today)
+		autoSyncFromLastClosed(today, userID)
 	}
 
 	rows, err := db.DB.Query(`
 		SELECT e.id, e.day_date, e.product_id, e.opening, e.receipts, e.closing, e.price, e.created_at, e.updated_at,
-		       p.name, p.unit, p.low_stock_threshold, p.stock
+		       p.name, p.low_stock_threshold, p.stock
 		FROM entries e
 		JOIN products p ON p.id = e.product_id
-		WHERE e.day_date = ?
+		WHERE e.day_date = ? AND e.user_id = ?
 		ORDER BY p.name
-	`, today)
+	`, today, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +91,7 @@ func GetTodayEntries() ([]EntryWithProduct, error) {
 		var e EntryWithProduct
 		var lowStockThreshold *int
 		var productStock int
-		if err := rows.Scan(&e.ID, &e.DayDate, &e.ProductID, &e.Opening, &e.Receipts, &e.Closing, &e.Price, &e.CreatedAt, &e.UpdatedAt, &e.ProductName, &e.ProductUnit, &lowStockThreshold, &productStock); err != nil {
+		if err := rows.Scan(&e.ID, &e.DayDate, &e.ProductID, &e.Opening, &e.Receipts, &e.Closing, &e.Price, &e.CreatedAt, &e.UpdatedAt, &e.ProductName, &lowStockThreshold, &productStock); err != nil {
 			return nil, err
 		}
 		effectiveThreshold := defaultThreshold
@@ -119,8 +114,8 @@ func GetTodayEntries() ([]EntryWithProduct, error) {
 	return entries, nil
 }
 
-func ensureEntries(dayDate string) {
-	rows, err := db.DB.Query("SELECT id, price, stock FROM products WHERE archived_at IS NULL")
+func ensureEntries(dayDate string, userID int64) {
+	rows, err := db.DB.Query("SELECT id, price, stock FROM products WHERE archived_at IS NULL AND user_id = ?", userID)
 	if err != nil {
 		return
 	}
@@ -139,25 +134,25 @@ func ensureEntries(dayDate string) {
 
 	for _, p := range products {
 		db.DB.Exec(
-			"INSERT OR IGNORE INTO entries (day_date, product_id, opening, price) VALUES (?, ?, ?, ?)",
-			dayDate, p.id, p.stock, p.price,
+			"INSERT OR IGNORE INTO entries (user_id, day_date, product_id, opening, price) VALUES (?, ?, ?, ?, ?)",
+			userID, dayDate, p.id, p.stock, p.price,
 		)
 	}
 }
 
-func UpdateEntry(dayDate string, productID int64, opening, receipts, closing, price *int) (*Entry, error) {
+func UpdateEntry(dayDate string, productID int64, userID int64, opening, receipts, closing, price *int) (*Entry, error) {
 	if opening != nil {
 		if _, err := db.DB.Exec(
-			"UPDATE entries SET opening = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ?",
-			*opening, dayDate, productID,
+			"UPDATE entries SET opening = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
+			*opening, dayDate, productID, userID,
 		); err != nil {
 			return nil, err
 		}
 	}
 	if receipts != nil {
 		_, err := db.DB.Exec(
-			"UPDATE entries SET receipts = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ?",
-			*receipts, dayDate, productID,
+			"UPDATE entries SET receipts = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
+			*receipts, dayDate, productID, userID,
 		)
 		if err != nil {
 			return nil, err
@@ -165,8 +160,8 @@ func UpdateEntry(dayDate string, productID int64, opening, receipts, closing, pr
 	}
 	if closing != nil {
 		_, err := db.DB.Exec(
-			"UPDATE entries SET closing = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ?",
-			*closing, dayDate, productID,
+			"UPDATE entries SET closing = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
+			*closing, dayDate, productID, userID,
 		)
 		if err != nil {
 			return nil, err
@@ -174,20 +169,20 @@ func UpdateEntry(dayDate string, productID int64, opening, receipts, closing, pr
 	}
 	if price != nil {
 		if _, err := db.DB.Exec(
-			"UPDATE entries SET price = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ?",
-			*price, dayDate, productID,
+			"UPDATE entries SET price = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
+			*price, dayDate, productID, userID,
 		); err != nil {
 			return nil, err
 		}
 	}
-	return getEntry(dayDate, productID)
+	return getEntry(dayDate, productID, userID)
 }
 
-func getEntry(dayDate string, productID int64) (*Entry, error) {
+func getEntry(dayDate string, productID int64, userID int64) (*Entry, error) {
 	var e Entry
 	err := db.DB.QueryRow(
-		"SELECT id, day_date, product_id, opening, receipts, closing, price, created_at, updated_at FROM entries WHERE day_date = ? AND product_id = ?",
-		dayDate, productID,
+		"SELECT id, day_date, product_id, opening, receipts, closing, price, created_at, updated_at FROM entries WHERE day_date = ? AND product_id = ? AND user_id = ?",
+		dayDate, productID, userID,
 	).Scan(&e.ID, &e.DayDate, &e.ProductID, &e.Opening, &e.Receipts, &e.Closing, &e.Price, &e.CreatedAt, &e.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -198,19 +193,14 @@ func getEntry(dayDate string, productID int64) (*Entry, error) {
 	return &e, nil
 }
 
-// autoSyncFromLastClosed silently copies the most recent closed day's closing
-// values into today's entry openings (and product stock). It is called
-// automatically when a new day's entries are first created, replacing the
-// need for a manual "Sync last closed" button. No error is returned when
-// there is no previous closed day — that is a normal state for new shops.
-func autoSyncFromLastClosed(today string) {
+func autoSyncFromLastClosed(today string, userID int64) {
 	var prevDate string
 	err := db.DB.QueryRow(`
 		SELECT date FROM days
-		WHERE closed_at IS NOT NULL AND date < ?
+		WHERE closed_at IS NOT NULL AND date < ? AND user_id = ?
 		ORDER BY date DESC
 		LIMIT 1
-	`, today).Scan(&prevDate)
+	`, today, userID).Scan(&prevDate)
 	if err != nil {
 		return
 	}
@@ -219,8 +209,8 @@ func autoSyncFromLastClosed(today string) {
 		SELECT e.product_id, e.closing
 		FROM entries e
 		JOIN products p ON p.id = e.product_id
-		WHERE e.day_date = ? AND e.closing IS NOT NULL
-	`, prevDate)
+		WHERE e.day_date = ? AND e.closing IS NOT NULL AND e.user_id = ?
+	`, prevDate, userID)
 	if err != nil {
 		return
 	}
@@ -232,32 +222,23 @@ func autoSyncFromLastClosed(today string) {
 			return
 		}
 		db.DB.Exec(
-			"UPDATE entries SET opening = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ?",
-			closing, today, productID,
+			"UPDATE entries SET opening = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
+			closing, today, productID, userID,
 		)
 		db.DB.Exec(
-			"UPDATE products SET stock = ? WHERE id = ?", closing, productID,
+			"UPDATE products SET stock = ? WHERE id = ? AND user_id = ?", closing, productID, userID,
 		)
 	}
 }
 
-// SyncFromLastClosedDay copies closing values from the most recent
-// previous closed day into today's entry openings (and product stock).
-//
-// Safety guard: if today already has user-entered data (non-zero receipts or
-// non-null closing on any entry), the sync is rejected to prevent silently
-// overwriting openings the user may have already adjusted.
-//
-// Returns the date we synced from, or an error if no previous closed day exists
-// or if today already has data.
-func SyncFromLastClosedDay(today string) (string, error) {
+func SyncFromLastClosedDay(today string, userID int64) (string, error) {
 	var prevDate string
 	err := db.DB.QueryRow(`
 		SELECT date FROM days
-		WHERE closed_at IS NOT NULL AND date < ?
+		WHERE closed_at IS NOT NULL AND date < ? AND user_id = ?
 		ORDER BY date DESC
 		LIMIT 1
-	`, today).Scan(&prevDate)
+	`, today, userID).Scan(&prevDate)
 	if err == sql.ErrNoRows {
 		return "", fmt.Errorf("no previous closed day found")
 	}
@@ -268,27 +249,26 @@ func SyncFromLastClosedDay(today string) (string, error) {
 	var hasData int
 	if err := db.DB.QueryRow(`
 		SELECT COUNT(*) FROM entries
-		WHERE day_date = ? AND (receipts != 0 OR closing IS NOT NULL)
-	`, today).Scan(&hasData); err != nil {
+		WHERE day_date = ? AND user_id = ? AND (receipts != 0 OR closing IS NOT NULL)
+	`, today, userID).Scan(&hasData); err != nil {
 		return "", err
 	}
 	if hasData > 0 {
 		return "", fmt.Errorf("today already has entries with data; sync only works on a fresh day")
 	}
 
-	// Ensure today has entries for all active products
-	_, err = db.DB.Exec("INSERT OR IGNORE INTO days (date) VALUES (?)", today)
+	_, err = db.DB.Exec("INSERT OR IGNORE INTO days (user_id, date) VALUES (?, ?)", userID, today)
 	if err != nil {
 		return "", err
 	}
-	ensureEntries(today)
+	ensureEntries(today, userID)
 
 	rows, err := db.DB.Query(`
 		SELECT e.product_id, e.closing, p.stock
 		FROM entries e
 		JOIN products p ON p.id = e.product_id
-		WHERE e.day_date = ? AND e.closing IS NOT NULL
-	`, prevDate)
+		WHERE e.day_date = ? AND e.closing IS NOT NULL AND e.user_id = ?
+	`, prevDate, userID)
 	if err != nil {
 		return "", err
 	}
@@ -299,16 +279,14 @@ func SyncFromLastClosedDay(today string) (string, error) {
 		if err := rows.Scan(&productID, &closing, &stock); err != nil {
 			return "", err
 		}
-		// Update today's opening to match previous closing
 		if _, err := db.DB.Exec(
-			"UPDATE entries SET opening = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ?",
-			closing, today, productID,
+			"UPDATE entries SET opening = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
+			closing, today, productID, userID,
 		); err != nil {
 			return "", err
 		}
-		// Update product stock to match
 		if _, err := db.DB.Exec(
-			"UPDATE products SET stock = ? WHERE id = ?", closing, productID,
+			"UPDATE products SET stock = ? WHERE id = ? AND user_id = ?", closing, productID, userID,
 		); err != nil {
 			return "", err
 		}
@@ -317,7 +295,7 @@ func SyncFromLastClosedDay(today string) (string, error) {
 	return prevDate, nil
 }
 
-func CloseDay(dayDate string) error {
+func CloseDay(dayDate string, userID int64) error {
 	tx, err := db.DB.Begin()
 	if err != nil {
 		return err
@@ -326,8 +304,8 @@ func CloseDay(dayDate string) error {
 
 	_, err = tx.Exec(`
 		UPDATE entries SET closing = opening + receipts
-		WHERE day_date = ? AND closing IS NULL
-	`, dayDate)
+		WHERE day_date = ? AND user_id = ? AND closing IS NULL
+	`, dayDate, userID)
 	if err != nil {
 		return err
 	}
@@ -336,8 +314,8 @@ func CloseDay(dayDate string) error {
 		SELECT e.id, e.product_id, e.closing
 		FROM entries e
 		JOIN products p ON p.id = e.product_id
-		WHERE e.day_date = ?
-	`, dayDate)
+		WHERE e.day_date = ? AND e.user_id = ?
+	`, dayDate, userID)
 	if err != nil {
 		return err
 	}
@@ -348,12 +326,12 @@ func CloseDay(dayDate string) error {
 		if err := rows.Scan(&entryID, &productID, &closing); err != nil {
 			return err
 		}
-		if _, err := tx.Exec("UPDATE products SET stock = ? WHERE id = ?", closing, productID); err != nil {
+		if _, err := tx.Exec("UPDATE products SET stock = ? WHERE id = ? AND user_id = ?", closing, productID, userID); err != nil {
 			return err
 		}
 	}
 
-	if _, err := tx.Exec("UPDATE days SET closed_at = CURRENT_TIMESTAMP WHERE date = ?", dayDate); err != nil {
+	if _, err := tx.Exec("UPDATE days SET closed_at = CURRENT_TIMESTAMP WHERE user_id = ? AND date = ?", userID, dayDate); err != nil {
 		return err
 	}
 
