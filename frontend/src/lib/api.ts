@@ -3,6 +3,8 @@
  * Always sends credentials so the httpOnly JWT cookie is included.
  */
 
+import { queueMutation } from "./offlineQueue";
+
 const API_BASE = import.meta.env.VITE_API_URL ?? ""
 
 export class ApiError extends Error {
@@ -50,4 +52,22 @@ export async function api<T>(
   }
 
   return (await res.json()) as T
+}
+
+/**
+ * Like api(), but on network error (fetch throws) the mutation is queued for
+ * offline replay instead of throwing. Server errors (4xx/5xx) still throw.
+ */
+export async function mutateWithOffline<T>(
+  path: string,
+  method: string,
+  body: unknown,
+): Promise<T | null> {
+  try {
+    return await api<T>(path, { method, body });
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    await queueMutation(path, method, body);
+    return null;
+  }
 }
