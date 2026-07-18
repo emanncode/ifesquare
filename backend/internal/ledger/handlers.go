@@ -98,7 +98,7 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"entry not found"}`, http.StatusNotFound)
 		return
 	}
-	cache.Invalidate(cacheKey, "/api/history/"+today)
+	cache.Invalidate(cacheKey, "/api/history/"+today, "analytics:monthly-comparison:"+today)
 	writeJSON(w, http.StatusOK, entry)
 }
 
@@ -173,7 +173,7 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"entry not found"}`, http.StatusNotFound)
 		return
 	}
-	cache.Invalidate(cacheKey, "/api/history/"+date)
+	cache.Invalidate(cacheKey, "/api/history/"+date, "analytics:monthly-comparison:"+getToday())
 	writeJSON(w, http.StatusOK, entry)
 }
 
@@ -183,7 +183,7 @@ func CloseHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
-	cache.Invalidate(cacheKey, "/api/history")
+	cache.Invalidate(cacheKey, "/api/history", "analytics:monthly-comparison:"+today)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "day closed"})
 }
 

@@ -18,6 +18,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/getsentry/sentry-go"
 
+	"github.com/emanncode/ifesquare/backend/internal/analytics"
 	"github.com/emanncode/ifesquare/backend/internal/auth"
 	"github.com/emanncode/ifesquare/backend/internal/cache"
 	"github.com/emanncode/ifesquare/backend/internal/db"
@@ -207,6 +208,8 @@ func main() {
 			r.Get("/{date}/export", history.ExportCSVHandler)
 			r.Get("/{date}", history.GetByDateHandler)
 		})
+
+		r.Get("/api/analytics/monthly-comparison", analytics.MonthlyComparisonHandler)
 	})
 
 	staticDir := os.Getenv("STATIC_DIR")
