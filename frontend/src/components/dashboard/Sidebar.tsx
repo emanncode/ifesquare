@@ -2,6 +2,7 @@ import { useContext, useEffect } from "react";
 import { LayoutGroup, motion } from "framer-motion";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { BookOpen, Package, History, LogOut, X, AlertTriangle } from "lucide-react";
+import { usePendingSync } from "@/hooks/usePendingSync";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import BrandMark from "@/components/login/brandmark";
@@ -29,6 +30,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const location = useLocation();
   const productsCtx = useContext(ProductsContext)
   const lowStockCount = productsCtx ? productsCtx.rows.filter((r) => r.isLowStock).length : 0
+  const pendingCount = usePendingSync()
 
   // Close the mobile drawer after navigation
   useEffect(() => {
@@ -162,6 +164,17 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               {user.email}
             </p>
           )}
+
+          {pendingCount > 0 && (
+            <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 px-3.5 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+              <span className="relative inline-flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-amber-500 opacity-75" />
+                <span className="relative inline-flex size-2 rounded-full bg-amber-500" />
+              </span>
+              {pendingCount} change{pendingCount !== 1 ? "s" : ""} pending sync
+            </div>
+          )}
+
           <ThemeToggle
             showLabel
             className="h-auto w-full justify-start px-3.5 py-3 font-medium text-muted-foreground hover:text-foreground"
