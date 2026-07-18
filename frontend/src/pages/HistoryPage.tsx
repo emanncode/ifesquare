@@ -11,7 +11,7 @@ import { DayDetailPanel } from "@/components/dashboard/DayDetailPanel"
 import { fmtInt, formatDate, nairaFmt, parseCommaInt } from "@/components/dashboard/format"
 import { useHistory } from "@/hooks/useHistory"
 import { useToast } from "@/hooks/useToast"
-import { api } from "@/lib/api"
+import { mutateWithOffline } from "@/lib/api"
 import type { ApiHistoryDayDetail } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -71,13 +71,13 @@ export default function HistoryPage() {
     raw: string,
   ) {
     if (!detail) return
-    await api(`/api/ledger/${detail.date}/${productId}`, {
-      method: "PATCH",
-      body: { [field]: parseCommaInt(raw) },
+    const r = await mutateWithOffline(`/api/ledger/${detail.date}/${productId}`, "PATCH", {
+      [field]: parseCommaInt(raw),
     })
-    // Refresh detail
-    const data = await getDay(detail.date)
-    setDetail(data)
+    if (r !== null) {
+      const data = await getDay(detail.date)
+      setDetail(data)
+    }
   }
 
   return (

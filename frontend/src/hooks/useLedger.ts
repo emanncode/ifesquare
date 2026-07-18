@@ -60,7 +60,14 @@ export function useLedger() {
   }, [load, isAuthenticated])
 
   const closeDay = useCallback(async () => {
-    await api("/api/ledger/close", { method: "POST" })
+    try {
+      await api("/api/ledger/close", { method: "POST" })
+    } catch (err) {
+      if (!(err instanceof Error) || err.name === "TypeError") {
+        throw new Error("Can't close the day while offline — reconnect and try again.")
+      }
+      throw err
+    }
     await load()
   }, [load])
 

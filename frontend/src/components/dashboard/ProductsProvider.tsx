@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import { api, ApiError } from "@/lib/api"
+import { api, ApiError, mutateWithOffline } from "@/lib/api"
 import type { ApiLedgerEntry, ApiProduct } from "@/lib/types"
 import { parseCommaInt } from "./format"
 import { useToast } from "@/hooks/useToast"
@@ -120,11 +120,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       if (form.lowStockThreshold) {
         body.low_stock_threshold = parseCommaInt(form.lowStockThreshold)
       }
-      await api<ApiProduct>("/api/products", {
-        method: "POST",
-        body,
-      })
-      await refresh()
+      const r = await mutateWithOffline<ApiProduct>("/api/products", "POST", body)
+      if (r !== null) await refresh()
     },
     [refresh],
   )
@@ -133,24 +130,21 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     async (forms: NewProductForm[]) => {
       const valid = forms.filter((f) => f.name.trim())
       if (valid.length === 0) return
-      await api("/api/products", {
-        method: "POST",
-        body: {
-          products: valid.map((f) => {
-            const p: Record<string, unknown> = {
-              name: f.name.trim(),
-              unit: f.unit?.trim() || "",
-              stock: parseCommaInt(f.stock),
-              price: parseCommaInt(f.price),
-            }
-            if (f.lowStockThreshold) {
-              p.low_stock_threshold = parseCommaInt(f.lowStockThreshold)
-            }
-            return p
-          }),
-        },
+      const r = await mutateWithOffline("/api/products", "POST", {
+        products: valid.map((f) => {
+          const p: Record<string, unknown> = {
+            name: f.name.trim(),
+            unit: f.unit?.trim() || "",
+            stock: parseCommaInt(f.stock),
+            price: parseCommaInt(f.price),
+          }
+          if (f.lowStockThreshold) {
+            p.low_stock_threshold = parseCommaInt(f.lowStockThreshold)
+          }
+          return p
+        }),
       })
-      await refresh()
+      if (r !== null) await refresh()
     },
     [refresh],
   )
@@ -192,46 +186,39 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         key,
         setTimeout(async () => {
           debounceTimers.current.delete(key)
+          let ok = false
           try {
             if (field === "low_stock_threshold") {
               const body: Record<string, number | null> = {}
               body.low_stock_threshold = value === "" ? null : parseCommaInt(value)
-              await api(`/api/products/${productId}`, {
-                method: "PATCH",
-                body,
-              })
+              const r = await mutateWithOffline(`/api/products/${productId}`, "PATCH", body)
+              ok = r !== null
             } else if (field === "opening" || field === "price") {
-              await Promise.all([
-                api(`/api/ledger/today/${productId}`, {
-                  method: "PATCH",
-                  body: { [field]: parseCommaInt(value) },
-                }),
-                api(`/api/products/${productId}`, {
-                  method: "PATCH",
-                  body: field === "opening" ? { stock: parseCommaInt(value) } : { price: parseCommaInt(value) },
-                }),
+              const val = parseCommaInt(value)
+              const [r1, r2] = await Promise.all([
+                mutateWithOffline(`/api/ledger/today/${productId}`, "PATCH", { [field]: val }),
+                mutateWithOffline(`/api/products/${productId}`, "PATCH", field === "opening" ? { stock: val } : { price: val }),
               ])
+              ok = r1 !== null && r2 !== null
             } else if (field === "receipts" || field === "closing") {
               const body: Record<string, number> = {}
               body[field] = parseCommaInt(value)
-              await api(`/api/ledger/today/${productId}`, {
-                method: "PATCH",
-                body,
-              })
+              const r = await mutateWithOffline(`/api/ledger/today/${productId}`, "PATCH", body)
+              ok = r !== null
             } else {
               const body: Record<string, string | number> = {}
               if (field === "name") body.name = value
               else if (field === "unit") body.unit = value
-              await api(`/api/products/${productId}`, {
-                method: "PATCH",
-                body,
-              })
+              const r = await mutateWithOffline(`/api/products/${productId}`, "PATCH", body)
+              ok = r !== null
             }
-            const [products, entries] = await Promise.all([
-              api<ApiProduct[]>("/api/products"),
-              api<ApiLedgerEntry[]>("/api/ledger/today"),
-            ])
-            setRows(merge(products ?? [], entries ?? []))
+            if (ok) {
+              const [products, entries] = await Promise.all([
+                api<ApiProduct[]>("/api/products"),
+                api<ApiLedgerEntry[]>("/api/ledger/today"),
+              ])
+              setRows(merge(products ?? [], entries ?? []))
+            }
           } catch (err) {
             if (err instanceof ApiError && err.status === 401) {
               window.location.href = "/login"
