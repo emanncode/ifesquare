@@ -4,7 +4,7 @@ import { formatWithCommas, stripNonDigits } from "./format"
 export function CatalogNumericTd({
   value,
   onChange,
-  placeholder = "0",
+  placeholder = "—",
 }: {
   value: string
   onChange: (v: string) => void

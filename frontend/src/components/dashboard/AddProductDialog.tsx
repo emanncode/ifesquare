@@ -93,7 +93,7 @@ export function AddProductDialog({
           Add products
         </Button>
       </DialogTrigger>
-      <DialogContent className="gap-4 sm:max-w-7xl sm:rounded-xl">
+      <DialogContent className="gap-4 sm:max-w-[95vw] sm:rounded-xl">
         <DialogHeader>
           <DialogTitle>Add products</DialogTitle>
           <DialogDescription>
@@ -169,7 +169,7 @@ export function AddProductDialog({
                         id={`${row.key}-stock`}
                         value={row.stock}
                         onChange={(v) => updateRow(row.key, { stock: v })}
-                        placeholder="0"
+                        placeholder="—"
                       />
                     </div>
                     <div className="grid gap-1">
@@ -183,7 +183,7 @@ export function AddProductDialog({
                         id={`${row.key}-price`}
                         value={row.price}
                         onChange={(v) => updateRow(row.key, { price: v })}
-                        placeholder="0"
+                        placeholder="—"
                       />
                     </div>
                     <div className="grid gap-1">

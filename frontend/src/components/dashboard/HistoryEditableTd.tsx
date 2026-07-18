@@ -4,7 +4,7 @@ import { formatWithCommas, stripNonDigits } from "./format"
 export function HistoryEditableTd({
   value,
   onChange,
-  placeholder = "0",
+  placeholder = "—",
 }: {
   value: number | null
   onChange: (v: string) => void
