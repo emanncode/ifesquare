@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN phone_number TEXT;
+ALTER TABLE users ADD COLUMN notify_on_close INTEGER NOT NULL DEFAULT 0;
