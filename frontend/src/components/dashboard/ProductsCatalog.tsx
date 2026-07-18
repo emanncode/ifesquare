@@ -4,7 +4,7 @@ import { ArrowUp, ArrowUpDown, Loader2, Trash2, AlertTriangle, X } from "lucide-
 import { useSearchParams } from "react-router-dom"
 import { Card } from "@/components/ui/Card"
 import { CardTitle } from "@/components/ui/CardTitle"
-import { fmtInt, nairaFmt, formatWithCommas, stripNonDigits } from "./format"
+import { fmtInt, nairaFmt, stripNonDigits } from "./format"
 import { AddProductDialog } from "./AddProductDialog"
 import { useProducts } from "./useProducts"
 import { CatalogTh } from "./CatalogTh"
@@ -44,7 +44,7 @@ const SORTABLE_COLUMNS: { key: SortKey; label: string; align?: "left" | "right" 
   { key: "price", label: "Price", align: "right" },
   { key: "amount", label: "Amount", align: "right" },
   { key: "lowStockThreshold", label: "Alert at", align: "right" },
-  { key: "isLowStock", label: "Low stock", align: "center" },
+  { key: "isLowStock", label: "Low stock", align: undefined },
 ]
 
 export function ProductsCatalog() {
@@ -256,13 +256,12 @@ export function ProductsCatalog() {
                 </CatalogTd>
                 <CatalogTd align="right">
                   <AlertAtInput
-                    productId={r.productId}
                     lowStockThreshold={r.lowStockThreshold}
                     effectiveThreshold={r.effectiveThreshold}
                     onChange={(v) => void handlePatch(r.productId, "low_stock_threshold", v)}
                   />
                 </CatalogTd>
-                <CatalogTd align="center">
+                <CatalogTd>
                   {r.isLowStock && (
                     <span className="inline-flex items-center rounded-lg bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
                       Low stock
