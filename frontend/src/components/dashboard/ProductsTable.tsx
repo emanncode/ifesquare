@@ -24,16 +24,20 @@ type ProductsTableProps = {
 export function ProductsTable({ rows }: ProductsTableProps) {
   const [query, setQuery] = useState("");
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) || r.unit.toLowerCase().includes(q),
-    );
-  }, [rows, query]);
-
   const grandTotal = rows.reduce((s, r) => s + (r.amount ?? 0), 0);
+
+  const displayed = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const candidate = q
+      ? rows.filter(
+          (r) =>
+            r.name.toLowerCase().includes(q) || r.unit.toLowerCase().includes(q),
+        )
+      : rows;
+    return [...candidate]
+      .sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0))
+      .slice(0, 8);
+  }, [rows, query]);
 
   return (
     <Card
@@ -46,7 +50,7 @@ export function ProductsTable({ rows }: ProductsTableProps) {
             Today&apos;s products
           </CardTitle>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            View only — manage catalog on the Products page
+            Top products today — manage full catalog on the Products page
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -88,7 +92,7 @@ export function ProductsTable({ rows }: ProductsTableProps) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((r, i) => {
+            {displayed.map((r, i) => {
               return (
                 <motion.tr
                   key={r.id}
@@ -159,7 +163,7 @@ export function ProductsTable({ rows }: ProductsTableProps) {
                 </motion.tr>
               );
             })}
-            {filtered.length === 0 && (
+            {displayed.length === 0 && (
               <tr>
                 <td
                   colSpan={8}
