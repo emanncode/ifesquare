@@ -1,7 +1,7 @@
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import { LayoutGroup, motion } from "framer-motion";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { BookOpen, Package, History, LogOut, X, AlertTriangle } from "lucide-react";
+import { BookOpen, Package, History, LogOut, X, AlertTriangle, Settings } from "lucide-react";
 import { usePendingSync } from "@/hooks/usePendingSync";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,16 @@ import BrandMark from "@/components/login/brandmark";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { ProductsContext } from "@/components/dashboard/productsContext";
+import { Dialog } from "@/components/ui/Dialog";
+import { DialogTrigger } from "@/components/ui/DialogTrigger";
+import { DialogContent } from "@/components/ui/DialogContent";
+import { DialogHeader } from "@/components/ui/DialogHeader";
+import { DialogTitle } from "@/components/ui/DialogTitle";
+import { DialogDescription } from "@/components/ui/DialogDescription";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { api } from "@/lib/api";
+import type { User } from "@/lib/types";
 
 type SidebarProps = {
   open?: boolean;
@@ -31,6 +41,36 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const productsCtx = useContext(ProductsContext)
   const lowStockCount = productsCtx ? productsCtx.rows.filter((r) => r.isLowStock).length : 0
   const pendingCount = usePendingSync()
+
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [phoneNumber, setPhoneNumber] = useState(user?.phone_number ?? "")
+  const [notifyOnClose, setNotifyOnClose] = useState(user?.notify_on_close ?? false)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    setPhoneNumber(user?.phone_number ?? "")
+    setNotifyOnClose(user?.notify_on_close ?? false)
+  }, [user])
+
+  async function handleSaveSettings() {
+    setSaving(true)
+    try {
+      const updated = await api<User>("/api/auth/me", {
+        method: "PATCH",
+        body: {
+          phone_number: phoneNumber.trim() || null,
+          notify_on_close: notifyOnClose,
+        },
+      })
+      setPhoneNumber(updated.phone_number ?? "")
+      setNotifyOnClose(updated.notify_on_close)
+      setSettingsOpen(false)
+    } catch {
+      // keep dialog open on error
+    } finally {
+      setSaving(false)
+    }
+  }
 
   // Close the mobile drawer after navigation
   useEffect(() => {
@@ -157,12 +197,67 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
 
         <div className="mt-4 shrink-0 space-y-2 border-t border-border pt-4">
           {user?.email && (
-            <p
-              className="truncate px-3.5 text-xs text-muted-foreground"
-              title={user.email}
-            >
-              {user.email}
-            </p>
+            <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 rounded-xl px-3.5 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  title={user.email}
+                >
+                  <Settings className="size-3.5 shrink-0" strokeWidth={2} />
+                  <span className="truncate">{user.email}</span>
+                </button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Account settings</DialogTitle>
+                  <DialogDescription>Set your phone number to receive a daily SMS summary when you close the day.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+2348012345678"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                    />
+                  </div>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={notifyOnClose}
+                      onClick={() => setNotifyOnClose(!notifyOnClose)}
+                      className={cn(
+                        "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        notifyOnClose ? "bg-primary" : "bg-input",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "pointer-events-none inline-block size-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200",
+                          notifyOnClose ? "translate-x-4" : "translate-x-0",
+                        )}
+                      />
+                    </button>
+                    <span className="text-sm font-medium leading-none select-none">
+                      Text me a summary when I close the day
+                    </span>
+                  </label>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setSettingsOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={() => void handleSaveSettings()} disabled={saving}>
+                    {saving ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           )}
 
           {pendingCount > 0 && (

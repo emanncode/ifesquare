@@ -3,13 +3,14 @@
 export type User = {
   id: number
   email: string
+  phone_number: string | null
+  notify_on_close: boolean
 }
 
 /** GET/POST /api/products */
 export type ApiProduct = {
   id: number
   name: string
-  unit: string
   price: number
   stock: number
   low_stock_threshold: number | null
@@ -23,7 +24,6 @@ export type ApiLedgerEntry = {
   day_date: string
   product_id: number
   product_name: string
-  product_unit: string
   opening: number
   receipts: number
   closing: number | null
@@ -62,7 +62,6 @@ export type LedgerRow = {
   id: number
   productId: number
   name: string
-  unit: string
   stock: number
   price: number
   receipts: number
@@ -92,7 +91,6 @@ export function deriveLedgerRow(e: ApiLedgerEntry): LedgerRow {
     id: e.id,
     productId: e.product_id,
     name: e.product_name,
-    unit: e.product_unit,
     stock: e.opening,
     price: e.price,
     receipts: e.receipts,

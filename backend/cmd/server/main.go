@@ -20,7 +20,6 @@ import (
 
 	"github.com/emanncode/ifesquare/backend/internal/analytics"
 	"github.com/emanncode/ifesquare/backend/internal/auth"
-	"github.com/emanncode/ifesquare/backend/internal/cache"
 	"github.com/emanncode/ifesquare/backend/internal/db"
 	"github.com/emanncode/ifesquare/backend/internal/history"
 	"github.com/emanncode/ifesquare/backend/internal/ledger"
@@ -78,21 +77,8 @@ func main() {
 	}
 	ledger.SetDefaultThreshold(lowStockDefault)
 
-	// Pre-load cache so first requests are served from memory
-	go func() {
-		if p, err := products.List(); err == nil {
-			if p == nil {
-				p = []products.Product{}
-			}
-			cache.Set("/api/products", p)
-		}
-		if e, err := ledger.GetTodayEntries(); err == nil {
-			if e == nil {
-				e = []ledger.EntryWithProduct{}
-			}
-			cache.Set("/api/ledger/today", e)
-		}
-	}()
+	// Pre-load cache is now per-user and happens on first request via handlers.
+	// The global cache preload was removed because there is no user context at startup.
 
 	// Keep Turso connection warm — ping every 30s to prevent cold starts
 	go func() {
@@ -182,6 +168,7 @@ func main() {
 		r.Post("/login", auth.Login)
 		r.Post("/logout", auth.Logout)
 		r.With(auth.Middleware).Get("/me", auth.Me)
+		r.With(auth.Middleware).Patch("/me", auth.UpdateMe)
 		r.With(auth.Middleware).Post("/change-password", auth.ChangePassword)
 	})
 
@@ -191,6 +178,8 @@ func main() {
 		r.Route("/api/products", func(r chi.Router) {
 			r.Get("/", products.ListHandler)
 			r.Post("/", products.CreateHandler)
+			r.Get("/template", products.TemplateHandler)
+			r.Post("/import", products.ImportHandler)
 			r.Patch("/{id}", products.UpdateHandler)
 			r.Delete("/{id}", products.DeleteHandler)
 		})

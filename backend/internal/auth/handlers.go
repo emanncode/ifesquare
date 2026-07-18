@@ -1,12 +1,12 @@
 package auth
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/emanncode/ifesquare/backend/internal/db"
 )
@@ -17,8 +17,10 @@ type loginReq struct {
 }
 
 type userResp struct {
-	ID    int64  `json:"id"`
-	Email string `json:"email"`
+	ID            int64   `json:"id"`
+	Email         string  `json:"email"`
+	PhoneNumber   *string `json:"phone_number"`
+	NotifyOnClose bool    `json:"notify_on_close"`
 }
 
 // Login error codes returned in {"error":"..."}.
@@ -168,14 +170,72 @@ func Me(w http.ResponseWriter, r *http.Request) {
 
 	var id int64
 	var email string
-	var createdAt time.Time
-	err := db.DB.QueryRow("SELECT id, email, created_at FROM users WHERE id = ?", userID).Scan(&id, &email, &createdAt)
+	var phoneNumber sql.NullString
+	var notifyOnClose int
+	err := db.DB.QueryRow("SELECT id, email, phone_number, notify_on_close FROM users WHERE id = ?", userID).Scan(&id, &email, &phoneNumber, &notifyOnClose)
 	if err != nil {
 		http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, userResp{ID: id, Email: email})
+	var pn *string
+	if phoneNumber.Valid {
+		pn = &phoneNumber.String
+	}
+	writeJSON(w, http.StatusOK, userResp{ID: id, Email: email, PhoneNumber: pn, NotifyOnClose: notifyOnClose != 0})
+}
+
+type updateMeReq struct {
+	PhoneNumber   *string `json:"phone_number"`
+	NotifyOnClose *bool   `json:"notify_on_close"`
+}
+
+func UpdateMe(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(UserIDKey).(int64)
+
+	var req updateMeReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeAuthError(w, http.StatusBadRequest, errInvalidBody)
+		return
+	}
+
+	if req.PhoneNumber != nil {
+		var v any
+		if *req.PhoneNumber == "" {
+			v = nil
+		} else {
+			v = *req.PhoneNumber
+		}
+		if _, err := db.DB.Exec("UPDATE users SET phone_number = ? WHERE id = ?", v, userID); err != nil {
+			http.Error(w, `{"error":"could not update phone number"}`, http.StatusInternalServerError)
+			return
+		}
+	}
+	if req.NotifyOnClose != nil {
+		v := 0
+		if *req.NotifyOnClose {
+			v = 1
+		}
+		if _, err := db.DB.Exec("UPDATE users SET notify_on_close = ? WHERE id = ?", v, userID); err != nil {
+			http.Error(w, `{"error":"could not update notification preference"}`, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Return updated user
+	var id int64
+	var email string
+	var phoneNumber sql.NullString
+	var notifyOnClose int
+	if err := db.DB.QueryRow("SELECT id, email, phone_number, notify_on_close FROM users WHERE id = ?", userID).Scan(&id, &email, &phoneNumber, &notifyOnClose); err != nil {
+		http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+		return
+	}
+	var pn *string
+	if phoneNumber.Valid {
+		pn = &phoneNumber.String
+	}
+	writeJSON(w, http.StatusOK, userResp{ID: id, Email: email, PhoneNumber: pn, NotifyOnClose: notifyOnClose != 0})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
