@@ -161,7 +161,7 @@ func main() {
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
 	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
-	origins := []string{"http://localhost:5173", "http://localhost:3000"}
+	origins := []string{"http://localhost:5173", "http://localhost:4173", "http://localhost:3000"}
 	if allowedOrigin != "" {
 		origins = append(origins, allowedOrigin)
 	}
