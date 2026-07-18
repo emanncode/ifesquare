@@ -90,6 +90,9 @@ func migrate() error {
 		"migrations/001_init.sql",
 		"migrations/002_session_revoke.sql",
 		"migrations/003_low_stock.sql",
+		"migrations/004_notifications.sql",
+		"migrations/005_multi_user.sql",
+		"migrations/006_drop_unit.sql",
 	}
 	for _, name := range files {
 		sqlBytes, err := migrations.ReadFile(name)
@@ -97,9 +100,9 @@ func migrate() error {
 			return fmt.Errorf("read migration %s: %w", name, err)
 		}
 		if _, err := DB.Exec(string(sqlBytes)); err != nil {
-			// 003_low_stock.sql is ALTER TABLE ADD COLUMN, not idempotent.
+			// ALTER TABLE ADD COLUMN migrations are not idempotent.
 			// If the column already exists, skip the error.
-			if name == "migrations/003_low_stock.sql" && strings.Contains(err.Error(), "duplicate column") {
+			if strings.Contains(err.Error(), "duplicate column") {
 				log.Printf("migration %s: column already exists, skipping", name)
 				continue
 			}
