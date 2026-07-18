@@ -39,7 +39,6 @@ function merge(products: ApiProduct[], entries: ApiLedgerEntry[]): CatalogRow[] 
     return {
       productId: p.id,
       name: p.name,
-      unit: p.unit,
       opening,
       receipts,
       closing,
@@ -113,7 +112,6 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       if (!form.name.trim()) return
       const body: Record<string, unknown> = {
         name: form.name.trim(),
-        unit: form.unit?.trim() || "",
         stock: parseCommaInt(form.stock),
         price: parseCommaInt(form.price),
       }
@@ -134,7 +132,6 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         products: valid.map((f) => {
           const p: Record<string, unknown> = {
             name: f.name.trim(),
-            unit: f.unit?.trim() || "",
             stock: parseCommaInt(f.stock),
             price: parseCommaInt(f.price),
           }
@@ -152,7 +149,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const patchCatalogField = useCallback(
     (
       productId: number,
-      field: "name" | "unit" | "opening" | "receipts" | "closing" | "price" | "low_stock_threshold",
+      field: "name" | "opening" | "receipts" | "closing" | "price" | "low_stock_threshold",
       value: string,
     ) => {
       setRows((prev) =>
@@ -160,7 +157,6 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
           if (r.productId !== productId) return r
           const next = { ...r }
           if (field === "name") next.name = value
-          else if (field === "unit") next.unit = value
           else if (field === "opening") next.opening = parseCommaInt(value)
           else if (field === "receipts") next.receipts = parseCommaInt(value)
           else if (field === "closing") next.closing = parseCommaInt(value) || null
@@ -205,11 +201,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
               body[field] = parseCommaInt(value)
               const r = await mutateWithOffline(`/api/ledger/today/${productId}`, "PATCH", body)
               ok = r !== null
-            } else {
-              const body: Record<string, string | number> = {}
-              if (field === "name") body.name = value
-              else if (field === "unit") body.unit = value
-              const r = await mutateWithOffline(`/api/products/${productId}`, "PATCH", body)
+            } else if (field === "name") {
+              const r = await mutateWithOffline(`/api/products/${productId}`, "PATCH", { name: value })
               ok = r !== null
             }
             if (ok) {

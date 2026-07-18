@@ -75,8 +75,8 @@ export function AddProductDialog({
   function handleSubmit() {
     const filled = rows
       .filter((r) => r.name.trim())
-      .map(({ name, unit, stock, price, lowStockThreshold }) => {
-        const p: NewProductForm = { name, unit, stock, price }
+      .map(({ name, stock, price, lowStockThreshold }) => {
+        const p: NewProductForm = { name, stock, price }
         if (lowStockThreshold) p.lowStockThreshold = lowStockThreshold
         return p
       })
@@ -140,24 +140,7 @@ export function AddProductDialog({
                     className="h-8 text-sm"
                   />
                 </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    <div className="grid gap-1">
-                      <Label
-                        htmlFor={`${row.key}-unit`}
-                        className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-                      >
-                        Unit
-                      </Label>
-                      <Input
-                        id={`${row.key}-unit`}
-                        value={row.unit ?? ""}
-                        onChange={(e) =>
-                          updateRow(row.key, { unit: e.target.value })
-                        }
-                        placeholder="bottle"
-                        className="h-8 text-sm"
-                      />
-                    </div>
+                  <div className="grid grid-cols-3 gap-2">
                     <div className="grid gap-1">
                       <Label
                         htmlFor={`${row.key}-stock`}

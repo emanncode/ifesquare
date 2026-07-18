@@ -105,9 +105,6 @@ export function DayDetailPanel({
                     >
                       <td className="px-2 py-3 font-medium text-foreground">
                         {e.product_name}
-                        <span className="mt-0.5 block text-xs text-muted-foreground">
-                          {e.product_unit}
-                        </span>
                       </td>
                       {isToday ? (
                         <>

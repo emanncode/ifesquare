@@ -31,7 +31,7 @@ export function ProductsTable({ rows }: ProductsTableProps) {
     const candidate = q
       ? rows.filter(
           (r) =>
-            r.name.toLowerCase().includes(q) || r.unit.toLowerCase().includes(q),
+            r.name.toLowerCase().includes(q),
         )
       : rows;
     return [...candidate]
@@ -106,18 +106,15 @@ export function ProductsTable({ rows }: ProductsTableProps) {
                   )}
                 >
                   <ProductsTableTd className="text-left">
-                    <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
                       <span className="font-semibold text-foreground">
                         {r.name}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {r.unit}
-                        {r.isLowStock && (
-                          <span className="ml-2 inline-flex items-center rounded-lg bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
-                            Low stock
-                          </span>
-                        )}
-                      </span>
+                      {r.isLowStock && (
+                        <span className="inline-flex items-center rounded-lg bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                          Low stock
+                        </span>
+                      )}
                     </div>
                   </ProductsTableTd>
                   <ProductsTableTd

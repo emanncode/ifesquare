@@ -10,12 +10,11 @@ import { useProducts } from "./useProducts"
 import { CatalogTh } from "./CatalogTh"
 import { CatalogTd } from "./CatalogTd"
 import { CatalogNumericTd } from "./CatalogNumericTd"
-import { CatalogEditableTextTd } from "./CatalogEditableTextTd"
 import { useToast } from "@/hooks/useToast"
 import { cn } from "@/lib/utils"
 import type { CatalogRow, NewProductForm } from "./types"
 
-type Field = "name" | "unit" | "opening" | "receipts" | "closing" | "price" | "low_stock_threshold"
+type Field = "name" | "opening" | "receipts" | "closing" | "price" | "low_stock_threshold"
 
 type SortKey = keyof CatalogRow
 type SortDir = "asc" | "desc"
@@ -35,7 +34,6 @@ function sortRows(data: CatalogRow[], key: SortKey, dir: SortDir): CatalogRow[] 
 
 const SORTABLE_COLUMNS: { key: SortKey; label: string; align?: "left" | "right" }[] = [
   { key: "name", label: "Product", align: "left" },
-  { key: "unit", label: "Unit", align: "left" },
   { key: "opening", label: "Opening", align: "right" },
   { key: "receipts", label: "Receipts", align: "right" },
   { key: "total", label: "Total", align: "right" },
@@ -223,11 +221,6 @@ export function ProductsCatalog() {
                     className="h-9 min-w-24 border-b border-dashed border-border bg-transparent text-sm font-medium text-foreground outline-none transition-colors focus:border-solid focus:border-primary"
                   />
                 </CatalogTd>
-                <CatalogEditableTextTd
-                  value={r.unit}
-                  onChange={(v) => void handlePatch(r.productId, "unit", v)}
-                  className="text-muted-foreground"
-                />
                 <CatalogNumericTd
                   value={String(r.opening)}
                   onChange={(v) => void handlePatch(r.productId, "opening", v)}
