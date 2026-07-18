@@ -75,6 +75,14 @@ export type LedgerRow = {
   isLowStock: boolean
 }
 
+/** GET /api/analytics/monthly-comparison */
+export type MonthlyComparison = {
+  current: { from: string; to: string; revenue: number; units: number }
+  previous: { from: string; to: string; revenue: number; units: number }
+  revenueDeltaPct: number | null
+  unitsDeltaPct: number | null
+}
+
 export function deriveLedgerRow(e: ApiLedgerEntry): LedgerRow {
   const total = e.opening + e.receipts
   const hasClosing = e.closing != null && e.closing > 0

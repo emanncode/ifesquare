@@ -4,13 +4,16 @@ import { motion } from "framer-motion"
 import { Wallet, Package, Cylinder, AlertTriangle, Loader2 } from "lucide-react"
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
 import { MetricCard } from "@/components/dashboard/MetricCard"
+import { MonthComparisonCard } from "@/components/dashboard/MonthComparisonCard"
 import { ProductsTable } from "@/components/dashboard/ProductsTable"
 import { InsightsCard } from "@/components/dashboard/InsightsCard"
 import { AnimatedNumber } from "@/components/AnimatedNumber"
-import { fmtInt, nairaFmt } from "@/components/dashboard/format"
+import { nairaFmt } from "@/components/dashboard/format"
 import { useAppShell } from "@/components/layout/appShell"
 import { useLedger } from "@/hooks/useLedger"
 import { useToast } from "@/hooks/useToast"
+import { api } from "@/lib/api"
+import type { MonthlyComparison } from "@/lib/types"
 
 export default function DashboardPage() {
   const { openMobileNav } = useAppShell()
@@ -19,10 +22,24 @@ export default function DashboardPage() {
   const [closeOpen, setCloseOpen] = useState(false)
   const [closing, setClosing] = useState(false)
   const navigate = useNavigate()
+  const [monthlyComparison, setMonthlyComparison] = useState<MonthlyComparison | null>(null)
 
   useEffect(() => {
     if (error) toast(error)
   }, [error, toast])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const data = await api<MonthlyComparison>("/api/analytics/monthly-comparison")
+        if (!cancelled) setMonthlyComparison(data)
+      } catch {
+        // month comparison is non-critical
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const totalRevenue = rows.reduce((s, r) => s + (r.amount ?? 0), 0)
   const totalUnits = rows.reduce((s, r) => s + (r.sales ?? 0), 0)
@@ -34,6 +51,12 @@ export default function DashboardPage() {
 
   async function handleRefresh() {
     await refresh()
+    try {
+      const data = await api<MonthlyComparison>("/api/analytics/monthly-comparison")
+      setMonthlyComparison(data)
+    } catch {
+      // non-critical
+    }
   }
 
   async function confirmCloseDay() {
@@ -141,6 +164,12 @@ export default function DashboardPage() {
           onClick={() => navigate("/app/products?filter=low-stock")}
         />
       </div>
+
+      {monthlyComparison && (
+        <div className="mb-6">
+          <MonthComparisonCard data={monthlyComparison} />
+        </div>
+      )}
 
       <ProductsTable rows={rows} />
 
