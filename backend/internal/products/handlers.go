@@ -1,20 +1,31 @@
 package products
 
 import (
+	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/emanncode/ifesquare/backend/internal/auth"
 	"github.com/emanncode/ifesquare/backend/internal/cache"
 )
 
+func cacheKey(userID int64, key string) string {
+	return fmt.Sprintf("%d:%s", userID, key)
+}
+
 func ListHandler(w http.ResponseWriter, r *http.Request) {
-	if cache.Serve(w, "/api/products") {
+	userID := r.Context().Value(auth.UserIDKey).(int64)
+	ck := cacheKey(userID, "/api/products")
+	if cache.Serve(w, ck) {
 		return
 	}
-	products, err := List()
+	products, err := List(userID)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
@@ -22,11 +33,13 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 	if products == nil {
 		products = []Product{}
 	}
-	cache.Set("/api/products", products)
+	cache.Set(ck, products)
 	writeJSON(w, http.StatusOK, products)
 }
 
 func CreateHandler(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(auth.UserIDKey).(int64)
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, `{"error":"cannot read body"}`, http.StatusBadRequest)
@@ -42,7 +55,6 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 	if productsRaw, ok := raw["products"]; ok {
 		var products []struct {
 			Name              string `json:"name"`
-			Unit              string `json:"unit"`
 			Price             int    `json:"price"`
 			Stock             int    `json:"stock"`
 			LowStockThreshold *int   `json:"low_stock_threshold"`
@@ -68,19 +80,20 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, `{"error":"low_stock_threshold cannot be negative"}`, http.StatusBadRequest)
 				return
 			}
-			if _, err := Create(p.Name, p.Unit, p.Price, p.Stock, p.LowStockThreshold); err != nil {
+			if _, err := Create(userID, p.Name, p.Price, p.Stock, p.LowStockThreshold); err != nil {
 				http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 				return
 			}
 		}
-		cache.Invalidate("/api/products", "/api/ledger/today")
+		ck := cacheKey(userID, "/api/products")
+		ltk := cacheKey(userID, "/api/ledger/today")
+		cache.Invalidate(ck, ltk)
 		writeJSON(w, http.StatusCreated, map[string]string{"message": "products created"})
 		return
 	}
 
 	var pData struct {
 		Name              string `json:"name"`
-		Unit              string `json:"unit"`
 		Price             int    `json:"price"`
 		Stock             int    `json:"stock"`
 		LowStockThreshold *int   `json:"low_stock_threshold"`
@@ -106,16 +119,19 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, err := Create(pData.Name, pData.Unit, pData.Price, pData.Stock, pData.LowStockThreshold)
+	p, err := Create(userID, pData.Name, pData.Price, pData.Stock, pData.LowStockThreshold)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
-	cache.Invalidate("/api/products", "/api/ledger/today")
+	ck := cacheKey(userID, "/api/products")
+	ltk := cacheKey(userID, "/api/ledger/today")
+	cache.Invalidate(ck, ltk)
 	writeJSON(w, http.StatusCreated, p)
 }
 
 func UpdateHandler(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(auth.UserIDKey).(int64)
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -129,7 +145,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	allowed := map[string]bool{"name": true, "unit": true, "price": true, "stock": true, "low_stock_threshold": true}
+	allowed := map[string]bool{"name": true, "price": true, "stock": true, "low_stock_threshold": true}
 	fields := make(map[string]interface{})
 	for k, v := range body {
 		if allowed[k] {
@@ -168,7 +184,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	p, err := Update(id, fields)
+	p, err := Update(id, userID, fields)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
@@ -177,11 +193,14 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
 		return
 	}
-	cache.Invalidate("/api/products", "/api/ledger/today")
+	ck := cacheKey(userID, "/api/products")
+	ltk := cacheKey(userID, "/api/ledger/today")
+	cache.Invalidate(ck, ltk)
 	writeJSON(w, http.StatusOK, p)
 }
 
 func DeleteHandler(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(auth.UserIDKey).(int64)
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -189,12 +208,88 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := Archive(id); err != nil {
+	if err := Archive(id, userID); err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
-	cache.Invalidate("/api/products")
+	ck := cacheKey(userID, "/api/products")
+	cache.Invalidate(ck)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "archived"})
+}
+
+func TemplateHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", `attachment; filename="ifesquare-products-template.csv"`)
+	wr := csv.NewWriter(w)
+	wr.Write([]string{"name", "price", "stock"})
+	wr.Flush()
+}
+
+func ImportHandler(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(auth.UserIDKey).(int64)
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, `{"error":"cannot read body"}`, http.StatusBadRequest)
+		return
+	}
+
+	rd := csv.NewReader(strings.NewReader(string(body)))
+	records, err := rd.ReadAll()
+	if err != nil {
+		http.Error(w, `{"error":"invalid CSV: `+err.Error()+`"}`, http.StatusBadRequest)
+		return
+	}
+
+	if len(records) < 2 {
+		http.Error(w, `{"error":"CSV must have a header row and at least one data row"}`, http.StatusBadRequest)
+		return
+	}
+
+	header := records[0]
+	if len(header) < 3 || header[0] != "name" || header[1] != "price" || header[2] != "stock" {
+		http.Error(w, `{"error":"CSV must have columns: name,price,stock"}`, http.StatusBadRequest)
+		return
+	}
+
+	var created int
+	var errors []string
+	for i, row := range records[1:] {
+		if len(row) < 3 {
+			errors = append(errors, fmt.Sprintf("row %d: too few columns", i+2))
+			continue
+		}
+		name := strings.TrimSpace(row[0])
+		if name == "" {
+			errors = append(errors, fmt.Sprintf("row %d: name is required", i+2))
+			continue
+		}
+		price, err := strconv.Atoi(strings.TrimSpace(row[1]))
+		if err != nil || price < 0 {
+			errors = append(errors, fmt.Sprintf("row %d: invalid price", i+2))
+			continue
+		}
+		stock, err := strconv.Atoi(strings.TrimSpace(row[2]))
+		if err != nil || stock < 0 {
+			errors = append(errors, fmt.Sprintf("row %d: invalid stock", i+2))
+			continue
+		}
+		if _, err := Create(userID, name, price, stock, nil); err != nil {
+			errors = append(errors, fmt.Sprintf("row %d: %s", i+2, err.Error()))
+			continue
+		}
+		created++
+	}
+
+	ck := cacheKey(userID, "/api/products")
+	ltk := cacheKey(userID, "/api/ledger/today")
+	cache.Invalidate(ck, ltk)
+
+	resp := map[string]interface{}{"created": created}
+	if len(errors) > 0 {
+		resp["errors"] = errors
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
