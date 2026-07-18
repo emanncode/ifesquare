@@ -7,13 +7,20 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-chi/chi/v5"
+
+	"github.com/emanncode/ifesquare/backend/internal/auth"
 	"github.com/emanncode/ifesquare/backend/internal/cache"
 	"github.com/emanncode/ifesquare/backend/internal/ledger"
-	"github.com/go-chi/chi/v5"
 )
 
+func cacheKey(userID int64, key string) string {
+	return fmt.Sprintf("%d:%s", userID, key)
+}
+
 func ListHandler(w http.ResponseWriter, r *http.Request) {
-	key := r.URL.RequestURI()
+	userID := r.Context().Value(auth.UserIDKey).(int64)
+	key := cacheKey(userID, r.URL.RequestURI())
 	if cache.Serve(w, key) {
 		return
 	}
@@ -26,7 +33,7 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	days, err := ListClosedDays(limit)
+	days, err := ListClosedDays(limit, userID)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
@@ -39,18 +46,19 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetByDateHandler(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(auth.UserIDKey).(int64)
 	date := chi.URLParam(r, "date")
 	if date == "" {
 		http.Error(w, `{"error":"date required"}`, http.StatusBadRequest)
 		return
 	}
 
-	key := r.URL.Path
+	key := cacheKey(userID, r.URL.Path)
 	if cache.Serve(w, key) {
 		return
 	}
 
-	entries, err := GetByDate(date)
+	entries, err := GetByDate(date, userID)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
@@ -85,7 +93,6 @@ func GetByDateHandler(w http.ResponseWriter, r *http.Request) {
 			"day_date":           e.DayDate,
 			"product_id":         e.ProductID,
 			"product_name":       e.ProductName,
-			"product_unit":       e.ProductUnit,
 			"opening":            e.Opening,
 			"receipts":           e.Receipts,
 			"closing":            e.Closing,
@@ -110,13 +117,14 @@ func GetByDateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ExportCSVHandler(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(auth.UserIDKey).(int64)
 	date := chi.URLParam(r, "date")
 	if date == "" {
 		http.Error(w, `{"error":"date required"}`, http.StatusBadRequest)
 		return
 	}
 
-	entries, err := GetByDate(date)
+	entries, err := GetByDate(date, userID)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return

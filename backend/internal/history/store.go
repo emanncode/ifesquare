@@ -7,7 +7,6 @@ import (
 	"github.com/emanncode/ifesquare/backend/internal/ledger"
 )
 
-// DaySummary is one closed calendar day for the history list.
 type DaySummary struct {
 	Date         string    `json:"date"`
 	ClosedAt     time.Time `json:"closed_at"`
@@ -15,8 +14,7 @@ type DaySummary struct {
 	TotalUnits   int       `json:"total_units"`
 }
 
-// ListClosedDays returns recently closed days with totals.
-func ListClosedDays(limit int) ([]DaySummary, error) {
+func ListClosedDays(limit int, userID int64) ([]DaySummary, error) {
 	if limit <= 0 {
 		limit = 30
 	}
@@ -37,12 +35,12 @@ func ListClosedDays(limit int) ([]DaySummary, error) {
 		         END
 		       ), 0) AS total_units
 		FROM days d
-		LEFT JOIN entries e ON e.day_date = d.date
-		WHERE d.closed_at IS NOT NULL
-		GROUP BY d.date, d.closed_at
+		LEFT JOIN entries e ON e.day_date = d.date AND e.user_id = d.user_id
+		WHERE d.closed_at IS NOT NULL AND d.user_id = ?
+		GROUP BY d.date, d.closed_at, d.user_id
 		ORDER BY d.date DESC
 		LIMIT ?
-	`, limit)
+	`, userID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -59,15 +57,15 @@ func ListClosedDays(limit int) ([]DaySummary, error) {
 	return out, nil
 }
 
-func GetByDate(date string) ([]ledger.EntryWithProduct, error) {
+func GetByDate(date string, userID int64) ([]ledger.EntryWithProduct, error) {
 	rows, err := db.DB.Query(`
 		SELECT e.id, e.day_date, e.product_id, e.opening, e.receipts, e.closing, e.price, e.created_at, e.updated_at,
-		       p.name, p.unit, p.low_stock_threshold, p.stock
+		       p.name, p.low_stock_threshold, p.stock
 		FROM entries e
 		JOIN products p ON p.id = e.product_id
-		WHERE e.day_date = ?
+		WHERE e.day_date = ? AND e.user_id = ?
 		ORDER BY p.name
-	`, date)
+	`, date, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +76,7 @@ func GetByDate(date string) ([]ledger.EntryWithProduct, error) {
 		var e ledger.EntryWithProduct
 		var lowStockThreshold *int
 		var productStock int
-		if err := rows.Scan(&e.ID, &e.DayDate, &e.ProductID, &e.Opening, &e.Receipts, &e.Closing, &e.Price, &e.CreatedAt, &e.UpdatedAt, &e.ProductName, &e.ProductUnit, &lowStockThreshold, &productStock); err != nil {
+		if err := rows.Scan(&e.ID, &e.DayDate, &e.ProductID, &e.Opening, &e.Receipts, &e.Closing, &e.Price, &e.CreatedAt, &e.UpdatedAt, &e.ProductName, &lowStockThreshold, &productStock); err != nil {
 			return nil, err
 		}
 		effectiveThreshold := ledger.DefaultThreshold()
