@@ -3,7 +3,6 @@ import type { CatalogRow, NewProductForm } from "./types"
 
 export const emptyForm: NewProductForm = {
   name: "",
-  unit: "",
   stock: "",
   price: "",
   lowStockThreshold: "",
@@ -18,7 +17,7 @@ export type ProductsContextValue = {
   addProducts: (forms: NewProductForm[]) => Promise<void>
   patchCatalogField: (
     productId: number,
-    field: "name" | "unit" | "opening" | "receipts" | "closing" | "price" | "low_stock_threshold",
+    field: "name" | "opening" | "receipts" | "closing" | "price" | "low_stock_threshold",
     value: string,
   ) => void
   removeProduct: (productId: number) => Promise<void>

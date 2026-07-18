@@ -3,7 +3,6 @@
 export type Product = {
   id: number
   name: string
-  unit: string
   stock: number
   price: number
 }
@@ -11,7 +10,6 @@ export type Product = {
 export type CatalogRow = {
   productId: number
   name: string
-  unit: string
   opening: number
   receipts: number
   closing: number | null
@@ -27,7 +25,6 @@ export type CatalogRow = {
 
 export type NewProductForm = {
   name: string
-  unit?: string
   stock: string
   price: string
   lowStockThreshold?: string
