@@ -81,18 +81,21 @@ func GetByDateHandler(w http.ResponseWriter, r *http.Request) {
 			amount = nil
 		}
 		out = append(out, map[string]interface{}{
-			"id":           e.ID,
-			"day_date":     e.DayDate,
-			"product_id":   e.ProductID,
-			"product_name": e.ProductName,
-			"product_unit": e.ProductUnit,
-			"opening":      e.Opening,
-			"receipts":     e.Receipts,
-			"closing":      e.Closing,
-			"price":        e.Price,
-			"total":        total,
-			"sales":        sales,
-			"amount":       amount,
+			"id":                 e.ID,
+			"day_date":           e.DayDate,
+			"product_id":         e.ProductID,
+			"product_name":       e.ProductName,
+			"product_unit":       e.ProductUnit,
+			"opening":            e.Opening,
+			"receipts":           e.Receipts,
+			"closing":            e.Closing,
+			"price":              e.Price,
+			"total":              total,
+			"sales":              sales,
+			"amount":             amount,
+			"effective_threshold": e.EffectiveThreshold,
+			"current_stock":      e.CurrentStock,
+			"is_low_stock":        e.IsLowStock,
 		})
 	}
 

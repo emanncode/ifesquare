@@ -14,6 +14,10 @@ func SetDefaultThreshold(n int) {
 	defaultThreshold = n
 }
 
+func DefaultThreshold() int {
+	return defaultThreshold
+}
+
 type Entry struct {
 	ID        int64  `json:"id"`
 	DayDate   string `json:"day_date"`
@@ -103,8 +107,8 @@ func GetTodayEntries() ([]EntryWithProduct, error) {
 			e.CurrentStock = *e.Closing
 			e.IsLowStock = *e.Closing <= effectiveThreshold
 		} else {
-			e.CurrentStock = 0
-			e.IsLowStock = false
+			e.CurrentStock = e.Opening + e.Receipts
+			e.IsLowStock = e.CurrentStock > 0 && e.CurrentStock <= effectiveThreshold
 		}
 		e.EffectiveThreshold = effectiveThreshold
 		entries = append(entries, e)
