@@ -19,6 +19,8 @@ type loginReq struct {
 type userResp struct {
 	ID            int64   `json:"id"`
 	Email         string  `json:"email"`
+	Role          string  `json:"role"`
+	OwnerID       *int64  `json:"owner_id"`
 	PhoneNumber   *string `json:"phone_number"`
 	NotifyOnClose bool    `json:"notify_on_close"`
 }
@@ -58,10 +60,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var userID int64
-	var email, hash string
-	err := db.DB.QueryRow("SELECT id, email, password_hash FROM users WHERE email = ?", req.Email).Scan(&userID, &email, &hash)
-	if err != nil {
-		// Email not found — generic error to avoid user enumeration.
+	var email, hash, role string
+	var ownerID sql.NullInt64
+	var active int
+	err := db.DB.QueryRow("SELECT id, email, password_hash, role, owner_id, active FROM users WHERE email = ?", req.Email).Scan(&userID, &email, &hash, &role, &ownerID, &active)
+	if err != nil || active == 0 {
+		// Email not found or inactive — generic error to avoid user enumeration.
 		writeAuthError(w, http.StatusUnauthorized, errInvalidCredentials)
 		return
 	}
@@ -95,7 +99,11 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   int(DefaultTokenTTL.Seconds()),
 	})
 
-	writeJSON(w, http.StatusOK, userResp{ID: userID, Email: email})
+	var oid *int64
+	if ownerID.Valid {
+		oid = &ownerID.Int64
+	}
+	writeJSON(w, http.StatusOK, userResp{ID: userID, Email: email, Role: role, OwnerID: oid})
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
@@ -169,10 +177,11 @@ func Me(w http.ResponseWriter, r *http.Request) {
 	userID := r.Context().Value(UserIDKey).(int64)
 
 	var id int64
-	var email string
+	var email, role string
+	var ownerID sql.NullInt64
 	var phoneNumber sql.NullString
 	var notifyOnClose int
-	err := db.DB.QueryRow("SELECT id, email, phone_number, notify_on_close FROM users WHERE id = ?", userID).Scan(&id, &email, &phoneNumber, &notifyOnClose)
+	err := db.DB.QueryRow("SELECT id, email, role, owner_id, phone_number, notify_on_close FROM users WHERE id = ?", userID).Scan(&id, &email, &role, &ownerID, &phoneNumber, &notifyOnClose)
 	if err != nil {
 		http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
 		return
@@ -182,7 +191,11 @@ func Me(w http.ResponseWriter, r *http.Request) {
 	if phoneNumber.Valid {
 		pn = &phoneNumber.String
 	}
-	writeJSON(w, http.StatusOK, userResp{ID: id, Email: email, PhoneNumber: pn, NotifyOnClose: notifyOnClose != 0})
+	var oid *int64
+	if ownerID.Valid {
+		oid = &ownerID.Int64
+	}
+	writeJSON(w, http.StatusOK, userResp{ID: id, Email: email, Role: role, OwnerID: oid, PhoneNumber: pn, NotifyOnClose: notifyOnClose != 0})
 }
 
 type updateMeReq struct {
@@ -224,10 +237,11 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 
 	// Return updated user
 	var id int64
-	var email string
+	var email, role string
+	var ownerID sql.NullInt64
 	var phoneNumber sql.NullString
 	var notifyOnClose int
-	if err := db.DB.QueryRow("SELECT id, email, phone_number, notify_on_close FROM users WHERE id = ?", userID).Scan(&id, &email, &phoneNumber, &notifyOnClose); err != nil {
+	if err := db.DB.QueryRow("SELECT id, email, role, owner_id, phone_number, notify_on_close FROM users WHERE id = ?", userID).Scan(&id, &email, &role, &ownerID, &phoneNumber, &notifyOnClose); err != nil {
 		http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
 		return
 	}
@@ -235,7 +249,11 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 	if phoneNumber.Valid {
 		pn = &phoneNumber.String
 	}
-	writeJSON(w, http.StatusOK, userResp{ID: id, Email: email, PhoneNumber: pn, NotifyOnClose: notifyOnClose != 0})
+	var oid *int64
+	if ownerID.Valid {
+		oid = &ownerID.Int64
+	}
+	writeJSON(w, http.StatusOK, userResp{ID: id, Email: email, Role: role, OwnerID: oid, PhoneNumber: pn, NotifyOnClose: notifyOnClose != 0})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
