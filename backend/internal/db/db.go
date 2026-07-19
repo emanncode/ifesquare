@@ -93,6 +93,8 @@ func migrate() error {
 		"migrations/004_notifications.sql",
 		"migrations/005_multi_user.sql",
 		"migrations/006_drop_unit.sql",
+		"migrations/007_multi_role.sql",
+		"migrations/008_audit_log.sql",
 	}
 	for _, name := range files {
 		sqlBytes, err := migrations.ReadFile(name)

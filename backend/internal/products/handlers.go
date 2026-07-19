@@ -11,21 +11,22 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/emanncode/ifesquare/backend/internal/audit_log"
 	"github.com/emanncode/ifesquare/backend/internal/auth"
 	"github.com/emanncode/ifesquare/backend/internal/cache"
 )
 
-func cacheKey(userID int64, key string) string {
-	return fmt.Sprintf("%d:%s", userID, key)
+func cacheKey(scopeID int64, key string) string {
+	return fmt.Sprintf("%d:%s", scopeID, key)
 }
 
 func ListHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(auth.UserIDKey).(int64)
-	ck := cacheKey(userID, "/api/products")
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+	ck := cacheKey(scopeID, "/api/products")
 	if cache.Serve(w, ck) {
 		return
 	}
-	products, err := List(userID)
+	products, err := List(scopeID)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
@@ -38,7 +39,8 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(auth.UserIDKey).(int64)
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+	user := r.Context().Value(auth.UserKey).(auth.User)
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -80,13 +82,19 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, `{"error":"low_stock_threshold cannot be negative"}`, http.StatusBadRequest)
 				return
 			}
-			if _, err := Create(userID, p.Name, p.Price, p.Stock, p.LowStockThreshold); err != nil {
+			created, err := Create(scopeID, p.Name, p.Price, p.Stock, p.LowStockThreshold)
+			if err != nil {
 				http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 				return
 			}
+			if err := audit_log.Write(scopeID, user.ID, "create", "product", strconv.FormatInt(created.ID, 10), nil,
+				map[string]interface{}{"name": p.Name, "price": p.Price, "stock": p.Stock},
+			); err != nil {
+				// non-fatal
+			}
 		}
-		ck := cacheKey(userID, "/api/products")
-		ltk := cacheKey(userID, "/api/ledger/today")
+		ck := cacheKey(scopeID, "/api/products")
+		ltk := cacheKey(scopeID, "/api/ledger/today")
 		cache.Invalidate(ck, ltk)
 		writeJSON(w, http.StatusCreated, map[string]string{"message": "products created"})
 		return
@@ -119,19 +127,25 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, err := Create(userID, pData.Name, pData.Price, pData.Stock, pData.LowStockThreshold)
+	p, err := Create(scopeID, pData.Name, pData.Price, pData.Stock, pData.LowStockThreshold)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
-	ck := cacheKey(userID, "/api/products")
-	ltk := cacheKey(userID, "/api/ledger/today")
+	if err := audit_log.Write(scopeID, user.ID, "create", "product", strconv.FormatInt(p.ID, 10), nil,
+		map[string]interface{}{"name": pData.Name, "price": pData.Price, "stock": pData.Stock},
+	); err != nil {
+		// non-fatal
+	}
+	ck := cacheKey(scopeID, "/api/products")
+	ltk := cacheKey(scopeID, "/api/ledger/today")
 	cache.Invalidate(ck, ltk)
 	writeJSON(w, http.StatusCreated, p)
 }
 
 func UpdateHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(auth.UserIDKey).(int64)
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+	user := r.Context().Value(auth.UserKey).(auth.User)
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -184,7 +198,9 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	p, err := Update(id, userID, fields)
+	before, _ := Get(id, scopeID)
+
+	p, err := Update(id, scopeID, fields)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
@@ -193,14 +209,20 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
 		return
 	}
-	ck := cacheKey(userID, "/api/products")
-	ltk := cacheKey(userID, "/api/ledger/today")
+
+	if err := audit_log.Write(scopeID, user.ID, "update", "product", idStr, before, p); err != nil {
+		// non-fatal
+	}
+
+	ck := cacheKey(scopeID, "/api/products")
+	ltk := cacheKey(scopeID, "/api/ledger/today")
 	cache.Invalidate(ck, ltk)
 	writeJSON(w, http.StatusOK, p)
 }
 
 func DeleteHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(auth.UserIDKey).(int64)
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+	user := r.Context().Value(auth.UserKey).(auth.User)
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -208,11 +230,18 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := Archive(id, userID); err != nil {
+	before, _ := Get(id, scopeID)
+
+	if err := Archive(id, scopeID); err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
-	ck := cacheKey(userID, "/api/products")
+
+	if err := audit_log.Write(scopeID, user.ID, "archive", "product", idStr, before, nil); err != nil {
+		// non-fatal
+	}
+
+	ck := cacheKey(scopeID, "/api/products")
 	cache.Invalidate(ck)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "archived"})
 }
@@ -226,7 +255,8 @@ func TemplateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ImportHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(auth.UserIDKey).(int64)
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+	user := r.Context().Value(auth.UserKey).(auth.User)
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -274,15 +304,21 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 			errors = append(errors, fmt.Sprintf("row %d: invalid stock", i+2))
 			continue
 		}
-		if _, err := Create(userID, name, price, stock, nil); err != nil {
+		createdProd, err := Create(scopeID, name, price, stock, nil)
+		if err != nil {
 			errors = append(errors, fmt.Sprintf("row %d: %s", i+2, err.Error()))
 			continue
+		}
+		if err := audit_log.Write(scopeID, user.ID, "create", "product", strconv.FormatInt(createdProd.ID, 10), nil,
+			map[string]interface{}{"name": name, "price": price, "stock": stock},
+		); err != nil {
+			// non-fatal
 		}
 		created++
 	}
 
-	ck := cacheKey(userID, "/api/products")
-	ltk := cacheKey(userID, "/api/ledger/today")
+	ck := cacheKey(scopeID, "/api/products")
+	ltk := cacheKey(scopeID, "/api/ledger/today")
 	cache.Invalidate(ck, ltk)
 
 	resp := map[string]interface{}{"created": created}

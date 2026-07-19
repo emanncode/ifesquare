@@ -12,23 +12,43 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/getsentry/sentry-go"
 
+	"github.com/emanncode/ifesquare/backend/internal/audit_log"
 	"github.com/emanncode/ifesquare/backend/internal/auth"
 	"github.com/emanncode/ifesquare/backend/internal/cache"
 	"github.com/emanncode/ifesquare/backend/internal/db"
 	"github.com/emanncode/ifesquare/backend/internal/notify"
 )
 
-func cacheKey(userID int64, key string) string {
-	return fmt.Sprintf("%d:%s", userID, key)
+func cacheKey(scopeID int64, key string) string {
+	return fmt.Sprintf("%d:%s", scopeID, key)
+}
+
+type staffEntryResponse struct {
+	ID                 int64  `json:"id"`
+	DayDate            string `json:"day_date"`
+	ProductID          int64  `json:"product_id"`
+	ProductName        string `json:"product_name"`
+	Opening            int    `json:"opening"`
+	Receipts           int    `json:"receipts"`
+	Closing            *int   `json:"closing"`
+	EffectiveThreshold int    `json:"effective_threshold"`
+	CurrentStock       int    `json:"current_stock"`
+	IsLowStock         bool   `json:"is_low_stock"`
+	CreatedAt          string `json:"created_at"`
+	UpdatedAt          string `json:"updated_at"`
 }
 
 func TodayHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(auth.UserIDKey).(int64)
-	ck := cacheKey(userID, "/api/ledger/today")
-	if cache.Serve(w, ck) {
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+	user := r.Context().Value(auth.UserKey).(auth.User)
+	isStaff := user.Role == "staff"
+
+	ck := cacheKey(scopeID, "/api/ledger/today")
+	if !isStaff && cache.Serve(w, ck) {
 		return
 	}
-	entries, err := GetTodayEntries(userID)
+
+	entries, err := GetTodayEntries(scopeID)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
@@ -36,12 +56,41 @@ func TodayHandler(w http.ResponseWriter, r *http.Request) {
 	if entries == nil {
 		entries = []EntryWithProduct{}
 	}
-	cache.Set(ck, entries)
-	writeJSON(w, http.StatusOK, entries)
+
+	var resp []interface{}
+	for _, e := range entries {
+		if isStaff {
+			resp = append(resp, staffEntryResponse{
+				ID:                 e.ID,
+				DayDate:            e.DayDate,
+				ProductID:          e.ProductID,
+				ProductName:        e.ProductName,
+				Opening:            e.Opening,
+				Receipts:           e.Receipts,
+				Closing:            e.Closing,
+				EffectiveThreshold: e.EffectiveThreshold,
+				CurrentStock:       e.CurrentStock,
+				IsLowStock:         e.IsLowStock,
+				CreatedAt:          e.CreatedAt,
+				UpdatedAt:          e.UpdatedAt,
+			})
+		} else {
+			resp = append(resp, e)
+		}
+	}
+	if resp == nil {
+		resp = []interface{}{}
+	}
+
+	if !isStaff {
+		cache.Set(ck, entries)
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(auth.UserIDKey).(int64)
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+	user := r.Context().Value(auth.UserKey).(auth.User)
 	productIDStr := chi.URLParam(r, "productId")
 	productID, err := strconv.ParseInt(productIDStr, 10, 64)
 	if err != nil {
@@ -58,6 +107,13 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
 		return
+	}
+
+	if user.Role == "staff" {
+		if body.Price != nil || body.Opening != nil {
+			http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+			return
+		}
 	}
 
 	if body.Opening != nil && *body.Opening < 0 {
@@ -80,7 +136,7 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 	today := getToday()
 
 	if body.Closing != nil {
-		current, err := getEntry(today, productID, userID)
+		current, err := getEntry(today, productID, scopeID)
 		if err != nil {
 			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 			return
@@ -102,7 +158,9 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	entry, err := UpdateEntry(today, productID, userID, body.Opening, body.Receipts, body.Closing, body.Price)
+	before, _ := getEntry(today, productID, scopeID)
+
+	entry, err := UpdateEntry(today, productID, scopeID, body.Opening, body.Receipts, body.Closing, body.Price)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
@@ -111,15 +169,21 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"entry not found"}`, http.StatusNotFound)
 		return
 	}
-	ck := cacheKey(userID, "/api/ledger/today")
-	hk := cacheKey(userID, "/api/history/"+today)
-	mk := cacheKey(userID, "analytics:monthly-comparison:"+today)
+
+	if err := audit_log.Write(scopeID, user.ID, "update", "entry", today+":"+productIDStr, before, entry); err != nil {
+		// non-fatal
+	}
+
+	ck := cacheKey(scopeID, "/api/ledger/today")
+	hk := cacheKey(scopeID, "/api/history/"+today)
+	mk := cacheKey(scopeID, "analytics:monthly-comparison:"+today)
 	cache.Invalidate(ck, hk, mk)
 	writeJSON(w, http.StatusOK, entry)
 }
 
 func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(auth.UserIDKey).(int64)
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+	user := r.Context().Value(auth.UserKey).(auth.User)
 	date := chi.URLParam(r, "date")
 	productIDStr := chi.URLParam(r, "productId")
 	productID, err := strconv.ParseInt(productIDStr, 10, 64)
@@ -157,7 +221,7 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if body.Closing != nil {
-		current, err := getEntry(date, productID, userID)
+		current, err := getEntry(date, productID, scopeID)
 		if err != nil {
 			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 			return
@@ -179,7 +243,9 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	entry, err := UpdateEntry(date, productID, userID, body.Opening, body.Receipts, body.Closing, body.Price)
+	before, _ := getEntry(date, productID, scopeID)
+
+	entry, err := UpdateEntry(date, productID, scopeID, body.Opening, body.Receipts, body.Closing, body.Price)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
@@ -188,33 +254,44 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"entry not found"}`, http.StatusNotFound)
 		return
 	}
-	ck := cacheKey(userID, "/api/ledger/today")
-	hk := cacheKey(userID, "/api/history/"+date)
-	mk := cacheKey(userID, "analytics:monthly-comparison:"+getToday())
+
+	if err := audit_log.Write(scopeID, user.ID, "update", "entry", date+":"+productIDStr, before, entry); err != nil {
+		// non-fatal
+	}
+
+	ck := cacheKey(scopeID, "/api/ledger/today")
+	hk := cacheKey(scopeID, "/api/history/"+date)
+	mk := cacheKey(scopeID, "analytics:monthly-comparison:"+getToday())
 	cache.Invalidate(ck, hk, mk)
 	writeJSON(w, http.StatusOK, entry)
 }
 
 func CloseHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(auth.UserIDKey).(int64)
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+	user := r.Context().Value(auth.UserKey).(auth.User)
 	today := getToday()
-	if err := CloseDay(today, userID); err != nil {
+	if err := CloseDay(today, scopeID); err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
 	}
-	ck := cacheKey(userID, "/api/ledger/today")
-	hk := cacheKey(userID, "/api/history")
-	mk := cacheKey(userID, "analytics:monthly-comparison:"+today)
+
+	if err := audit_log.Write(scopeID, user.ID, "close", "day", today, nil, nil); err != nil {
+		// non-fatal
+	}
+
+	ck := cacheKey(scopeID, "/api/ledger/today")
+	hk := cacheKey(scopeID, "/api/history")
+	mk := cacheKey(scopeID, "analytics:monthly-comparison:"+today)
 	cache.Invalidate(ck, hk, mk)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "day closed"})
 
-	go sendCloseNotification(userID, today)
+	go sendCloseNotification(scopeID, today)
 }
 
-func sendCloseNotification(userID int64, date string) {
+func sendCloseNotification(scopeID int64, date string) {
 	var phoneNumber sql.NullString
 	var notifyOnClose int
-	err := db.DB.QueryRow("SELECT phone_number, notify_on_close FROM users WHERE id = ?", userID).Scan(&phoneNumber, &notifyOnClose)
+	err := db.DB.QueryRow("SELECT phone_number, notify_on_close FROM users WHERE id = ?", scopeID).Scan(&phoneNumber, &notifyOnClose)
 	if err != nil || !phoneNumber.Valid || notifyOnClose == 0 {
 		return
 	}
@@ -224,7 +301,7 @@ func sendCloseNotification(userID int64, date string) {
 		FROM entries e
 		JOIN products p ON p.id = e.product_id
 		WHERE e.day_date = ? AND e.user_id = ?
-	`, date, userID)
+	`, date, scopeID)
 	if err != nil {
 		sentry.CaptureException(fmt.Errorf("notify: query entries: %w", err))
 		return
@@ -298,14 +375,14 @@ func buildSummaryMessage(date string, totalRevenue, totalUnits int, topProduct s
 }
 
 func SyncFromLastClosedHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(auth.UserIDKey).(int64)
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
 	today := getToday()
-	prevDate, err := SyncFromLastClosedDay(today, userID)
+	prevDate, err := SyncFromLastClosedDay(today, scopeID)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusBadRequest)
 		return
 	}
-	ck := cacheKey(userID, "/api/ledger/today")
+	ck := cacheKey(scopeID, "/api/ledger/today")
 	cache.Invalidate(ck)
 	writeJSON(w, http.StatusOK, map[string]string{
 		"message":   "synced",

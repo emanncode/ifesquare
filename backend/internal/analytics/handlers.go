@@ -12,14 +12,14 @@ import (
 
 const cacheKeyPrefix = "analytics:monthly-comparison:"
 
-func cacheKey(userID int64, key string) string {
-	return fmt.Sprintf("%d:%s", userID, key)
+func cacheKey(scopeID int64, key string) string {
+	return fmt.Sprintf("%d:%s", scopeID, key)
 }
 
 func MonthlyComparisonHandler(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(auth.UserIDKey).(int64)
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
 	today := time.Now().Format("2006-01-02")
-	key := cacheKey(userID, cacheKeyPrefix+today)
+	key := cacheKey(scopeID, cacheKeyPrefix+today)
 
 	if cache.Serve(w, key) {
 		return
@@ -27,7 +27,7 @@ func MonthlyComparisonHandler(w http.ResponseWriter, r *http.Request) {
 
 	currentFrom, currentTo, previousFrom, previousTo := computeDateRanges(today)
 
-	result, err := computeMonthlyComparison(currentFrom, currentTo, previousFrom, previousTo, userID)
+	result, err := computeMonthlyComparison(currentFrom, currentTo, previousFrom, previousTo, scopeID)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
