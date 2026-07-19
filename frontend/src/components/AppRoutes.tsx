@@ -6,8 +6,17 @@ import LoginPage from "@/pages/LoginPage"
 import DashboardPage from "@/pages/DashboardPage"
 import HistoryPage from "@/pages/HistoryPage"
 import ProductsPage from "@/pages/ProductsPage"
+import SettingsPage from "@/pages/SettingsPage"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { useAuth } from "@/hooks/useAuth"
+
+function StaffRouteGuard({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  if (user?.role === "staff") {
+    return <Navigate to="/app" replace />
+  }
+  return <>{children}</>
+}
 
 export function AppRoutes() {
   const { loading, login, isAuthenticated } = useAuth()
@@ -47,8 +56,30 @@ export function AppRoutes() {
 
         <Route path="/app" element={<AppLayout />}>
           <Route index element={<DashboardPage />} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="history" element={<HistoryPage />} />
+          <Route
+            path="products"
+            element={
+              <StaffRouteGuard>
+                <ProductsPage />
+              </StaffRouteGuard>
+            }
+          />
+          <Route
+            path="history"
+            element={
+              <StaffRouteGuard>
+                <HistoryPage />
+              </StaffRouteGuard>
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <StaffRouteGuard>
+                <SettingsPage />
+              </StaffRouteGuard>
+            }
+          />
         </Route>
 
         <Route path="/history" element={<Navigate to="/app/history" replace />} />
