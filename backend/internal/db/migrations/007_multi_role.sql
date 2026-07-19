@@ -1,0 +1,3 @@
+ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'owner' CHECK (role IN ('owner', 'staff'));
+ALTER TABLE users ADD COLUMN owner_id INTEGER REFERENCES users(id);
+ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1;
