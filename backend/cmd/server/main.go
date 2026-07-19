@@ -19,11 +19,13 @@ import (
 	"github.com/getsentry/sentry-go"
 
 	"github.com/emanncode/ifesquare/backend/internal/analytics"
+	"github.com/emanncode/ifesquare/backend/internal/audit_log"
 	"github.com/emanncode/ifesquare/backend/internal/auth"
 	"github.com/emanncode/ifesquare/backend/internal/db"
 	"github.com/emanncode/ifesquare/backend/internal/history"
 	"github.com/emanncode/ifesquare/backend/internal/ledger"
 	"github.com/emanncode/ifesquare/backend/internal/products"
+	"github.com/emanncode/ifesquare/backend/internal/users"
 )
 
 func main() {
@@ -177,28 +179,37 @@ func main() {
 
 		r.Route("/api/products", func(r chi.Router) {
 			r.Get("/", products.ListHandler)
-			r.Post("/", products.CreateHandler)
 			r.Get("/template", products.TemplateHandler)
-			r.Post("/import", products.ImportHandler)
-			r.Patch("/{id}", products.UpdateHandler)
-			r.Delete("/{id}", products.DeleteHandler)
+			r.With(auth.RequireRole("owner")).Post("/", products.CreateHandler)
+			r.With(auth.RequireRole("owner")).Post("/import", products.ImportHandler)
+			r.With(auth.RequireRole("owner")).Patch("/{id}", products.UpdateHandler)
+			r.With(auth.RequireRole("owner")).Delete("/{id}", products.DeleteHandler)
 		})
 
 		r.Route("/api/ledger", func(r chi.Router) {
 			r.Get("/today", ledger.TodayHandler)
 			r.Patch("/today/{productId}", ledger.UpdateTodayEntryHandler)
-			r.Post("/close", ledger.CloseHandler)
-			r.Post("/sync-from-last-closed", ledger.SyncFromLastClosedHandler)
-			r.Patch("/{date}/{productId}", ledger.UpdateEntryHandler)
+			r.With(auth.RequireRole("owner")).Post("/close", ledger.CloseHandler)
+			r.With(auth.RequireRole("owner")).Post("/sync-from-last-closed", ledger.SyncFromLastClosedHandler)
+			r.With(auth.RequireRole("owner")).Patch("/{date}/{productId}", ledger.UpdateEntryHandler)
 		})
 
 		r.Route("/api/history", func(r chi.Router) {
-			r.Get("/", history.ListHandler)
-			r.Get("/{date}/export", history.ExportCSVHandler)
-			r.Get("/{date}", history.GetByDateHandler)
+			r.With(auth.RequireRole("owner")).Get("/", history.ListHandler)
+			r.With(auth.RequireRole("owner")).Get("/{date}/export", history.ExportCSVHandler)
+			r.With(auth.RequireRole("owner")).Get("/{date}", history.GetByDateHandler)
 		})
 
-		r.Get("/api/analytics/monthly-comparison", analytics.MonthlyComparisonHandler)
+		r.With(auth.RequireRole("owner")).Get("/api/analytics/monthly-comparison", analytics.MonthlyComparisonHandler)
+
+		r.Route("/api/users", func(r chi.Router) {
+			r.Use(auth.RequireRole("owner"))
+			r.Get("/", users.ListHandler)
+			r.Post("/", users.CreateHandler)
+			r.Patch("/{id}", users.UpdateHandler)
+		})
+
+		r.With(auth.RequireRole("owner")).Get("/api/audit-log", audit_log.ListHandler)
 	})
 
 	staticDir := os.Getenv("STATIC_DIR")
