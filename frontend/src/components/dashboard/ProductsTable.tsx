@@ -15,16 +15,17 @@ import type { LedgerRow } from "./types";
 type ProductsTableProps = {
   /** View-only ledger rows for today's sales. */
   rows: LedgerRow[];
+  hideFinancials?: boolean;
 };
 
 /**
  * Today's ledger product table — read-only.
  * Add / edit / remove products live on the Products page.
  */
-export function ProductsTable({ rows }: ProductsTableProps) {
+export function ProductsTable({ rows, hideFinancials }: ProductsTableProps) {
   const [query, setQuery] = useState("");
 
-  const grandTotal = rows.reduce((s, r) => s + (r.amount ?? 0), 0);
+  const grandTotal = hideFinancials ? 0 : rows.reduce((s, r) => s + (r.amount ?? 0), 0);
 
   const displayed = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -85,10 +86,14 @@ export function ProductsTable({ rows }: ProductsTableProps) {
               </ProductsTableTh>
               <ProductsTableTh align="right">Closing</ProductsTableTh>
               <ProductsTableTh align="right">Sales</ProductsTableTh>
-              <ProductsTableTh align="right" className="hidden sm:table-cell">
-                Price
-              </ProductsTableTh>
-              <ProductsTableTh align="right">Amount</ProductsTableTh>
+              {!hideFinancials && (
+                <ProductsTableTh align="right" className="hidden sm:table-cell">
+                  Price
+                </ProductsTableTh>
+              )}
+              {!hideFinancials && (
+                <ProductsTableTh align="right">Amount</ProductsTableTh>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -145,25 +150,29 @@ export function ProductsTable({ rows }: ProductsTableProps) {
                   >
                     {fmtInt(r.sales)}
                   </ProductsTableTd>
-                  <ProductsTableTd
-                    align="right"
-                    className="hidden tabular-nums text-muted-foreground sm:table-cell"
-                  >
-                    {nairaFmt(r.price)}
-                  </ProductsTableTd>
-                  <ProductsTableTd
-                    align="right"
-                    className="tabular-nums text-base font-bold text-primary"
-                  >
-                    {nairaFmt(r.amount)}
-                  </ProductsTableTd>
+                  {!hideFinancials && (
+                    <ProductsTableTd
+                      align="right"
+                      className="hidden tabular-nums text-muted-foreground sm:table-cell"
+                    >
+                      {nairaFmt(r.price)}
+                    </ProductsTableTd>
+                  )}
+                  {!hideFinancials && (
+                    <ProductsTableTd
+                      align="right"
+                      className="tabular-nums text-base font-bold text-primary"
+                    >
+                      {nairaFmt(r.amount)}
+                    </ProductsTableTd>
+                  )}
                 </motion.tr>
               );
             })}
             {displayed.length === 0 && (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={hideFinancials ? 6 : 8}
                   className="px-4 py-10 text-center text-sm text-muted-foreground"
                 >
                   {query
@@ -181,13 +190,15 @@ export function ProductsTable({ rows }: ProductsTableProps) {
               <ProductsTableTd className="hidden lg:table-cell" />
               <ProductsTableTd />
               <ProductsTableTd />
-              <ProductsTableTd className="hidden sm:table-cell" />
-              <ProductsTableTd
-                align="right"
-                className="tabular-nums text-base font-bold text-primary"
-              >
-                {nairaFmt(grandTotal)}
-              </ProductsTableTd>
+              {!hideFinancials && <ProductsTableTd className="hidden sm:table-cell" />}
+              {!hideFinancials && (
+                <ProductsTableTd
+                  align="right"
+                  className="tabular-nums text-base font-bold text-primary"
+                >
+                  {nairaFmt(grandTotal)}
+                </ProductsTableTd>
+              )}
             </tr>
           </tfoot>
         </table>

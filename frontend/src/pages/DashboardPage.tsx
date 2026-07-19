@@ -11,24 +11,28 @@ import { AnimatedNumber } from "@/components/AnimatedNumber"
 import { nairaFmt } from "@/components/dashboard/format"
 import { useAppShell } from "@/components/layout/appShell"
 import { useLedger } from "@/hooks/useLedger"
+import { useAuth } from "@/hooks/useAuth"
 import { useToast } from "@/hooks/useToast"
 import { api } from "@/lib/api"
 import type { MonthlyComparison } from "@/lib/types"
 
 export default function DashboardPage() {
   const { openMobileNav } = useAppShell()
+  const { user } = useAuth()
   const { rows, loading, error, lastUpdated, refresh, closeDay } = useLedger()
   const { toast } = useToast()
   const [closeOpen, setCloseOpen] = useState(false)
   const [closing, setClosing] = useState(false)
   const navigate = useNavigate()
   const [monthlyComparison, setMonthlyComparison] = useState<MonthlyComparison | null>(null)
+  const isStaff = user?.role === "staff"
 
   useEffect(() => {
     if (error) toast(error)
   }, [error, toast])
 
   useEffect(() => {
+    if (isStaff) return
     let cancelled = false
     void (async () => {
       try {
@@ -39,7 +43,7 @@ export default function DashboardPage() {
       }
     })()
     return () => { cancelled = true }
-  }, [])
+  }, [isStaff])
 
   const totalRevenue = rows.reduce((s, r) => s + (r.amount ?? 0), 0)
   const totalUnits = rows.reduce((s, r) => s + (r.sales ?? 0), 0)
@@ -51,6 +55,7 @@ export default function DashboardPage() {
 
   async function handleRefresh() {
     await refresh()
+    if (isStaff) return
     try {
       const data = await api<MonthlyComparison>("/api/analytics/monthly-comparison")
       setMonthlyComparison(data)
@@ -129,6 +134,7 @@ export default function DashboardPage() {
         onConfirmClose={() => void confirmCloseDay()}
         onRefresh={() => void handleRefresh()}
         onMenuClick={openMobileNav}
+        hideCloseButton={isStaff}
       />
 
       {closing && (
@@ -136,25 +142,29 @@ export default function DashboardPage() {
       )}
 
       <div className="mb-8 flex flex-col gap-4 sm:grid sm:grid-cols-4 sm:gap-5">
-        <MetricCard
-          label="Today's revenue"
-          value={<AnimatedNumber value={totalRevenue} format={nairaFmt} />}
-          icon={Wallet}
-          accent
-          trend={totalRevenue > 0 ? "From closed counts" : "No sales yet"}
-          sparkline={revenueSpark}
-        />
+        {!isStaff && (
+          <MetricCard
+            label="Today's revenue"
+            value={<AnimatedNumber value={totalRevenue} format={nairaFmt} />}
+            icon={Wallet}
+            accent
+            trend={totalRevenue > 0 ? "From closed counts" : "No sales yet"}
+            sparkline={revenueSpark}
+          />
+        )}
         <MetricCard
           label="Units sold"
           value={<AnimatedNumber value={totalUnits} format={(n) => String(Math.round(n))} />}
           icon={Package}
         />
-        <MetricCard
-          label="Top product"
-          value={topProduct?.amount ? topProduct.name : "—"}
-          icon={Cylinder}
-          small
-        />
+        {!isStaff && (
+          <MetricCard
+            label="Top product"
+            value={topProduct?.amount ? topProduct.name : "—"}
+            icon={Cylinder}
+            small
+          />
+        )}
         <MetricCard
           label="Low stock"
           value={lowStockCount > 0 ? String(lowStockCount) : "All stocked"}
@@ -165,21 +175,23 @@ export default function DashboardPage() {
         />
       </div>
 
-      {monthlyComparison && (
+      {!isStaff && monthlyComparison && (
         <div className="mb-6">
           <MonthComparisonCard data={monthlyComparison} />
         </div>
       )}
 
-      <ProductsTable rows={rows} />
+      <ProductsTable rows={rows} hideFinancials={isStaff} />
 
-      <InsightsCard
-        barData={barData}
-        pieData={pieData}
-        lineData={lineData}
-        totalRevenue={totalRevenue}
-        totalUnits={totalUnits}
-      />
+      {!isStaff && (
+        <InsightsCard
+          barData={barData}
+          pieData={pieData}
+          lineData={lineData}
+          totalRevenue={totalRevenue}
+          totalUnits={totalUnits}
+        />
+      )}
     </motion.div>
   )
 }

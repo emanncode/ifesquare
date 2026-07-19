@@ -15,6 +15,7 @@ type DashboardHeaderProps = {
   onConfirmClose: () => void;
   onRefresh: () => void;
   onMenuClick?: () => void;
+  hideCloseButton?: boolean;
 };
 
 export function DashboardHeader({
@@ -24,6 +25,7 @@ export function DashboardHeader({
   onConfirmClose,
   onRefresh,
   onMenuClick,
+  hideCloseButton,
 }: DashboardHeaderProps) {
   const dateLabel = new Date().toLocaleDateString("en-NG", {
     weekday: "long",
@@ -75,44 +77,46 @@ export function DashboardHeader({
         </div>
       </div>
 
-      <Dialog open={closeOpen} onOpenChange={onCloseOpenChange}>
-        <DialogTrigger asChild>
-          <Button
-            size="lg"
-            className="h-12 shrink-0 rounded-lg px-6 text-base font-semibold"
-          >
-            Close &amp; save day
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Close &amp; save today&apos;s ledger?</DialogTitle>
-            <DialogDescription>
-              This will lock today&apos;s counts, update stock from closings,
-              and mark the day as closed. You won&apos;t be able to edit these
-              numbers afterward.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button size='lg'
-              variant="outline"
-              className="rounded-xl"
-              onClick={() => onCloseOpenChange(false)}
+      {!hideCloseButton && (
+        <Dialog open={closeOpen} onOpenChange={onCloseOpenChange}>
+          <DialogTrigger asChild>
+            <Button
+              size="lg"
+              className="h-12 shrink-0 rounded-lg px-6 text-base font-semibold"
             >
-              Cancel
+              Close &amp; save day
             </Button>
-            <Button size='lg'
-              className="rounded-xl font-semibold"
-              onClick={() => {
-                onConfirmClose();
-                onCloseOpenChange(false);
-              }}
-            >
-              Yes, close day
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Close &amp; save today&apos;s ledger?</DialogTitle>
+              <DialogDescription>
+                This will lock today&apos;s counts, update stock from closings,
+                and mark the day as closed. You won&apos;t be able to edit these
+                numbers afterward.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button size='lg'
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => onCloseOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button size='lg'
+                className="rounded-xl font-semibold"
+                onClick={() => {
+                  onConfirmClose();
+                  onCloseOpenChange(false);
+                }}
+              >
+                Yes, close day
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </header>
   );
 }
