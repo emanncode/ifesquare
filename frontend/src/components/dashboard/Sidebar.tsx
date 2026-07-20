@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { LayoutGroup, motion } from "framer-motion";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { BookOpen, Package, History, LogOut, X, AlertTriangle, Settings } from "lucide-react";
