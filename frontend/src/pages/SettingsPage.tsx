@@ -35,7 +35,6 @@ type AuditEntry = {
 
 export default function SettingsPage() {
   const { user, refresh } = useAuth();
-  const { toast } = useToast();
   const [tab, setTab] = useState("account");
 
   if (!user) return null;
