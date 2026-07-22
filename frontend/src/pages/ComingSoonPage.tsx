@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Github, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 import BrandMark from "@/components/login/brandmark"
@@ -69,6 +69,37 @@ export default function LandingPage() {
             &copy; {new Date().getFullYear()} Ifesquare &middot; Built for
             Mum's shop &middot; Ledger & sales analytics
           </p>
+          <div className="mt-5 flex items-center justify-center gap-5 text-xs text-muted-foreground">
+            <a
+              href="https://github.com/emanncode"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+            >
+              <Github className="size-3.5" />
+              emanncode
+            </a>
+            <a
+              href="https://x.com/emanncode"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+            >
+              <svg className="size-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+              emanncode
+            </a>
+            <a
+              href="https://wa.me/2349048801668"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
+            >
+              <MessageCircle className="size-3.5" />
+              09048801668
+            </a>
+          </div>
         </footer>
       </div>
     </div>
