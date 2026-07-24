@@ -251,6 +251,8 @@ func TemplateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", `attachment; filename="ifesquare-products-template.csv"`)
 	wr := csv.NewWriter(w)
 	wr.Write([]string{"name", "price", "stock"})
+	wr.Write([]string{"Rice", "5000", "100"})
+	wr.Write([]string{"Beans", "3000", "50"})
 	wr.Flush()
 }
 
@@ -278,7 +280,7 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 
 	header := records[0]
 	if len(header) < 3 || header[0] != "name" || header[1] != "price" || header[2] != "stock" {
-		http.Error(w, `{"error":"CSV must have columns: name,price,stock"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"CSV header must have columns: name,price,stock"}`, http.StatusBadRequest)
 		return
 	}
 
