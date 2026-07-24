@@ -250,9 +250,9 @@ func TemplateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="ifesquare-products-template.csv"`)
 	wr := csv.NewWriter(w)
-	wr.Write([]string{"name", "price", "stock"})
-	wr.Write([]string{"Rice", "5000", "100"})
-	wr.Write([]string{"Beans", "3000", "50"})
+	wr.Write([]string{"Product", "Opening", "Receipts", "Closing", "Price", "Alert at"})
+	wr.Write([]string{"Rice", "100", "20", "80", "5000", "10"})
+	wr.Write([]string{"Beans", "50", "10", "40", "3000", "5"})
 	wr.Flush()
 }
 
@@ -279,40 +279,60 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	header := records[0]
-	if len(header) < 3 || header[0] != "name" || header[1] != "price" || header[2] != "stock" {
-		http.Error(w, `{"error":"CSV header must have columns: name,price,stock"}`, http.StatusBadRequest)
+	if len(header) < 6 || header[0] != "Product" || header[1] != "Opening" || header[2] != "Receipts" || header[3] != "Closing" || header[4] != "Price" || header[5] != "Alert at" {
+		http.Error(w, `{"error":"CSV header must have columns: Product,Opening,Receipts,Closing,Price,Alert at"}`, http.StatusBadRequest)
 		return
 	}
 
 	var created int
 	var errors []string
 	for i, row := range records[1:] {
-		if len(row) < 3 {
+		if len(row) < 6 {
 			errors = append(errors, fmt.Sprintf("row %d: too few columns", i+2))
 			continue
 		}
 		name := strings.TrimSpace(row[0])
 		if name == "" {
-			errors = append(errors, fmt.Sprintf("row %d: name is required", i+2))
+			errors = append(errors, fmt.Sprintf("row %d: Product is required", i+2))
 			continue
 		}
-		price, err := strconv.Atoi(strings.TrimSpace(row[1]))
+		opening, err := strconv.Atoi(strings.TrimSpace(row[1]))
+		if err != nil || opening < 0 {
+			errors = append(errors, fmt.Sprintf("row %d: invalid Opening", i+2))
+			continue
+		}
+		receipts, err := strconv.Atoi(strings.TrimSpace(row[2]))
+		if err != nil || receipts < 0 {
+			errors = append(errors, fmt.Sprintf("row %d: invalid Receipts", i+2))
+			continue
+		}
+		closing, err := strconv.Atoi(strings.TrimSpace(row[3]))
+		if err != nil || closing < 0 {
+			errors = append(errors, fmt.Sprintf("row %d: invalid Closing", i+2))
+			continue
+		}
+		price, err := strconv.Atoi(strings.TrimSpace(row[4]))
 		if err != nil || price < 0 {
-			errors = append(errors, fmt.Sprintf("row %d: invalid price", i+2))
+			errors = append(errors, fmt.Sprintf("row %d: invalid Price", i+2))
 			continue
 		}
-		stock, err := strconv.Atoi(strings.TrimSpace(row[2]))
-		if err != nil || stock < 0 {
-			errors = append(errors, fmt.Sprintf("row %d: invalid stock", i+2))
-			continue
+		var lowStockThreshold *int
+		thresholdStr := strings.TrimSpace(row[5])
+		if thresholdStr != "" {
+			t, err := strconv.Atoi(thresholdStr)
+			if err != nil || t < 0 {
+				errors = append(errors, fmt.Sprintf("row %d: invalid Alert at", i+2))
+				continue
+			}
+			lowStockThreshold = &t
 		}
-		createdProd, err := Create(scopeID, name, price, stock, nil)
+		createdProd, err := Create(scopeID, name, price, opening, lowStockThreshold)
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("row %d: %s", i+2, err.Error()))
 			continue
 		}
 		if err := audit_log.Write(scopeID, user.ID, "create", "product", strconv.FormatInt(createdProd.ID, 10), nil,
-			map[string]interface{}{"name": name, "price": price, "stock": stock},
+			map[string]interface{}{"name": name, "price": price, "stock": opening, "low_stock_threshold": lowStockThreshold},
 		); err != nil {
 			// non-fatal
 		}
