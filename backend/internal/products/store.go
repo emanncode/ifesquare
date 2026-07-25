@@ -37,6 +37,10 @@ func List(userID int64) ([]Product, error) {
 }
 
 func Create(userID int64, name string, price, stock int, lowStockThreshold *int) (*Product, error) {
+	if lowStockThreshold == nil {
+		defaultThreshold := 12
+		lowStockThreshold = &defaultThreshold
+	}
 	res, err := db.DB.Exec(
 		"INSERT INTO products (name, price, stock, low_stock_threshold, user_id) VALUES (?, ?, ?, ?, ?)",
 		name, price, stock, lowStockThreshold, userID,

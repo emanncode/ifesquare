@@ -267,6 +267,9 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rd := csv.NewReader(strings.NewReader(string(body)))
+	if strings.ContainsRune(string(body), '\t') {
+		rd.Comma = '\t'
+	}
 	records, err := rd.ReadAll()
 	if err != nil {
 		http.Error(w, `{"error":"invalid CSV: `+err.Error()+`"}`, http.StatusBadRequest)
@@ -301,17 +304,21 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 			errors = append(errors, fmt.Sprintf("row %d: invalid Opening", i+2))
 			continue
 		}
-		receipts, err := strconv.Atoi(strings.TrimSpace(row[2]))
-		if err != nil || receipts < 0 {
-			errors = append(errors, fmt.Sprintf("row %d: invalid Receipts", i+2))
-			continue
+		receiptsStr := strings.TrimSpace(row[2])
+		receipts := 0
+		if receiptsStr != "" {
+			receipts, err = strconv.Atoi(receiptsStr)
+			if err != nil || receipts < 0 {
+				errors = append(errors, fmt.Sprintf("row %d: invalid Receipts", i+2))
+				continue
+			}
 		}
 		closing, err := strconv.Atoi(strings.TrimSpace(row[3]))
 		if err != nil || closing < 0 {
 			errors = append(errors, fmt.Sprintf("row %d: invalid Closing", i+2))
 			continue
 		}
-		price, err := strconv.Atoi(strings.TrimSpace(row[4]))
+		price, err := parsePrice(strings.TrimSpace(row[4]))
 		if err != nil || price < 0 {
 			errors = append(errors, fmt.Sprintf("row %d: invalid Price", i+2))
 			continue
@@ -370,4 +377,32 @@ func toFloat(v interface{}) (float64, bool) {
 	default:
 		return 0, false
 	}
+}
+
+func parsePrice(s string) (int, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, fmt.Errorf("empty")
+	}
+	if parts := strings.SplitN(s, " ", 2); len(parts) == 2 {
+		whole, err := strconv.ParseFloat(parts[0], 64)
+		if err != nil {
+			return 0, err
+		}
+		fracParts := strings.SplitN(parts[1], "/", 2)
+		if len(fracParts) == 2 {
+			num, e1 := strconv.ParseFloat(fracParts[0], 64)
+			den, e2 := strconv.ParseFloat(fracParts[1], 64)
+			if e1 != nil || e2 != nil || den == 0 {
+				return 0, fmt.Errorf("bad fraction")
+			}
+			return int(whole + num/den + 0.5), nil
+		}
+		return 0, fmt.Errorf("bad format")
+	}
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, err
+	}
+	return int(f + 0.5), nil
 }
