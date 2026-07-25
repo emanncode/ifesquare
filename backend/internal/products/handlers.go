@@ -250,6 +250,18 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "archived"})
 }
 
+func ArchiveAllHandler(w http.ResponseWriter, r *http.Request) {
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+	if err := ArchiveAll(scopeID); err != nil {
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+	ck := cacheKey(scopeID, "/api/products")
+	ltk := cacheKey(scopeID, "/api/ledger/today")
+	cache.Invalidate(ck, ltk)
+	writeJSON(w, http.StatusOK, map[string]string{"message": "all products archived"})
+}
+
 func TemplateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="ifesquare-products-template.csv"`)
@@ -301,6 +313,9 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 		name := strings.TrimSpace(row[0])
 		if name == "" {
 			errors = append(errors, fmt.Sprintf("row %d: Product is required", i+2))
+			continue
+		}
+		if ExistsByName(scopeID, name) {
 			continue
 		}
 		opening, err := strconv.Atoi(strings.TrimSpace(row[1]))

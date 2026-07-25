@@ -96,6 +96,17 @@ func Update(id, userID int64, fields map[string]interface{}) (*Product, error) {
 	return Get(id, userID)
 }
 
+func ExistsByName(userID int64, name string) bool {
+	var count int
+	db.DB.QueryRow("SELECT COUNT(*) FROM products WHERE name = ? AND user_id = ? AND archived_at IS NULL", name, userID).Scan(&count)
+	return count > 0
+}
+
+func ArchiveAll(userID int64) error {
+	_, err := db.DB.Exec("UPDATE products SET archived_at = CURRENT_TIMESTAMP WHERE user_id = ? AND archived_at IS NULL", userID)
+	return err
+}
+
 func Archive(id, userID int64) error {
 	res, err := db.DB.Exec("UPDATE products SET archived_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?", id, userID)
 	if err != nil {
