@@ -109,9 +109,12 @@ func DeleteAll(userID int64) error {
 	}
 	defer tx.Rollback()
 
-	today := time.Now().Format("2006-01-02")
-	tx.Exec("DELETE FROM entries WHERE user_id = ? AND day_date = ?", userID, today)
-	tx.Exec("DELETE FROM products WHERE user_id = ?", userID)
+	if _, err := tx.Exec("DELETE FROM entries WHERE user_id = ? AND product_id IN (SELECT id FROM products WHERE user_id = ?)", userID, userID); err != nil {
+		return fmt.Errorf("delete entries: %w", err)
+	}
+	if _, err := tx.Exec("DELETE FROM products WHERE user_id = ?", userID); err != nil {
+		return fmt.Errorf("delete products: %w", err)
+	}
 	return tx.Commit()
 }
 
