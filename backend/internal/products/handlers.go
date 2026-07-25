@@ -5,15 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/emanncode/ifesquare/backend/internal/audit_log"
 	"github.com/emanncode/ifesquare/backend/internal/auth"
 	"github.com/emanncode/ifesquare/backend/internal/cache"
+	"github.com/emanncode/ifesquare/backend/internal/db"
+	"github.com/emanncode/ifesquare/backend/internal/ledger"
 )
 
 func cacheKey(scopeID int64, key string) string {
@@ -343,6 +347,15 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 		); err != nil {
 			// non-fatal
 		}
+
+		today := time.Now().Format("2006-01-02")
+		db.DB.Exec("INSERT OR IGNORE INTO days (user_id, date) VALUES (?, ?)", scopeID, today)
+		db.DB.Exec(
+			"INSERT OR IGNORE INTO entries (user_id, day_date, product_id, opening, price) VALUES (?, ?, ?, ?, ?)",
+			scopeID, today, createdProd.ID, opening, price,
+		)
+		ledger.UpdateEntry(today, createdProd.ID, scopeID, &opening, &receipts, &closing, &price)
+
 		created++
 	}
 
@@ -350,9 +363,11 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 	ltk := cacheKey(scopeID, "/api/ledger/today")
 	cache.Invalidate(ck, ltk)
 
+	log.Printf("CSV import: %d created, %d errors", created, len(errors))
 	resp := map[string]interface{}{"created": created}
 	if len(errors) > 0 {
 		resp["errors"] = errors
+		log.Printf("CSV import errors: %v", errors)
 	}
 	writeJSON(w, http.StatusOK, resp)
 }
