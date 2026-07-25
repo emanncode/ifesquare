@@ -172,6 +172,7 @@ export function ProductsCatalog() {
         <table className="w-full min-w-[960px] border-collapse text-sm [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
           <thead>
             <tr className="border-b border-border/60 bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+              <CatalogTh className="w-12 text-center text-nowrap">S/N</CatalogTh>
               {SORTABLE_COLUMNS.map((col) => {
                 const active = sortKey === col.key
                 return (
@@ -213,6 +214,9 @@ export function ProductsCatalog() {
                   r.isLowStock && "border-l-2 border-l-amber-500 bg-amber-500/4",
                 )}
               >
+                <CatalogTd className="w-12 text-center text-xs text-muted-foreground">
+                  {sorted.indexOf(r) + 1}
+                </CatalogTd>
                 <CatalogTd className="text-left font-medium text-foreground">
                   <input
                     type="text"
@@ -276,11 +280,29 @@ export function ProductsCatalog() {
             {rows.length === 0 && (
               <tr>
                 <td
-                  colSpan={12}
+                  colSpan={13}
                   className="px-4 py-10 text-center text-sm text-muted-foreground"
                 >
                   No products yet. Add your first product.
                 </td>
+              </tr>
+            )}
+            {sorted.length > 0 && (
+              <tr className="border-t-2 border-border bg-muted/50 font-bold">
+                <CatalogTd />
+                <CatalogTd className="text-left text-sm">Total</CatalogTd>
+                <CatalogTd />
+                <CatalogTd />
+                <CatalogTd />
+                <CatalogTd />
+                <CatalogTd />
+                <CatalogTd />
+                <CatalogTd align="right" className="text-sm tabular-nums">
+                  {nairaFmt(sorted.reduce((sum, r) => sum + (r.amount ?? 0), 0))}
+                </CatalogTd>
+                <CatalogTd />
+                <CatalogTd />
+                <CatalogTd />
               </tr>
             )}
           </tbody>
