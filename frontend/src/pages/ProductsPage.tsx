@@ -4,7 +4,6 @@ import { Download, Upload, Menu, Loader2 } from "lucide-react"
 import { useAppShell } from "@/components/layout/appShell"
 import { ProductsCatalog } from "@/components/dashboard/ProductsCatalog"
 import { Button } from "@/components/ui/button"
-import { api } from "@/lib/api"
 import { useToast } from "@/hooks/useToast"
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ""
@@ -30,11 +29,17 @@ export default function ProductsPage() {
     setImporting(true)
     try {
       const text = await file.text()
-      const result = await api<{ created: number; errors?: string[] }>("/api/products/import", {
+      const res = await fetch(`${API_BASE}/api/products/import`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "text/csv" },
         body: text,
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? res.statusText)
+      }
+      const result = await res.json() as { created: number; errors?: string[] }
       if (result.errors && result.errors.length > 0) {
         toast(`${result.created} created, ${result.errors.length} errors: ${result.errors.slice(0, 3).join("; ")}`, "error")
       } else {
