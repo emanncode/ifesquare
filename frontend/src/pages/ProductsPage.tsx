@@ -8,11 +8,17 @@ import { useToast } from "@/hooks/useToast"
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ""
 
+export type ImportProgress = {
+  current: number
+  total: number
+} | null
+
 export default function ProductsPage() {
   const { openMobileNav } = useAppShell()
   const { toast } = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(false)
+  const [progress, setProgress] = useState<ImportProgress>(null)
 
   function handleDownloadTemplate() {
     const a = document.createElement("a")
@@ -27,6 +33,7 @@ export default function ProductsPage() {
     const file = e.target.files?.[0]
     if (!file) return
     setImporting(true)
+    setProgress(null)
     try {
       const text = await file.text()
       const res = await fetch(`${API_BASE}/api/products/import`, {
@@ -39,16 +46,45 @@ export default function ProductsPage() {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error ?? res.statusText)
       }
-      const result = await res.json() as { created: number; errors?: string[] }
-      if (result.errors && result.errors.length > 0) {
-        toast(`${result.created} created, ${result.errors.length} errors: ${result.errors.slice(0, 3).join("; ")}`, "error")
-      } else {
-        toast(`${result.created} products imported`, "success")
+      const reader = res.body!.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ""
+      let finalResult: { created: number; errors?: string[] } | null = null
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n")
+        buffer = lines.pop() ?? ""
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue
+          const json = line.slice(6)
+          const evt = JSON.parse(json)
+          if (evt.type === "start") {
+            setProgress({ current: 0, total: evt.total })
+          } else if (evt.type === "progress") {
+            setProgress({ current: evt.current, total: evt.total })
+          } else if (evt.type === "done") {
+            finalResult = { created: evt.created, errors: evt.errors }
+          } else if (evt.type === "error") {
+            throw new Error(evt.message)
+          }
+        }
+      }
+
+      if (finalResult) {
+        if (finalResult.errors && finalResult.errors.length > 0) {
+          toast(`${finalResult.created} created, ${finalResult.errors.length} errors: ${finalResult.errors.slice(0, 3).join("; ")}`, "error")
+        } else {
+          toast(`${finalResult.created} products imported`, "success")
+        }
       }
     } catch (err) {
       toast(err instanceof Error ? err.message : "Import failed")
     } finally {
       setImporting(false)
+      setProgress(null)
       if (fileRef.current) fileRef.current.value = ""
     }
   }
@@ -114,7 +150,7 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      <ProductsCatalog />
+      <ProductsCatalog importProgress={progress} />
     </motion.div>
   )
 }

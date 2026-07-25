@@ -182,7 +182,7 @@ func main() {
 			r.Get("/template", products.TemplateHandler)
 			r.With(auth.RequireRole("owner")).Post("/", products.CreateHandler)
 			r.With(auth.RequireRole("owner")).Post("/import", products.ImportHandler)
-			r.With(auth.RequireRole("owner")).Delete("/all", products.ArchiveAllHandler)
+			r.With(auth.RequireRole("owner")).Delete("/all", products.DeleteAllHandler)
 			r.With(auth.RequireRole("owner")).Patch("/{id}", products.UpdateHandler)
 			r.With(auth.RequireRole("owner")).Delete("/{id}", products.DeleteHandler)
 		})

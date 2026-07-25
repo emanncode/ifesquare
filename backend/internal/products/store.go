@@ -102,6 +102,19 @@ func ExistsByName(userID int64, name string) bool {
 	return count > 0
 }
 
+func DeleteAll(userID int64) error {
+	tx, err := db.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	today := time.Now().Format("2006-01-02")
+	tx.Exec("DELETE FROM entries WHERE user_id = ? AND day_date = ?", userID, today)
+	tx.Exec("DELETE FROM products WHERE user_id = ?", userID)
+	return tx.Commit()
+}
+
 func ArchiveAll(userID int64) error {
 	_, err := db.DB.Exec("UPDATE products SET archived_at = CURRENT_TIMESTAMP WHERE user_id = ? AND archived_at IS NULL", userID)
 	return err

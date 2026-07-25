@@ -13,6 +13,7 @@ import { CatalogNumericTd } from "./CatalogNumericTd"
 import { useToast } from "@/hooks/useToast"
 import { cn } from "@/lib/utils"
 import type { CatalogRow, NewProductForm } from "./types"
+import type { ImportProgress } from "@/pages/ProductsPage"
 
 type Field = "name" | "opening" | "receipts" | "closing" | "price" | "low_stock_threshold"
 
@@ -45,7 +46,7 @@ const SORTABLE_COLUMNS: { key: SortKey; label: string; align?: "left" | "right" 
   { key: "isLowStock", label: "Low stock", align: undefined },
 ]
 
-export function ProductsCatalog() {
+export function ProductsCatalog({ importProgress }: { importProgress?: ImportProgress }) {
   const { rows, loading, error, addProducts, patchCatalogField, removeProduct } =
     useProducts()
   const { toast } = useToast()
@@ -142,8 +143,9 @@ export function ProductsCatalog() {
           <div>
             <CardTitle className="text-base">Products</CardTitle>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Synced with the server catalog
-              {busy ? " · saving…" : ""}
+              {importProgress
+                ? `Importing ${importProgress.current} of ${importProgress.total} products…`
+                : `Synced with the server catalog${busy ? " · saving…" : ""}`}
             </p>
           </div>
           <div className="flex items-center gap-2">

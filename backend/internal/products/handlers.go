@@ -17,7 +17,6 @@ import (
 	"github.com/emanncode/ifesquare/backend/internal/auth"
 	"github.com/emanncode/ifesquare/backend/internal/cache"
 	"github.com/emanncode/ifesquare/backend/internal/db"
-	"github.com/emanncode/ifesquare/backend/internal/ledger"
 )
 
 func cacheKey(scopeID int64, key string) string {
@@ -250,6 +249,18 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "archived"})
 }
 
+func DeleteAllHandler(w http.ResponseWriter, r *http.Request) {
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+	if err := DeleteAll(scopeID); err != nil {
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+	ck := cacheKey(scopeID, "/api/products")
+	ltk := cacheKey(scopeID, "/api/ledger/today")
+	cache.Invalidate(ck, ltk)
+	writeJSON(w, http.StatusOK, map[string]string{"message": "all products deleted"})
+}
+
 func ArchiveAllHandler(w http.ResponseWriter, r *http.Request) {
 	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
 	if err := ArchiveAll(scopeID); err != nil {
@@ -274,7 +285,6 @@ func TemplateHandler(w http.ResponseWriter, r *http.Request) {
 
 func ImportHandler(w http.ResponseWriter, r *http.Request) {
 	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
-	user := r.Context().Value(auth.UserKey).(auth.User)
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -303,24 +313,50 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, `{"error":"streaming not supported"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	total := len(records) - 1
+	fmt.Fprintf(w, "data: {\"type\":\"start\",\"total\":%d}\n\n", total)
+	flusher.Flush()
+
+	tx, err := db.DB.Begin()
+	if err != nil {
+		fmt.Fprintf(w, "data: {\"type\":\"error\",\"message\":\"cannot start transaction\"}\n\n")
+		flusher.Flush()
+		return
+	}
+
+	today := time.Now().Format("2006-01-02")
+	tx.Exec("INSERT OR IGNORE INTO days (user_id, date) VALUES (?, ?)", scopeID, today)
+
 	var created int
-	var errors []string
+	var importErrors []string
 	for i, row := range records[1:] {
 		if len(row) < 6 {
-			errors = append(errors, fmt.Sprintf("row %d: too few columns", i+2))
+			importErrors = append(importErrors, fmt.Sprintf("row %d: too few columns", i+2))
 			continue
 		}
 		name := strings.TrimSpace(row[0])
 		if name == "" {
-			errors = append(errors, fmt.Sprintf("row %d: Product is required", i+2))
+			importErrors = append(importErrors, fmt.Sprintf("row %d: Product is required", i+2))
 			continue
 		}
-		if ExistsByName(scopeID, name) {
+		var nameExists int
+		tx.QueryRow("SELECT COUNT(*) FROM products WHERE name = ? AND user_id = ? AND archived_at IS NULL", name, scopeID).Scan(&nameExists)
+		if nameExists > 0 {
 			continue
 		}
 		opening, err := strconv.Atoi(strings.TrimSpace(row[1]))
 		if err != nil || opening < 0 {
-			errors = append(errors, fmt.Sprintf("row %d: invalid Opening", i+2))
+			importErrors = append(importErrors, fmt.Sprintf("row %d: invalid Opening", i+2))
 			continue
 		}
 		receiptsStr := strings.TrimSpace(row[2])
@@ -328,63 +364,72 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 		if receiptsStr != "" {
 			receipts, err = strconv.Atoi(receiptsStr)
 			if err != nil || receipts < 0 {
-				errors = append(errors, fmt.Sprintf("row %d: invalid Receipts", i+2))
+				importErrors = append(importErrors, fmt.Sprintf("row %d: invalid Receipts", i+2))
 				continue
 			}
 		}
 		closing, err := strconv.Atoi(strings.TrimSpace(row[3]))
 		if err != nil || closing < 0 {
-			errors = append(errors, fmt.Sprintf("row %d: invalid Closing", i+2))
+			importErrors = append(importErrors, fmt.Sprintf("row %d: invalid Closing", i+2))
 			continue
 		}
 		price, err := parsePrice(strings.TrimSpace(row[4]))
 		if err != nil || price < 0 {
-			errors = append(errors, fmt.Sprintf("row %d: invalid Price", i+2))
+			importErrors = append(importErrors, fmt.Sprintf("row %d: invalid Price", i+2))
 			continue
 		}
-		var lowStockThreshold *int
+		lowStockThreshold := 12
 		thresholdStr := strings.TrimSpace(row[5])
 		if thresholdStr != "" {
 			t, err := strconv.Atoi(thresholdStr)
 			if err != nil || t < 0 {
-				errors = append(errors, fmt.Sprintf("row %d: invalid Alert at", i+2))
+				importErrors = append(importErrors, fmt.Sprintf("row %d: invalid Alert at", i+2))
 				continue
 			}
-			lowStockThreshold = &t
+			lowStockThreshold = t
 		}
-		createdProd, err := Create(scopeID, name, price, opening, lowStockThreshold)
+
+		res, err := tx.Exec(
+			"INSERT INTO products (name, price, stock, low_stock_threshold, user_id) VALUES (?, ?, ?, ?, ?)",
+			name, price, opening, lowStockThreshold, scopeID,
+		)
 		if err != nil {
-			errors = append(errors, fmt.Sprintf("row %d: %s", i+2, err.Error()))
+			importErrors = append(importErrors, fmt.Sprintf("row %d: %s", i+2, err.Error()))
 			continue
 		}
-		if err := audit_log.Write(scopeID, user.ID, "create", "product", strconv.FormatInt(createdProd.ID, 10), nil,
-			map[string]interface{}{"name": name, "price": price, "stock": opening, "low_stock_threshold": lowStockThreshold},
-		); err != nil {
-			// non-fatal
-		}
+		prodID, _ := res.LastInsertId()
 
-		today := time.Now().Format("2006-01-02")
-		db.DB.Exec("INSERT OR IGNORE INTO days (user_id, date) VALUES (?, ?)", scopeID, today)
-		db.DB.Exec(
-			"INSERT OR IGNORE INTO entries (user_id, day_date, product_id, opening, price) VALUES (?, ?, ?, ?, ?)",
-			scopeID, today, createdProd.ID, opening, price,
+		tx.Exec(
+			"INSERT OR IGNORE INTO entries (user_id, day_date, product_id, opening, receipts, closing, price) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			scopeID, today, prodID, opening, receipts, closing, price,
 		)
-		ledger.UpdateEntry(today, createdProd.ID, scopeID, &opening, &receipts, &closing, &price)
 
 		created++
+
+		if (created % 5 == 0) || created == total {
+			fmt.Fprintf(w, "data: {\"type\":\"progress\",\"current\":%d,\"total\":%d}\n\n", created, total)
+			flusher.Flush()
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		fmt.Fprintf(w, "data: {\"type\":\"error\",\"message\":\"commit failed: %s\"}\n\n", err.Error())
+		flusher.Flush()
+		return
 	}
 
 	ck := cacheKey(scopeID, "/api/products")
 	ltk := cacheKey(scopeID, "/api/ledger/today")
 	cache.Invalidate(ck, ltk)
 
-	log.Printf("CSV import: %d created, %d errors", created, len(errors))
+	log.Printf("CSV import: %d created, %d errors", created, len(importErrors))
 	resp := map[string]interface{}{"created": created}
-	if len(errors) > 0 {
-		resp["errors"] = errors
-		log.Printf("CSV import errors: %v", errors)
+	if len(importErrors) > 0 {
+		resp["errors"] = importErrors
 	}
-	writeJSON(w, http.StatusOK, resp)
+	respBytes, _ := json.Marshal(resp)
+	fmt.Fprintf(w, "data: {\"type\":\"done\",%s}\n\n", string(respBytes[1:]))
+	flusher.Flush()
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {
