@@ -10,11 +10,12 @@ export function CatalogNumericTd({
   onChange: (v: string) => void
   placeholder?: string
 }) {
-  const [display, setDisplay] = useState(() => formatWithCommas(value))
+  const isEmpty = value === "" || value === "0"
+  const [display, setDisplay] = useState(() => (isEmpty ? "" : formatWithCommas(value)))
 
   useEffect(() => {
-    setDisplay(formatWithCommas(value))
-  }, [value])
+    setDisplay(isEmpty ? "" : formatWithCommas(value))
+  }, [value, isEmpty])
 
   return (
     <td className="h-14 border-r border-border/60 px-4 py-4 text-right">

@@ -17,12 +17,12 @@ export const CHART_COLORS_DARK = [
 export const CHART_COLORS = CHART_COLORS_LIGHT
 
 export function fmtInt(n: number | null | undefined) {
-  if (n == null || Number.isNaN(n)) return "—"
+  if (n == null || Number.isNaN(n) || n === 0) return "—"
   return Math.round(n).toLocaleString("en-NG")
 }
 
 export function nairaFmt(n: number | null) {
-  if (n == null || Number.isNaN(n)) return "—"
+  if (n == null || Number.isNaN(n) || n === 0) return "—"
   return "₦" + Math.round(n).toLocaleString("en-NG")
 }
 
