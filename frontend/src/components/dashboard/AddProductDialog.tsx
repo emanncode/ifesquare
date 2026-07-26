@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react"
+import { useId, useState } from "react"
 import { Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -39,16 +39,6 @@ export function AddProductDialog({
     Array.from({ length: INITIAL_COUNT }, (_, i) => newRow(`${baseId}-${i}`)),
   )
 
-  useEffect(() => {
-    if (open) {
-      setRows(
-        Array.from({ length: INITIAL_COUNT }, (_, i) =>
-          newRow(`${baseId}-${Date.now()}-${i}`),
-        ),
-      )
-    }
-  }, [open, baseId])
-
   const validCount = rows.filter((r) => r.name.trim()).length
   const atMax = rows.length >= MAX_PRODUCTS
 
@@ -86,7 +76,16 @@ export function AddProductDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(next) => {
+      if (next) {
+        setRows(
+          Array.from({ length: INITIAL_COUNT }, (_, i) =>
+            newRow(`${baseId}-${Date.now()}-${i}`),
+          ),
+        )
+      }
+      onOpenChange(next)
+    }}>
       <DialogTrigger asChild>
         <Button variant="outline" size="lg" className="rounded-xl">
           <Plus className="size-4" />

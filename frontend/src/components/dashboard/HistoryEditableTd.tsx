@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
 import { formatWithCommas, stripNonDigits } from "./format"
 
 export function HistoryEditableTd({
@@ -11,15 +11,14 @@ export function HistoryEditableTd({
   placeholder?: string
 }) {
   const rawProp = value != null ? String(value) : ""
-  const [display, setDisplay] = useState(() => formatWithCommas(rawProp))
-  const prevRaw = useRef(rawProp)
+  const expected = formatWithCommas(rawProp)
+  const [display, setDisplay] = useState(expected)
+  const [prevRaw, setPrevRaw] = useState(rawProp)
 
-  useEffect(() => {
-    if (rawProp !== prevRaw.current) {
-      prevRaw.current = rawProp
-      setDisplay(formatWithCommas(rawProp))
-    }
-  }, [rawProp])
+  if (rawProp !== prevRaw) {
+    setPrevRaw(rawProp)
+    setDisplay(expected)
+  }
 
   return (
     <td className="px-2 py-3 text-right">

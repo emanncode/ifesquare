@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { formatWithCommas, stripNonDigits } from "./format"
 
@@ -13,11 +13,14 @@ export function NumericInput({
   placeholder: string
   id: string
 }) {
-  const [display, setDisplay] = useState(() => formatWithCommas(value))
+  const expected = formatWithCommas(value)
+  const [display, setDisplay] = useState(expected)
+  const [prevExpected, setPrevExpected] = useState(expected)
 
-  useEffect(() => {
-    setDisplay(formatWithCommas(value))
-  }, [value])
+  if (prevExpected !== expected) {
+    setPrevExpected(expected)
+    setDisplay(expected)
+  }
 
   return (
     <Input

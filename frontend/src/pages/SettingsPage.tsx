@@ -85,15 +85,23 @@ function AccountTab({
   user: NonNullable<ReturnType<typeof useAuth>["user"]>;
   onSaved: () => void;
 }) {
-  const [phoneNumber, setPhoneNumber] = useState(user.phone_number ?? "");
-  const [notifyOnClose, setNotifyOnClose] = useState(user.notify_on_close);
+  const expectedPhone = user.phone_number ?? "";
+  const expectedNotify = user.notify_on_close;
+  const [phoneNumber, setPhoneNumber] = useState(expectedPhone);
+  const [notifyOnClose, setNotifyOnClose] = useState(expectedNotify);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const [prevExpectedPhone, setPrevExpectedPhone] = useState(expectedPhone);
+  const [prevExpectedNotify, setPrevExpectedNotify] = useState(expectedNotify);
 
-  useEffect(() => {
-    setPhoneNumber(user.phone_number ?? "");
-    setNotifyOnClose(user.notify_on_close);
-  }, [user]);
+  if (prevExpectedPhone !== expectedPhone) {
+    setPrevExpectedPhone(expectedPhone);
+    setPhoneNumber(expectedPhone);
+  }
+  if (prevExpectedNotify !== expectedNotify) {
+    setPrevExpectedNotify(expectedNotify);
+    setNotifyOnClose(expectedNotify);
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -188,7 +196,18 @@ function UsersTab() {
   }
 
   useEffect(() => {
-    void loadUsers();
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await api<StaffUser[]>("/api/users");
+        if (!cancelled) setUsers(data ?? []);
+      } catch {
+        if (!cancelled) toast("Failed to load users");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   async function handleCreate(e: React.FormEvent) {

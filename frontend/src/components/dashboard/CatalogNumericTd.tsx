@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { formatWithCommas, stripNonDigits } from "./format"
 
 export function CatalogNumericTd({
@@ -11,11 +11,14 @@ export function CatalogNumericTd({
   placeholder?: string
 }) {
   const isEmpty = value === "" || value === "0"
-  const [display, setDisplay] = useState(() => (isEmpty ? "" : formatWithCommas(value)))
+  const expected = isEmpty ? "" : formatWithCommas(value)
+  const [display, setDisplay] = useState(expected)
+  const [prevExpected, setPrevExpected] = useState(expected)
 
-  useEffect(() => {
-    setDisplay(isEmpty ? "" : formatWithCommas(value))
-  }, [value, isEmpty])
+  if (prevExpected !== expected) {
+    setPrevExpected(expected)
+    setDisplay(expected)
+  }
 
   return (
     <td className="h-14 border-r border-border/60 px-4 py-4 text-right">

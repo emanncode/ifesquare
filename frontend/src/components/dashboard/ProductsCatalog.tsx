@@ -65,12 +65,6 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
     }, 700);
   }
 
-  useEffect(() => {
-    if (searchParams.get("filter") === "low-stock") {
-      setLowStockOnly(true)
-    }
-  }, [searchParams])
-
   function toggleLowStockFilter() {
     const next = !lowStockOnly
     setLowStockOnly(next)
@@ -323,11 +317,14 @@ function AlertAtInput({
   effectiveThreshold: number
   onChange: (v: string) => void
 }) {
-  const [display, setDisplay] = useState(() => String(effectiveThreshold))
+  const expected = lowStockThreshold != null ? String(lowStockThreshold) : String(effectiveThreshold)
+  const [display, setDisplay] = useState(expected)
+  const [prevExpected, setPrevExpected] = useState(expected)
 
-  useEffect(() => {
-    setDisplay(lowStockThreshold != null ? String(lowStockThreshold) : String(effectiveThreshold))
-  }, [lowStockThreshold, effectiveThreshold])
+  if (prevExpected !== expected) {
+    setPrevExpected(expected)
+    setDisplay(expected)
+  }
 
   return (
     <div className="inline-flex items-center gap-1">
