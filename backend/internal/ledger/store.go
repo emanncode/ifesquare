@@ -217,7 +217,7 @@ func autoSyncFromLastClosed(today string, userID int64) {
 		SELECT e.product_id, e.closing
 		FROM entries e
 		JOIN products p ON p.id = e.product_id
-		WHERE e.day_date = ? AND e.closing IS NOT NULL AND e.user_id = ?
+		WHERE e.day_date = ? AND e.closing IS NOT NULL AND e.closing > 0 AND e.user_id = ?
 	`, prevDate, userID)
 	if err != nil {
 		return
@@ -275,7 +275,7 @@ func SyncFromLastClosedDay(today string, userID int64) (string, error) {
 		SELECT e.product_id, e.closing, p.stock
 		FROM entries e
 		JOIN products p ON p.id = e.product_id
-		WHERE e.day_date = ? AND e.closing IS NOT NULL AND e.user_id = ?
+		WHERE e.day_date = ? AND e.closing IS NOT NULL AND e.closing > 0 AND e.user_id = ?
 	`, prevDate, userID)
 	if err != nil {
 		return "", err
@@ -340,7 +340,7 @@ func CloseDay(dayDate string, userID int64) error {
 		SELECT e.id, e.product_id, e.closing
 		FROM entries e
 		JOIN products p ON p.id = e.product_id
-		WHERE e.day_date = ? AND e.user_id = ?
+		WHERE e.day_date = ? AND e.user_id = ? AND e.closing IS NOT NULL AND e.closing > 0
 	`, dayDate, userID)
 	if err != nil {
 		return err

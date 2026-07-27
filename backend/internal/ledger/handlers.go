@@ -79,39 +79,21 @@ func TodayHandler(w http.ResponseWriter, r *http.Request) {
 
 	respEntries := make([]todayEntry, 0, len(entries))
 	for _, e := range entries {
-		if isStaff {
-			respEntries = append(respEntries, todayEntry{
-				ID:                 e.ID,
-				DayDate:            e.DayDate,
-				ProductID:          e.ProductID,
-				ProductName:        e.ProductName,
-				Opening:            e.Opening,
-				Receipts:           e.Receipts,
-				Closing:            e.Closing,
-				Price:              e.Price,
-				EffectiveThreshold: e.EffectiveThreshold,
-				CurrentStock:       e.CurrentStock,
-				IsLowStock:         e.IsLowStock,
-				CreatedAt:          e.CreatedAt,
-				UpdatedAt:          e.UpdatedAt,
-			})
-		} else {
-			respEntries = append(respEntries, todayEntry{
-				ID:                 e.ID,
-				DayDate:            e.DayDate,
-				ProductID:          e.ProductID,
-				ProductName:        e.ProductName,
-				Opening:            e.Opening,
-				Receipts:           e.Receipts,
-				Closing:            e.Closing,
-				Price:              e.Price,
-				EffectiveThreshold: e.EffectiveThreshold,
-				CurrentStock:       e.CurrentStock,
-				IsLowStock:         e.IsLowStock,
-				CreatedAt:          e.CreatedAt,
-				UpdatedAt:          e.UpdatedAt,
-			})
-		}
+		respEntries = append(respEntries, todayEntry{
+			ID:                 e.ID,
+			DayDate:            e.DayDate,
+			ProductID:          e.ProductID,
+			ProductName:        e.ProductName,
+			Opening:            e.Opening,
+			Receipts:           e.Receipts,
+			Closing:            e.Closing,
+			Price:              e.Price,
+			EffectiveThreshold: e.EffectiveThreshold,
+			CurrentStock:       e.CurrentStock,
+			IsLowStock:         e.IsLowStock,
+			CreatedAt:          e.CreatedAt,
+			UpdatedAt:          e.UpdatedAt,
+		})
 	}
 
 	type todayResponse struct {
@@ -426,7 +408,9 @@ func SyncFromLastClosedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ck := cacheKey(scopeID, "/api/ledger/today")
-	cache.Invalidate(ck)
+	hk := cacheKey(scopeID, "/api/history")
+	mk := cacheKey(scopeID, "analytics:monthly-comparison:"+getToday())
+	cache.Invalidate(ck, hk, mk)
 	writeJSON(w, http.StatusOK, map[string]string{
 		"message":   "synced",
 		"synced_from": prevDate,

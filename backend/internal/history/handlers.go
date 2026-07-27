@@ -20,7 +20,7 @@ func cacheKey(scopeID int64, key string) string {
 
 func ListHandler(w http.ResponseWriter, r *http.Request) {
 	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
-	key := cacheKey(scopeID, r.URL.RequestURI())
+	key := cacheKey(scopeID, "/api/history")
 	if cache.Serve(w, key) {
 		return
 	}
@@ -174,6 +174,7 @@ func ExportCSVHandler(w http.ResponseWriter, r *http.Request) {
 	wr.Flush()
 	if err := wr.Error(); err != nil {
 		http.Error(w, `{"error":"csv write error"}`, http.StatusInternalServerError)
+		return
 	}
 }
 
