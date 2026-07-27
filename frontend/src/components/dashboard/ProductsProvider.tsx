@@ -16,7 +16,7 @@ import { useAuth } from "@/hooks/useAuth"
 
 function formatError(err: unknown): string {
   if (err instanceof ApiError && err.status >= 500) {
-    return "A server error occurred. Please check the server logs and try again."
+    return "A server error occurred. Please try again later."
   }
   return err instanceof Error ? err.message : "Failed to load products"
 }
