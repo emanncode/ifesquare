@@ -1,32 +1,37 @@
-name: Daily DB Backup
+name: Daily Turso Backup
 
 on:
   schedule:
-    - cron: "0 6 * * *" # daily 06:00 UTC
-  workflow_dispatch: # manual trigger
+    - cron: "0 3 * * *"  # 03:00 UTC daily
+  workflow_dispatch:      # manual trigger
+
+permissions:
+  contents: read
 
 jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Install Turso CLI
-        run: |
-          curl -sSfL https://get.turso.tech | sh
-          echo "$HOME/.turso" >> "$GITHUB_PATH"
+        run: curl -sSfL https://get.tur.so/install.sh | bash
 
-      - name: Auth Turso
-        run: turso auth token --token "${{ secrets.TURSO_AUTH_TOKEN }}"
+      - name: Authenticate Turso
+        run: turso auth token --expire 300
+        env:
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
 
-      - name: Dump database
-        run: |
-          mkdir -p backup-output
-          turso db shell ifesquare ".dump" > "backup-output/ifesquare-$(date -u +%Y-%m-%dT%H-%M-%SZ).sql"
+      - name: Run backup
+        run: ./scripts/backup-db.sh /tmp/backups
+        env:
+          TURSO_DATABASE_NAME: ifesquare
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
 
       - name: Upload backup artifact
         uses: actions/upload-artifact@v4
         with:
-          name: db-backup-${{ github.run_id }}
-          path: backup-output/
+          name: turso-backup-${{ github.run_id }}
+          path: /tmp/backups/ifesquare-*.sql.gz
           retention-days: 30

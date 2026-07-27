@@ -22,6 +22,10 @@ if ! command -v turso &>/dev/null; then
   exit 1
 fi
 
+if [ -n "${TURSO_AUTH_TOKEN:-}" ]; then
+  export TURSO_AUTH_TOKEN
+fi
+
 echo "Dumping database '${DB_NAME}' to ${BACKUP_FILE}..."
 turso db shell "$DB_NAME" ".dump" > "$BACKUP_FILE"
 
@@ -30,6 +34,6 @@ gzip -f "$BACKUP_FILE"
 echo "Backup written: ${BACKUP_FILE}.gz ($(du -h "${BACKUP_FILE}.gz" | cut -f1))"
 
 # Keep only the last 30 backups
-find "$OUTPUT_DIR" -name "ifesquare-*.sql.gz" -type f | sort | head -n -30 | xargs -r rm
+find "$OUTPUT_DIR" -name "ifesquare-*.sql.gz" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | tail -n +31 | awk '{print $2}' | xargs -r rm
 
 echo "Done."
