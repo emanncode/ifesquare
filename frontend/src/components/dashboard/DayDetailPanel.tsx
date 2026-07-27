@@ -21,7 +21,7 @@ export function DayDetailPanel({
   className?: string
 }) {
   return (
-    <Card hoverable={false} className={cn("overflow-hidden py-0", className)}>
+    <Card hoverable={false} className={cn("overflow-hidden py-0", dialog && "flex-1 min-h-0 flex flex-col", className)}>
       <div className="flex items-center justify-between border-b border-border px-5 py-4">
         <CardTitle className="text-base">
           {selected ? formatDate(selected) : "Day detail"}
@@ -57,7 +57,7 @@ export function DayDetailPanel({
           )}
         </div>
       </div>
-      <div className="p-5">
+      <div className={cn("p-5", dialog && "flex-1 min-h-0 overflow-y-auto")}>
         {!selected && (
           <p className="text-sm text-muted-foreground">
             Select a closed day to see line items.
