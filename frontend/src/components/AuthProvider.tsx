@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import { api, ApiError } from "@/lib/api"
+import { api, ApiError, errorMessage } from "@/lib/api"
 import { getLoginErrorMessage } from "@/lib/loginErrors"
 import { AuthContext } from "@/hooks/useAuth"
 import type { User } from "@/lib/types"
@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState({
           user: null,
           loading: false,
-          error: err instanceof Error ? err.message : "Failed to load session",
+          error: errorMessage(err, "Failed to load session"),
         })
       }
     })()

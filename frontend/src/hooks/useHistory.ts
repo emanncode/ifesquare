@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
-import { api } from "@/lib/api"
+import { api, errorMessage } from "@/lib/api"
 import type { ApiHistoryDayDetail, ApiHistoryDaySummary } from "@/lib/types"
 
 /**
@@ -24,7 +24,7 @@ export function useHistory(limit = 30) {
       } catch (err) {
         if (!cancelled) {
           setError(
-            err instanceof Error ? err.message : "Failed to load history",
+            errorMessage(err, "Failed to load history"),
           )
           setDays([])
         }
@@ -46,7 +46,7 @@ export function useHistory(limit = 30) {
       )
       setDays(data ?? [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load history")
+      setError(errorMessage(err, "Failed to load history"))
     } finally {
       setLoading(false)
     }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { api } from "@/lib/api"
+import { api, errorMessage, isNetworkError } from "@/lib/api"
 import { deriveLedgerRow, type ApiLedgerEntry, type LedgerRow, type TodayResponse } from "@/lib/types"
 import { useAuth } from "@/hooks/useAuth"
 
@@ -37,7 +37,7 @@ export function useLedger() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load ledger")
+          setError(errorMessage(err, "Failed to load ledger"))
           setEntries([])
         }
       } finally {
@@ -56,7 +56,7 @@ export function useLedger() {
     try {
       await load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load ledger")
+      setError(errorMessage(err, "Failed to load ledger"))
     } finally {
       setLoading(false)
     }
@@ -66,7 +66,7 @@ export function useLedger() {
     try {
       await api("/api/ledger/close", { method: "POST" })
     } catch (err) {
-      if (!(err instanceof Error) || err.name === "TypeError") {
+      if (isNetworkError(err)) {
         throw new Error("Can't close the day while offline — reconnect and try again.")
       }
       throw err

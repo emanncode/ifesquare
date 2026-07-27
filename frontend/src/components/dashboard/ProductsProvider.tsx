@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import { api, ApiError, mutateWithOffline } from "@/lib/api"
+import { api, ApiError, mutateWithOffline, errorMessage } from "@/lib/api"
 import type { ApiLedgerEntry, ApiProduct, TodayResponse } from "@/lib/types"
 import { parseCommaInt } from "./format"
 import { useToast } from "@/hooks/useToast"
@@ -18,7 +18,7 @@ function formatError(err: unknown): string {
   if (err instanceof ApiError && err.status >= 500) {
     return "A server error occurred. Please try again later."
   }
-  return err instanceof Error ? err.message : "Failed to load products"
+  return errorMessage(err, "Failed to load products")
 }
 
 function merge(products: ApiProduct[], entries: ApiLedgerEntry[]): CatalogRow[] {

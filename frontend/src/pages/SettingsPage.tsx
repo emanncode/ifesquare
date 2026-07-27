@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
-import { api } from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
 
@@ -232,7 +232,7 @@ function UsersTab() {
       setPassword("");
       await loadUsers();
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to create user");
+      toast(errorMessage(err, "Failed to create user"));
     } finally {
       setCreating(false);
     }

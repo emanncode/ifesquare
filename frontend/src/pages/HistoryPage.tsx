@@ -11,7 +11,7 @@ import { DayDetailPanel } from "@/components/dashboard/DayDetailPanel"
 import { fmtInt, formatDate, nairaFmt, parseCommaInt } from "@/components/dashboard/format"
 import { useHistory } from "@/hooks/useHistory"
 import { useToast } from "@/hooks/useToast"
-import { mutateWithOffline } from "@/lib/api"
+import { mutateWithOffline, errorMessage } from "@/lib/api"
 import type { ApiHistoryDayDetail } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -67,7 +67,7 @@ export default function HistoryPage() {
       setDetail(data)
     } catch (err) {
       setDetail(null)
-      setDetailError(err instanceof Error ? err.message : "Failed to load day")
+      setDetailError(errorMessage(err, "Failed to load day"))
     } finally {
       setDetailLoading(false)
     }
@@ -135,7 +135,7 @@ export default function HistoryPage() {
       )}
 
       {!loading && days.length > 0 && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] items-start">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] items-start lg:items-stretch">
           <Card hoverable={false} className="overflow-hidden py-0">
             <div className="border-b border-border px-5 py-4">
               <CardTitle className="text-base">Closed days</CardTitle>

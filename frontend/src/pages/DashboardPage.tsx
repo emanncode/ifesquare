@@ -14,7 +14,7 @@ import { useLedger } from "@/hooks/useLedger"
 import { useAuth } from "@/hooks/useAuth"
 import { useToast } from "@/hooks/useToast"
 import { clearPrefetchCache } from "@/hooks/usePrefetch"
-import { api } from "@/lib/api"
+import { api, errorMessage } from "@/lib/api"
 import type { ApiHistoryDaySummary, MonthlyComparison } from "@/lib/types"
 
 export default function DashboardPage() {
@@ -85,7 +85,7 @@ export default function DashboardPage() {
       clearPrefetchCache()
       window.dispatchEvent(new CustomEvent("day-closed"))
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to close day")
+      toast(errorMessage(err, "Failed to close day"))
     } finally {
       setClosing(false)
     }

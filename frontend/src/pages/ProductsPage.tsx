@@ -6,6 +6,7 @@ import { ProductsCatalog } from "@/components/dashboard/ProductsCatalog"
 import { useProducts } from "@/components/dashboard/useProducts"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/useToast"
+import { errorMessage } from "@/lib/api"
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ""
 
@@ -88,7 +89,7 @@ export default function ProductsPage() {
         }
       }
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Import failed")
+      toast(errorMessage(err, "Import failed"))
     } finally {
       setImporting(false)
       setProgress(null)

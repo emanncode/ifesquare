@@ -54,6 +54,18 @@ export async function api<T>(
   return (await res.json()) as T
 }
 
+const NETWORK_ERROR = "Unable to connect to the server. Please check your connection and try again."
+
+export function isNetworkError(err: unknown): boolean {
+  return err instanceof TypeError
+}
+
+export function errorMessage(err: unknown, fallback: string): string {
+  if (isNetworkError(err)) return NETWORK_ERROR
+  if (err instanceof ApiError) return err.message || fallback
+  return err instanceof Error ? err.message : fallback
+}
+
 /**
  * Like api(), but on network error (fetch throws) the mutation is queued for
  * offline replay instead of throwing. Server errors (4xx/5xx) still throw.

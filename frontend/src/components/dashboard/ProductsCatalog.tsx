@@ -11,6 +11,7 @@ import { CatalogTh } from "./CatalogTh"
 import { CatalogTd } from "./CatalogTd"
 import { CatalogNumericTd } from "./CatalogNumericTd"
 import { useToast } from "@/hooks/useToast"
+import { errorMessage } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import type { CatalogRow, NewProductForm } from "./types"
 import type { ImportProgress } from "@/pages/ProductsPage"
@@ -103,7 +104,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
       await addProducts(forms)
       toast("Products added", "success")
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to add products")
+      toast(errorMessage(err, "Failed to add products"))
     } finally {
       setBusy(false)
     }
@@ -114,7 +115,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
       await patchCatalogField(productId, field, value)
       flashRow(String(productId))
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to update")
+      toast(errorMessage(err, "Failed to update"))
     }
   }
 
@@ -122,7 +123,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
     try {
       await removeProduct(productId)
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to remove")
+      toast(errorMessage(err, "Failed to remove"))
     }
   }
 
@@ -132,7 +133,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
       setArchivedRows((prev) => prev.filter((r) => r.productId !== productId))
       toast("Product restored", "success")
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Failed to restore")
+      toast(errorMessage(err, "Failed to restore"))
     }
   }
 
@@ -143,7 +144,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
         const data = await fetchArchived()
         setArchivedRows(data)
       } catch (err) {
-        toast(err instanceof Error ? err.message : "Failed to load archived")
+        toast(errorMessage(err, "Failed to load archived"))
       } finally {
         setArchivedLoading(false)
       }
