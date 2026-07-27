@@ -3,6 +3,7 @@ import { motion } from "framer-motion"
 import { Download, Upload, Menu, Loader2 } from "lucide-react"
 import { useAppShell } from "@/components/layout/appShell"
 import { ProductsCatalog } from "@/components/dashboard/ProductsCatalog"
+import { useProducts } from "@/components/dashboard/useProducts"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/useToast"
 
@@ -16,6 +17,7 @@ export type ImportProgress = {
 export default function ProductsPage() {
   const { openMobileNav } = useAppShell()
   const { toast } = useToast()
+  const { refresh } = useProducts()
   const fileRef = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(false)
   const [progress, setProgress] = useState<ImportProgress>(null)
@@ -79,6 +81,7 @@ export default function ProductsPage() {
         } else {
           toast(`${finalResult.created} products imported`, "success")
         }
+        await refresh()
       }
     } catch (err) {
       toast(err instanceof Error ? err.message : "Import failed")

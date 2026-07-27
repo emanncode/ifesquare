@@ -165,7 +165,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
         </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[960px] border-collapse text-sm [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
+        <table className="w-full min-w-240 border-collapse text-sm [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
           <thead>
             <tr className="border-b border-border/60 bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
               <CatalogTh className="w-12 text-center text-nowrap">S/N</CatalogTh>
@@ -279,7 +279,19 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
                   colSpan={13}
                   className="px-4 py-10 text-center text-sm text-muted-foreground"
                 >
-                  No products yet. Add your first product.
+                  {importProgress ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="size-4 animate-spin" />
+                      Importing products…
+                    </span>
+                  ) : loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="size-4 animate-spin" />
+                      Syncing with server…
+                    </span>
+                  ) : (
+                    "No products yet. Add your first product."
+                  )}
                 </td>
               </tr>
             )}
