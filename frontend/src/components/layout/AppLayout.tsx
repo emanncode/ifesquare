@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Navigate, Outlet } from "react-router-dom"
 import { Sidebar } from "@/components/dashboard/Sidebar"
 import { ProductsProvider } from "@/components/dashboard/ProductsProvider"
 import { useAuth } from "@/hooks/useAuth"
+import { usePrefetch } from "@/hooks/usePrefetch"
 import { AppShellContext } from "@/components/layout/appShell"
 
 /**
@@ -20,6 +21,11 @@ export function AppLayout() {
     () => ({ openMobileNav }),
     [openMobileNav],
   )
+
+  const { prefetchAll, scheduleIdle } = usePrefetch()
+  useEffect(() => {
+    scheduleIdle(prefetchAll)
+  }, [prefetchAll, scheduleIdle])
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
