@@ -82,10 +82,11 @@ export default function ProductsPage() {
       }
 
       if (finalResult) {
-        if (finalResult.errors && finalResult.errors.length > 0) {
-          toast(`${finalResult.created} created, ${finalResult.errors.length} skipped: ${finalResult.errors.slice(0, 3).join("; ")}`, "error")
+        const { created, errors } = finalResult as { created: number; errors?: string[] }
+        if (errors && errors.length > 0) {
+          toast(`${created} created, ${errors.length} skipped: ${errors.slice(0, 3).join("; ")}`, "error")
         } else {
-          toast(`${finalResult.created} products imported`, "success")
+          toast(`${created} products imported`, "success")
         }
       }
     } catch (err) {
