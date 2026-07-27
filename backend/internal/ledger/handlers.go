@@ -124,10 +124,11 @@ func TodayHandler(w http.ResponseWriter, r *http.Request) {
 		closedAtPtr = &closedAt.String
 	}
 
+	resp := todayResponse{Entries: respEntries, ClosedAt: closedAtPtr}
 	if !isStaff {
-		cache.Set(ck, entries)
+		cache.Set(ck, resp)
 	}
-	writeJSON(w, http.StatusOK, todayResponse{Entries: respEntries, ClosedAt: closedAtPtr})
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
