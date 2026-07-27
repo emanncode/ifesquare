@@ -1,14 +1,24 @@
+import { lazy, Suspense } from "react"
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom"
 import { AnimatePresence } from "framer-motion"
 import { Loader2 } from "lucide-react"
-import ComingSoonPage from "@/pages/ComingSoonPage"
-import LoginPage from "@/pages/LoginPage"
-import DashboardPage from "@/pages/DashboardPage"
-import HistoryPage from "@/pages/HistoryPage"
-import ProductsPage from "@/pages/ProductsPage"
-import SettingsPage from "@/pages/SettingsPage"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { useAuth } from "@/hooks/useAuth"
+
+const ComingSoonPage = lazy(() => import("@/pages/ComingSoonPage"))
+const LoginPage = lazy(() => import("@/pages/LoginPage"))
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"))
+const HistoryPage = lazy(() => import("@/pages/HistoryPage"))
+const ProductsPage = lazy(() => import("@/pages/ProductsPage"))
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"))
+
+function PageLoader() {
+  return (
+    <div className="flex min-h-[50svh] items-center justify-center">
+      <Loader2 className="size-6 animate-spin text-muted-foreground" />
+    </div>
+  )
+}
 
 function StaffRouteGuard({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
@@ -37,30 +47,32 @@ export function AppRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<ComingSoonPage />} />
+        <Route path="/" element={<Suspense fallback={<PageLoader />}><ComingSoonPage /></Suspense>} />
         <Route
           path="/login"
           element={
             isAuthenticated ? (
               <Navigate to="/app" replace />
             ) : (
-              <LoginPage
-                onSubmit={async (email, password) => {
-                  await login(email, password)
-                  navigate("/app", { replace: true })
-                }}
-              />
+              <Suspense fallback={<PageLoader />}>
+                <LoginPage
+                  onSubmit={async (email, password) => {
+                    await login(email, password)
+                    navigate("/app", { replace: true })
+                  }}
+                />
+              </Suspense>
             )
           }
         />
 
         <Route path="/app" element={<AppLayout />}>
-          <Route index element={<DashboardPage />} />
+          <Route index element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
           <Route
             path="products"
             element={
               <StaffRouteGuard>
-                <ProductsPage />
+                <Suspense fallback={<PageLoader />}><ProductsPage /></Suspense>
               </StaffRouteGuard>
             }
           />
@@ -68,7 +80,7 @@ export function AppRoutes() {
             path="history"
             element={
               <StaffRouteGuard>
-                <HistoryPage />
+                <Suspense fallback={<PageLoader />}><HistoryPage /></Suspense>
               </StaffRouteGuard>
             }
           />
@@ -76,7 +88,7 @@ export function AppRoutes() {
             path="settings"
             element={
               <StaffRouteGuard>
-                <SettingsPage />
+                <Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>
               </StaffRouteGuard>
             }
           />
