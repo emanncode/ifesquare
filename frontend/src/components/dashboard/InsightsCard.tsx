@@ -147,7 +147,7 @@ export function InsightsCard({
                             typeof v === "number" ? nairaFmt(v) : String(v ?? "")
                           }
                           style={{
-                            fill: label,
+                            fill: isDark ? "#ffffff" : "#1a1a1a",
                             fontSize: 10,
                             fontWeight: 600,
                           }}
