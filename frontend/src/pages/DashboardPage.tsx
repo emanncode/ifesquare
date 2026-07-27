@@ -15,7 +15,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useToast } from "@/hooks/useToast"
 import { clearPrefetchCache } from "@/hooks/usePrefetch"
 import { api } from "@/lib/api"
-import type { MonthlyComparison } from "@/lib/types"
+import type { ApiHistoryDaySummary, MonthlyComparison } from "@/lib/types"
 
 export default function DashboardPage() {
   const { openMobileNav } = useAppShell()
@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [closing, setClosing] = useState(false)
   const navigate = useNavigate()
   const [monthlyComparison, setMonthlyComparison] = useState<MonthlyComparison | null>(null)
+  const [recentDays, setRecentDays] = useState<ApiHistoryDaySummary[]>([])
   const isStaff = user?.role === "staff"
 
   useEffect(() => {
@@ -37,10 +38,16 @@ export default function DashboardPage() {
     let cancelled = false
     void (async () => {
       try {
-        const data = await api<MonthlyComparison>("/api/analytics/monthly-comparison")
-        if (!cancelled) setMonthlyComparison(data)
+        const [mc, days] = await Promise.all([
+          api<MonthlyComparison>("/api/analytics/monthly-comparison"),
+          api<ApiHistoryDaySummary[]>("/api/history?limit=7"),
+        ])
+        if (!cancelled) {
+          setMonthlyComparison(mc)
+          setRecentDays(days ?? [])
+        }
       } catch {
-        // month comparison is non-critical
+        // non-critical
       }
     })()
     return () => { cancelled = true }
@@ -58,8 +65,12 @@ export default function DashboardPage() {
     await refresh()
     if (isStaff) return
     try {
-      const data = await api<MonthlyComparison>("/api/analytics/monthly-comparison")
-      setMonthlyComparison(data)
+      const [mc, days] = await Promise.all([
+        api<MonthlyComparison>("/api/analytics/monthly-comparison"),
+        api<ApiHistoryDaySummary[]>("/api/history?limit=7"),
+      ])
+      setMonthlyComparison(mc)
+      setRecentDays(days ?? [])
     } catch {
       // non-critical
     }
@@ -101,15 +112,12 @@ export default function DashboardPage() {
     [totalRevenue],
   )
 
-  const revenueSpark = [
-    0.55,
-    0.62,
-    0.48,
-    0.7,
-    0.78,
-    0.85,
-    Math.max(0.4, Math.min(1, totalRevenue / 80000 || 0.5)),
-  ]
+  const revenueSpark = useMemo(() => {
+    const past = recentDays.map((d) => d.total_revenue)
+    const all = [...past, totalRevenue]
+    const max = Math.max(...all, 1)
+    return all.map((v) => Math.round((v / max) * 100) / 100)
+  }, [recentDays, totalRevenue])
 
   if (loading) {
     return (
