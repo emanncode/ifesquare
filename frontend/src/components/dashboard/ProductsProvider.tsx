@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react"
 import { api, ApiError, mutateWithOffline } from "@/lib/api"
-import type { ApiLedgerEntry, ApiProduct } from "@/lib/types"
+import type { ApiLedgerEntry, ApiProduct, TodayResponse } from "@/lib/types"
 import { parseCommaInt } from "./format"
 import { useToast } from "@/hooks/useToast"
 import { ProductsContext } from "./productsContext"
@@ -67,11 +67,11 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     setError(null)
     try {
-      const [products, entries] = await Promise.all([
+      const [products, ledger] = await Promise.all([
         api<ApiProduct[]>("/api/products"),
-        api<ApiLedgerEntry[]>("/api/ledger/today"),
+        api<TodayResponse>("/api/ledger/today"),
       ])
-      setRows(merge(products ?? [], entries ?? []))
+      setRows(merge(products ?? [], ledger?.entries ?? []))
     } catch (err) {
       setError(formatError(err))
       setRows([])
@@ -85,12 +85,12 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     let cancelled = false
     void (async () => {
       try {
-        const [products, entries] = await Promise.all([
+        const [products, ledger] = await Promise.all([
           api<ApiProduct[]>("/api/products"),
-          api<ApiLedgerEntry[]>("/api/ledger/today"),
+          api<TodayResponse>("/api/ledger/today"),
         ])
         if (!cancelled) {
-          setRows(merge(products ?? [], entries ?? []))
+          setRows(merge(products ?? [], ledger?.entries ?? []))
           setError(null)
         }
       } catch (err) {
@@ -206,11 +206,11 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
               ok = r !== null
             }
             if (ok) {
-              const [products, entries] = await Promise.all([
+              const [products, ledger] = await Promise.all([
                 api<ApiProduct[]>("/api/products"),
-                api<ApiLedgerEntry[]>("/api/ledger/today"),
+                api<TodayResponse>("/api/ledger/today"),
               ])
-              setRows(merge(products ?? [], entries ?? []))
+              setRows(merge(products ?? [], ledger?.entries ?? []))
             }
           } catch (err) {
             if (err instanceof ApiError && err.status === 401) {
