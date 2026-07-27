@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
-import { ArrowUp, ArrowUpDown, Loader2, Trash2, AlertTriangle, X } from "lucide-react"
+import { ArrowUp, ArrowUpDown, Loader2, Trash2, AlertTriangle, X, RotateCcw, Archive } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
 import { Card } from "@/components/ui/Card"
 import { CardTitle } from "@/components/ui/CardTitle"
@@ -47,7 +47,7 @@ const SORTABLE_COLUMNS: { key: SortKey; label: string; align?: "left" | "right" 
 ]
 
 export function ProductsCatalog({ importProgress }: { importProgress?: ImportProgress }) {
-  const { rows, loading, error, addProducts, patchCatalogField, removeProduct } =
+  const { rows, loading, error, addProducts, patchCatalogField, removeProduct, restoreProduct, fetchArchived } =
     useProducts()
   const { toast } = useToast()
   const [addOpen, setAddOpen] = useState(false)
@@ -57,6 +57,9 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
   const [searchParams, setSearchParams] = useSearchParams()
   const [lowStockOnly, setLowStockOnly] = useState(() => searchParams.get("filter") === "low-stock")
   const [justSaved, setJustSaved] = useState<Set<string>>(new Set())
+  const [showArchived, setShowArchived] = useState(false)
+  const [archivedRows, setArchivedRows] = useState<CatalogRow[]>([])
+  const [archivedLoading, setArchivedLoading] = useState(false)
 
   function flashRow(id: string) {
     setJustSaved((prev) => new Set(prev).add(id));
@@ -123,6 +126,31 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
     }
   }
 
+  async function handleRestore(productId: number) {
+    try {
+      await restoreProduct(productId)
+      setArchivedRows((prev) => prev.filter((r) => r.productId !== productId))
+      toast("Product restored", "success")
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Failed to restore")
+    }
+  }
+
+  async function toggleArchived() {
+    if (!showArchived) {
+      setArchivedLoading(true)
+      try {
+        const data = await fetchArchived()
+        setArchivedRows(data)
+      } catch (err) {
+        toast(err instanceof Error ? err.message : "Failed to load archived")
+      } finally {
+        setArchivedLoading(false)
+      }
+    }
+    setShowArchived((prev) => !prev)
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-40 items-center justify-center">
@@ -155,6 +183,19 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
             >
               <AlertTriangle className="size-3.5" />
               Low stock only
+            </button>
+            <button
+              type="button"
+              onClick={() => void toggleArchived()}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors",
+                showArchived
+                  ? "bg-primary/10 text-primary"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80",
+              )}
+            >
+              <Archive className="size-3.5" />
+              {showArchived ? "Hide archived" : "Show archived"}
             </button>
             <AddProductDialog
               open={addOpen}
@@ -316,6 +357,49 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
           </tbody>
         </table>
       </div>
+
+      {showArchived && (
+        <div className="border-t border-border">
+          <div className="px-5 py-3">
+            <p className="text-xs font-semibold text-muted-foreground">Archived products</p>
+          </div>
+          {archivedLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : archivedRows.length === 0 ? (
+            <p className="px-5 py-4 text-center text-xs text-muted-foreground">No archived products.</p>
+          ) : (
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-border/60 bg-muted/30 text-xs uppercase tracking-wide text-muted-foreground">
+                  <CatalogTh className="text-left">Product</CatalogTh>
+                  <CatalogTh align="right">Price</CatalogTh>
+                  <CatalogTh />
+                </tr>
+              </thead>
+              <tbody>
+                {archivedRows.map((r) => (
+                  <tr key={r.productId} className="border-b border-border/30 last:border-0 opacity-60">
+                    <CatalogTd className="text-left font-medium text-foreground">{r.name}</CatalogTd>
+                    <CatalogTd align="right" className="tabular-nums text-muted-foreground">{nairaFmt(r.price)}</CatalogTd>
+                    <CatalogTd align="right">
+                      <button
+                        type="button"
+                        onClick={() => void handleRestore(r.productId)}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
+                      >
+                        <RotateCcw className="size-3.5" />
+                        Restore
+                      </button>
+                    </CatalogTd>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </Card>
   )
 }

@@ -233,6 +233,33 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  const restoreProduct = useCallback(
+    async (productId: number) => {
+      await api(`/api/products/${productId}/restore`, { method: "POST" })
+      await refresh()
+    },
+    [refresh],
+  )
+
+  const fetchArchived = useCallback(async (): Promise<CatalogRow[]> => {
+    const products = await api<ApiProduct[]>("/api/products/archived")
+    return (products ?? []).map((p) => ({
+      productId: p.id,
+      name: p.name,
+      opening: p.stock,
+      receipts: 0,
+      closing: null,
+      price: p.price,
+      total: p.stock,
+      sales: 0,
+      amount: 0,
+      lowStockThreshold: p.low_stock_threshold,
+      effectiveThreshold: 10,
+      currentStock: p.stock,
+      isLowStock: false,
+    }))
+  }, [])
+
   const value = useMemo(
     () => ({
       rows,
@@ -243,8 +270,10 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       addProducts,
       patchCatalogField,
       removeProduct,
+      restoreProduct,
+      fetchArchived,
     }),
-    [rows, loading, error, refresh, addProduct, addProducts, patchCatalogField, removeProduct],
+    [rows, loading, error, refresh, addProduct, addProducts, patchCatalogField, removeProduct, restoreProduct, fetchArchived],
   )
 
   return (

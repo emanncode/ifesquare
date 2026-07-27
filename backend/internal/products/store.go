@@ -134,3 +134,32 @@ func Archive(id, userID int64) error {
 	}
 	return nil
 }
+
+func ListArchived(userID int64) ([]Product, error) {
+	rows, err := db.DB.Query("SELECT id, name, price, stock, low_stock_threshold, archived_at, created_at FROM products WHERE archived_at IS NOT NULL AND user_id = ? ORDER BY archived_at DESC", userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var products []Product
+	for rows.Next() {
+		var p Product
+		if err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.Stock, &p.LowStockThreshold, &p.ArchivedAt, &p.CreatedAt); err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+	return products, nil
+}
+
+func Restore(id, userID int64) error {
+	res, err := db.DB.Exec("UPDATE products SET archived_at = NULL WHERE id = ? AND user_id = ? AND archived_at IS NOT NULL", id, userID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("not found")
+	}
+	return nil
+}
