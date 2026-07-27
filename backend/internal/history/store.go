@@ -22,14 +22,14 @@ func ListClosedDays(limit int, userID int64) ([]DaySummary, error) {
 		SELECT d.date, d.closed_at,
 		       COALESCE(SUM(
 		         CASE
-		           WHEN e.closing IS NOT NULL
+		           WHEN e.closing IS NOT NULL AND e.closing > 0
 		           THEN (e.opening + e.receipts - e.closing) * e.price
 		           ELSE 0
 		         END
 		       ), 0) AS total_revenue,
 		       COALESCE(SUM(
 		         CASE
-		           WHEN e.closing IS NOT NULL
+		           WHEN e.closing IS NOT NULL AND e.closing > 0
 		           THEN (e.opening + e.receipts - e.closing)
 		           ELSE 0
 		         END
