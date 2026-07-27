@@ -13,13 +13,14 @@ import { useAppShell } from "@/components/layout/appShell"
 import { useLedger } from "@/hooks/useLedger"
 import { useAuth } from "@/hooks/useAuth"
 import { useToast } from "@/hooks/useToast"
+import { clearPrefetchCache } from "@/hooks/usePrefetch"
 import { api } from "@/lib/api"
 import type { MonthlyComparison } from "@/lib/types"
 
 export default function DashboardPage() {
   const { openMobileNav } = useAppShell()
   const { user } = useAuth()
-  const { rows, loading, error, lastUpdated, refresh, closeDay } = useLedger()
+  const { rows, loading, error, lastUpdated, isDayClosed, refresh, closeDay } = useLedger()
   const { toast } = useToast()
   const [closeOpen, setCloseOpen] = useState(false)
   const [closing, setClosing] = useState(false)
@@ -70,6 +71,8 @@ export default function DashboardPage() {
       await closeDay()
       setCloseOpen(false)
       toast("Day closed successfully", "success")
+      clearPrefetchCache()
+      window.dispatchEvent(new CustomEvent("day-closed"))
     } catch (err) {
       toast(err instanceof Error ? err.message : "Failed to close day")
     } finally {
@@ -135,6 +138,7 @@ export default function DashboardPage() {
         onRefresh={() => void handleRefresh()}
         onMenuClick={openMobileNav}
         hideCloseButton={isStaff}
+        isDayClosed={isDayClosed}
       />
 
       {closing && (

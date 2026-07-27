@@ -37,6 +37,12 @@ export type ApiLedgerEntry = {
   updated_at?: string
 }
 
+/** GET /api/ledger/today wrapper response */
+export type TodayResponse = {
+  entries: ApiLedgerEntry[]
+  closed_at: string | null
+}
+
 /** GET /api/history */
 export type ApiHistoryDaySummary = {
   date: string

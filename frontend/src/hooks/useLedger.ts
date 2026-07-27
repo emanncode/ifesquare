@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { api } from "@/lib/api"
-import { deriveLedgerRow, type ApiLedgerEntry, type LedgerRow } from "@/lib/types"
+import { deriveLedgerRow, type ApiLedgerEntry, type LedgerRow, type TodayResponse } from "@/lib/types"
 import { useAuth } from "@/hooks/useAuth"
 
 /**
  * Today's ledger from GET /api/ledger/today (+ close day).
- * Backend returns a flat array of entries; we derive sales/amount client-side.
+ * Backend returns { entries, closed_at }; we derive sales/amount client-side.
  */
 export function useLedger() {
   const { isAuthenticated } = useAuth()
@@ -13,11 +13,13 @@ export function useLedger() {
   const [loading, setLoading] = useState(isAuthenticated)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState(() => new Date())
+  const [closedAt, setClosedAt] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!isAuthenticated) return
-    const data = await api<ApiLedgerEntry[]>("/api/ledger/today")
-    setEntries(data ?? [])
+    const data = await api<TodayResponse>("/api/ledger/today")
+    setEntries(data?.entries ?? [])
+    setClosedAt(data?.closed_at ?? null)
     setLastUpdated(new Date())
   }, [isAuthenticated])
 
@@ -26,9 +28,10 @@ export function useLedger() {
     let cancelled = false
     void (async () => {
       try {
-        const data = await api<ApiLedgerEntry[]>("/api/ledger/today")
+        const data = await api<TodayResponse>("/api/ledger/today")
         if (!cancelled) {
-          setEntries(data ?? [])
+          setEntries(data?.entries ?? [])
+          setClosedAt(data?.closed_at ?? null)
           setError(null)
           setLastUpdated(new Date())
         }
@@ -77,6 +80,7 @@ export function useLedger() {
   )
 
   const date = entries[0]?.day_date ?? new Date().toISOString().slice(0, 10)
+  const isDayClosed = closedAt !== null
 
   return {
     date,
@@ -85,6 +89,7 @@ export function useLedger() {
     loading,
     error,
     lastUpdated,
+    isDayClosed,
     refresh,
     closeDay,
   }

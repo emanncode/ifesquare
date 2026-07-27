@@ -10,6 +10,10 @@ function prefetch<T>(key: string, fetcher: () => Promise<T>): void {
   void fetcher()
 }
 
+export function clearPrefetchCache(): void {
+  prefetched.clear()
+}
+
 /**
  * Prefetch page data on hover/idle so navigation feels instant.
  */

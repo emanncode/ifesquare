@@ -28,7 +28,7 @@ function useBelow(mq: string) {
 
 export default function HistoryPage() {
   const { openMobileNav } = useAppShell()
-  const { days, loading, error, getDay } = useHistory()
+  const { days, loading, error, refresh, getDay } = useHistory()
   const { toast } = useToast()
   const [selected, setSelected] = useState<string | null>(null)
   const [detail, setDetail] = useState<ApiHistoryDayDetail | null>(null)
@@ -44,6 +44,14 @@ export default function HistoryPage() {
   useEffect(() => {
     if (detailError) toast(detailError)
   }, [detailError, toast])
+
+  useEffect(() => {
+    function onDayClosed() {
+      void refresh()
+    }
+    window.addEventListener("day-closed", onDayClosed)
+    return () => window.removeEventListener("day-closed", onDayClosed)
+  }, [refresh])
 
   async function openDay(date: string) {
     if (date === selected) {

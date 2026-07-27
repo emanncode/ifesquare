@@ -16,6 +16,7 @@ type DashboardHeaderProps = {
   onRefresh: () => void;
   onMenuClick?: () => void;
   hideCloseButton?: boolean;
+  isDayClosed?: boolean;
 };
 
 export function DashboardHeader({
@@ -26,6 +27,7 @@ export function DashboardHeader({
   onRefresh,
   onMenuClick,
   hideCloseButton,
+  isDayClosed,
 }: DashboardHeaderProps) {
   const dateLabel = new Date().toLocaleDateString("en-NG", {
     weekday: "long",
@@ -83,8 +85,9 @@ export function DashboardHeader({
             <Button
               size="lg"
               className="h-12 shrink-0 rounded-lg px-6 text-base font-semibold"
+              disabled={isDayClosed}
             >
-              Close &amp; save day
+              {isDayClosed ? "Day closed" : "Close &amp; save day"}
             </Button>
           </DialogTrigger>
           <DialogContent>
