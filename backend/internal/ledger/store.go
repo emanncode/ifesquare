@@ -132,12 +132,20 @@ func ensureEntries(dayDate string, userID int64) {
 	}
 	rows.Close()
 
+	tx, err := db.DB.Begin()
+	if err != nil {
+		return
+	}
+	defer tx.Rollback()
+
 	for _, p := range products {
-		db.DB.Exec(
+		tx.Exec(
 			"INSERT OR IGNORE INTO entries (user_id, day_date, product_id, opening, price) VALUES (?, ?, ?, ?, ?)",
 			userID, dayDate, p.id, p.stock, p.price,
 		)
 	}
+
+	tx.Commit()
 }
 
 func UpdateEntry(dayDate string, productID int64, userID int64, opening, receipts, closing, price *int) (*Entry, error) {
@@ -274,22 +282,40 @@ func SyncFromLastClosedDay(today string, userID int64) (string, error) {
 	}
 	defer rows.Close()
 
+	type syncRow struct {
+		productID, closing, stock int64
+	}
+	var syncRows []syncRow
 	for rows.Next() {
-		var productID, closing, stock int64
-		if err := rows.Scan(&productID, &closing, &stock); err != nil {
+		var r syncRow
+		if err := rows.Scan(&r.productID, &r.closing, &r.stock); err != nil {
 			return "", err
 		}
-		if _, err := db.DB.Exec(
+		syncRows = append(syncRows, r)
+	}
+
+	tx, err := db.DB.Begin()
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback()
+
+	for _, r := range syncRows {
+		if _, err := tx.Exec(
 			"UPDATE entries SET opening = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
-			closing, today, productID, userID,
+			r.closing, today, r.productID, userID,
 		); err != nil {
 			return "", err
 		}
-		if _, err := db.DB.Exec(
-			"UPDATE products SET stock = ? WHERE id = ? AND user_id = ?", closing, productID, userID,
+		if _, err := tx.Exec(
+			"UPDATE products SET stock = ? WHERE id = ? AND user_id = ?", r.closing, r.productID, userID,
 		); err != nil {
 			return "", err
 		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return "", err
 	}
 
 	return prevDate, nil
