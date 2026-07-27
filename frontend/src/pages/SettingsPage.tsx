@@ -54,25 +54,33 @@ export default function SettingsPage() {
             <UserCircle className="size-4" />
             My account
           </TabsTrigger>
-          <TabsTrigger value="users" className="gap-2">
-            <Users className="size-4" />
-            Users
-          </TabsTrigger>
-          <TabsTrigger value="activity" className="gap-2">
-            <History className="size-4" />
-            Activity log
-          </TabsTrigger>
+          {user.role === "owner" && (
+            <>
+              <TabsTrigger value="users" className="gap-2">
+                <Users className="size-4" />
+                Users
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="gap-2">
+                <History className="size-4" />
+                Activity log
+              </TabsTrigger>
+            </>
+          )}
         </TabsList>
 
         <TabsContent value="account">
           <AccountTab user={user} onSaved={() => void refresh()} />
         </TabsContent>
-        <TabsContent value="users">
-          <UsersTab />
-        </TabsContent>
-        <TabsContent value="activity">
-          <ActivityTab />
-        </TabsContent>
+        {user.role === "owner" && (
+          <>
+            <TabsContent value="users">
+              <UsersTab />
+            </TabsContent>
+            <TabsContent value="activity">
+              <ActivityTab />
+            </TabsContent>
+          </>
+        )}
       </Tabs>
     </motion.div>
   );
