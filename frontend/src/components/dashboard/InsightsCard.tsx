@@ -76,6 +76,17 @@ export function InsightsCard({
   const productCount = barData.length;
   const tickStyle = { fontSize: 11, fill: tick };
 
+  const tooltipStyle = {
+    contentStyle: {
+      backgroundColor: isDark ? "#1a1a1a" : "#ffffff",
+      border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+      borderRadius: 8,
+      color: isDark ? "#ffffff" : "#1a1a1a",
+      fontSize: 12,
+    },
+    itemStyle: { color: isDark ? "#ffffff" : "#1a1a1a" },
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -138,7 +149,7 @@ export function InsightsCard({
                         height={54}
                       />
                       <YAxis tick={tickStyle} />
-                      <Tooltip formatter={tooltipNaira} />
+                      <Tooltip formatter={tooltipNaira} {...tooltipStyle} />
                       <Bar dataKey="Amount" fill={brand} radius={[6, 6, 0, 0]}>
                         <LabelList
                           dataKey="Amount"
@@ -171,7 +182,7 @@ export function InsightsCard({
                           />
                         ))}
                       </Pie>
-                      <Tooltip formatter={tooltipNaira} />
+                      <Tooltip formatter={tooltipNaira} {...tooltipStyle} />
                     </PieChart>
                   ) : (
                     <LineChart
@@ -185,7 +196,7 @@ export function InsightsCard({
                       />
                       <XAxis dataKey="date" tick={tickStyle} />
                       <YAxis tick={tickStyle} />
-                      <Tooltip formatter={tooltipNaira} />
+                      <Tooltip formatter={tooltipNaira} {...tooltipStyle} />
                       <Line
                         type="monotone"
                         dataKey="Revenue"
