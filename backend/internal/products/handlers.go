@@ -283,6 +283,46 @@ func TemplateHandler(w http.ResponseWriter, r *http.Request) {
 	wr.Flush()
 }
 
+func ListArchivedHandler(w http.ResponseWriter, r *http.Request) {
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+	products, err := ListArchived(scopeID)
+	if err != nil {
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+	if products == nil {
+		products = []Product{}
+	}
+	writeJSON(w, http.StatusOK, products)
+}
+
+func RestoreHandler(w http.ResponseWriter, r *http.Request) {
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+	user := r.Context().Value(auth.UserKey).(auth.User)
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, `{"error":"invalid id"}`, http.StatusBadRequest)
+		return
+	}
+
+	before, _ := Get(id, scopeID)
+
+	if err := Restore(id, scopeID); err != nil {
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+
+	p, _ := Get(id, scopeID)
+	if err := audit_log.Write(scopeID, user.ID, "restore", "product", idStr, before, p); err != nil {
+		// non-fatal
+	}
+
+	ck := cacheKey(scopeID, "/api/products")
+	cache.Invalidate(ck)
+	writeJSON(w, http.StatusOK, p)
+}
+
 func ImportHandler(w http.ResponseWriter, r *http.Request) {
 	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
 
@@ -337,9 +377,37 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 	today := time.Now().Format("2006-01-02")
 	tx.Exec("INSERT OR IGNORE INTO days (user_id, date) VALUES (?, ?)", scopeID, today)
 
-	var created int
+	// Batch-load existing product names in one query.
+	existingNames := make(map[string]bool)
+	if nameRows, err := tx.Query("SELECT name FROM products WHERE user_id = ? AND archived_at IS NULL", scopeID); err == nil {
+		defer nameRows.Close()
+		for nameRows.Next() {
+			var n string
+			if nameRows.Scan(&n) == nil {
+				existingNames[n] = true
+			}
+		}
+	}
+
+	type pendingProduct struct {
+		name              string
+		price             int
+		stock             int
+		lowStockThreshold int
+	}
+	type pendingEntry struct {
+		productIdx int
+		opening    int
+		receipts   int
+		closing    int
+		price      int
+	}
+
+	var products []pendingProduct
+	var entries []pendingEntry
 	var importErrors []string
 	seenNames := make(map[string]int)
+
 	for i, row := range records[1:] {
 		if len(row) < 6 {
 			importErrors = append(importErrors, fmt.Sprintf("row %d: too few columns", i+2))
@@ -354,9 +422,7 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped — '%s' already exists (see row %d)", i+2, name, prevRow))
 			continue
 		}
-		var nameExists int
-		tx.QueryRow("SELECT COUNT(*) FROM products WHERE name = ? AND user_id = ? AND archived_at IS NULL", name, scopeID).Scan(&nameExists)
-		if nameExists > 0 {
+		if existingNames[name] {
 			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped — '%s' already exists on server", i+2, name))
 			continue
 		}
@@ -396,24 +462,49 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 			lowStockThreshold = t
 		}
 
-		res, err := tx.Exec(
-			"INSERT INTO products (name, price, stock, low_stock_threshold, user_id) VALUES (?, ?, ?, ?, ?)",
-			name, price, opening, lowStockThreshold, scopeID,
-		)
+		idx := len(products)
+		products = append(products, pendingProduct{name, price, opening, lowStockThreshold})
+		entries = append(entries, pendingEntry{idx, opening, receipts, closing, price})
+		existingNames[name] = true
+	}
+
+	const chunkSize = 100
+	var created int
+
+	for start := 0; start < len(products); start += chunkSize {
+		end := start + chunkSize
+		if end > len(products) {
+			end = len(products)
+		}
+		chunk := products[start:end]
+
+		// Multi-row INSERT for products.
+		ph := make([]string, len(chunk))
+		args := make([]interface{}, 0, len(chunk)*5)
+		for j, p := range chunk {
+			ph[j] = "(?, ?, ?, ?, ?)"
+			args = append(args, p.name, p.price, p.stock, p.lowStockThreshold, scopeID)
+		}
+		res, err := tx.Exec("INSERT INTO products (name, price, stock, low_stock_threshold, user_id) VALUES "+strings.Join(ph, ", "), args...)
 		if err != nil {
-			importErrors = append(importErrors, fmt.Sprintf("row %d: %s", i+2, err.Error()))
+			importErrors = append(importErrors, fmt.Sprintf("batch %d–%d: %s", start+1, end, err.Error()))
 			continue
 		}
-		prodID, _ := res.LastInsertId()
+		firstID, _ := res.LastInsertId()
 
-		tx.Exec(
-			"INSERT OR IGNORE INTO entries (user_id, day_date, product_id, opening, receipts, closing, price) VALUES (?, ?, ?, ?, ?, ?, ?)",
-			scopeID, today, prodID, opening, receipts, closing, price,
-		)
+		// Multi-row INSERT for entries (using sequential IDs).
+		entryChunk := entries[start:end]
+		eph := make([]string, len(entryChunk))
+		eargs := make([]interface{}, 0, len(entryChunk)*7)
+		for j, e := range entryChunk {
+			eph[j] = "(?, ?, ?, ?, ?, ?, ?)"
+			prodID := firstID + int64(j)
+			eargs = append(eargs, scopeID, today, prodID, e.opening, e.receipts, e.closing, e.price)
+		}
+		tx.Exec("INSERT OR IGNORE INTO entries (user_id, day_date, product_id, opening, receipts, closing, price) VALUES "+strings.Join(eph, ", "), eargs...)
 
-		created++
-
-		if (created % 5 == 0) || created == total {
+		created += len(chunk)
+		if (created % 5 == 0) || created >= total {
 			fmt.Fprintf(w, "data: {\"type\":\"progress\",\"current\":%d,\"total\":%d}\n\n", created, total)
 			flusher.Flush()
 		}
