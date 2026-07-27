@@ -18,7 +18,7 @@ export function clearPrefetchCache(): void {
  * Prefetch page data on hover/idle so navigation feels instant.
  */
 export function usePrefetch() {
-  const raf = useRef<ReturnType<typeof setTimeout> | number>(0)
+  const raf = useRef<unknown>(0)
 
   const prefetchDashboard = useCallback(() => {
     prefetch("ledger", () => api("/api/ledger/today"))
@@ -43,7 +43,7 @@ export function usePrefetch() {
     if ("requestIdleCallback" in window) {
       raf.current = (window as any).requestIdleCallback(fn, { timeout: 2000 })
     } else {
-      raf.current = window.setTimeout(fn, 0)
+      raf.current = (window as any).setTimeout(fn, 0)
     }
   }, [])
 
