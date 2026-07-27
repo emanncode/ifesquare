@@ -3,6 +3,21 @@ import { api, errorMessage, isNetworkError } from "@/lib/api"
 import { deriveLedgerRow, type ApiLedgerEntry, type LedgerRow, type TodayResponse } from "@/lib/types"
 import { useAuth } from "@/hooks/useAuth"
 
+function safeEntries(data: TodayResponse | unknown): ApiLedgerEntry[] {
+  if (Array.isArray(data)) return data
+  if (data && typeof data === "object" && Array.isArray((data as TodayResponse).entries)) {
+    return (data as TodayResponse).entries
+  }
+  return []
+}
+
+function safeClosedAt(data: TodayResponse | unknown): string | null {
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    return (data as TodayResponse).closed_at ?? null
+  }
+  return null
+}
+
 /**
  * Today's ledger from GET /api/ledger/today (+ close day).
  * Backend returns { entries, closed_at }; we derive sales/amount client-side.
@@ -18,8 +33,8 @@ export function useLedger() {
   const load = useCallback(async () => {
     if (!isAuthenticated) return
     const data = await api<TodayResponse>("/api/ledger/today")
-    setEntries(data?.entries ?? [])
-    setClosedAt(data?.closed_at ?? null)
+    setEntries(safeEntries(data))
+    setClosedAt(safeClosedAt(data))
     setLastUpdated(new Date())
   }, [isAuthenticated])
 
@@ -30,8 +45,8 @@ export function useLedger() {
       try {
         const data = await api<TodayResponse>("/api/ledger/today")
         if (!cancelled) {
-          setEntries(data?.entries ?? [])
-          setClosedAt(data?.closed_at ?? null)
+          setEntries(safeEntries(data))
+          setClosedAt(safeClosedAt(data))
           setError(null)
           setLastUpdated(new Date())
         }

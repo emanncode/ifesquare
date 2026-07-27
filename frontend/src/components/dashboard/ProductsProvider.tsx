@@ -22,12 +22,14 @@ function formatError(err: unknown): string {
 }
 
 function merge(products: ApiProduct[], entries: ApiLedgerEntry[]): CatalogRow[] {
+  const safeProducts = Array.isArray(products) ? products : []
+  const safeEntries = Array.isArray(entries) ? entries : []
   const byProduct = new Map<number, ApiLedgerEntry>()
-  for (const e of entries) {
+  for (const e of safeEntries) {
     byProduct.set(e.product_id, e)
   }
 
-  return products.map((p) => {
+  return safeProducts.map((p) => {
     const e = byProduct.get(p.id)
     const opening = e?.opening ?? p.stock
     const receipts = e?.receipts ?? 0
@@ -54,6 +56,14 @@ function merge(products: ApiProduct[], entries: ApiLedgerEntry[]): CatalogRow[] 
   })
 }
 
+function todayEntries(ledger: TodayResponse | unknown): ApiLedgerEntry[] {
+  if (Array.isArray(ledger)) return ledger
+  if (ledger && typeof ledger === "object" && Array.isArray((ledger as TodayResponse).entries)) {
+    return (ledger as TodayResponse).entries
+  }
+  return []
+}
+
 export function ProductsProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
   const { toast } = useToast()
@@ -71,7 +81,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         api<ApiProduct[]>("/api/products"),
         api<TodayResponse>("/api/ledger/today"),
       ])
-      setRows(merge(products ?? [], ledger?.entries ?? []))
+      setRows(merge(products ?? [], todayEntries(ledger)))
     } catch (err) {
       setError(formatError(err))
       setRows([])
@@ -90,7 +100,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
           api<TodayResponse>("/api/ledger/today"),
         ])
         if (!cancelled) {
-          setRows(merge(products ?? [], ledger?.entries ?? []))
+          setRows(merge(products ?? [], todayEntries(ledger)))
           setError(null)
         }
       } catch (err) {
@@ -210,7 +220,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
                 api<ApiProduct[]>("/api/products"),
                 api<TodayResponse>("/api/ledger/today"),
               ])
-              setRows(merge(products ?? [], ledger?.entries ?? []))
+              setRows(merge(products ?? [], todayEntries(ledger)))
             }
           } catch (err) {
             if (err instanceof ApiError && err.status === 401) {

@@ -29,7 +29,7 @@ export default defineConfig({
             urlPattern: /\/api\/(products|ledger\/today|history|analytics\/monthly-comparison|users|audit-log)(\/.*)?$/,
             method: "GET",
             handler: "NetworkFirst",
-            options: { cacheName: "api-cache", networkTimeoutSeconds: 3 },
+            options: { cacheName: "api-cache-v2", networkTimeoutSeconds: 3 },
           },
         ],
       },
