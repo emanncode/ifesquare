@@ -3,6 +3,7 @@ import { LayoutGroup, motion } from "framer-motion";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { BookOpen, Package, History, LogOut, X, AlertTriangle, Settings } from "lucide-react";
 import { usePendingSync } from "@/hooks/usePendingSync";
+import { usePrefetch } from "@/hooks/usePrefetch";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import BrandMark from "@/components/login/brandmark";
@@ -23,6 +24,14 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   const lowStockCount = productsCtx ? productsCtx.rows.filter((r) => r.isLowStock).length : 0
   const pendingCount = usePendingSync()
   const isStaff = user?.role === "staff"
+  const { prefetchDashboard, prefetchProducts, prefetchHistory } = usePrefetch()
+
+  const prefetchMap: Record<string, () => void> = {
+    "/app": prefetchDashboard,
+    "/app/products": prefetchProducts,
+    "/app/history": prefetchHistory,
+    "/app/settings": () => {},
+  }
 
   const navItems = isStaff
     ? [
@@ -120,6 +129,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 to={item.to}
                 end={item.end}
                 onClick={onClose}
+                onMouseEnter={() => prefetchMap[item.to]?.()}
               >
                 {({ isActive }) => (
                   <span className={cn(
