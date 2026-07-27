@@ -53,26 +53,31 @@ export default function ProductsPage() {
       let buffer = ""
       let finalResult: { created: number; errors?: string[] } | null = null
 
+      function processLine(line: string) {
+        if (!line.startsWith("data: ")) return
+        const json = line.slice(6)
+        const evt = JSON.parse(json)
+        if (evt.type === "start") {
+          setProgress({ current: 0, total: evt.total })
+        } else if (evt.type === "progress") {
+          setProgress({ current: evt.current, total: evt.total })
+        } else if (evt.type === "done") {
+          finalResult = { created: evt.created, errors: evt.errors }
+        } else if (evt.type === "error") {
+          throw new Error(evt.message)
+        }
+      }
+
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
+        if (done) {
+          for (const line of buffer.split("\n")) processLine(line)
+          break
+        }
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split("\n")
         buffer = lines.pop() ?? ""
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue
-          const json = line.slice(6)
-          const evt = JSON.parse(json)
-          if (evt.type === "start") {
-            setProgress({ current: 0, total: evt.total })
-          } else if (evt.type === "progress") {
-            setProgress({ current: evt.current, total: evt.total })
-          } else if (evt.type === "done") {
-            finalResult = { created: evt.created, errors: evt.errors }
-          } else if (evt.type === "error") {
-            throw new Error(evt.message)
-          }
-        }
+        for (const line of lines) processLine(line)
       }
 
       if (finalResult) {
@@ -81,7 +86,6 @@ export default function ProductsPage() {
         } else {
           toast(`${finalResult.created} products imported`, "success")
         }
-        await refresh()
       }
     } catch (err) {
       toast(err instanceof Error ? err.message : "Import failed")
@@ -89,6 +93,7 @@ export default function ProductsPage() {
       setImporting(false)
       setProgress(null)
       if (fileRef.current) fileRef.current.value = ""
+      await refresh()
     }
   }
 
