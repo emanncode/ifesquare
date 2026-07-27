@@ -35,9 +35,11 @@ export function ProductsTable({ rows, hideFinancials }: ProductsTableProps) {
             r.name.toLowerCase().includes(q),
         )
       : rows;
-    return [...candidate]
-      .sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0))
-      .slice(0, 8);
+    const sorted = [...candidate].sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0));
+    const top = sorted.slice(0, 8);
+    const topIds = new Set(top.map((r) => r.id));
+    const extraLowStock = sorted.filter((r) => r.isLowStock && !topIds.has(r.id));
+    return [...top, ...extraLowStock];
   }, [rows, query]);
 
   return (
