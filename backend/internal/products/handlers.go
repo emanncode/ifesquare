@@ -428,7 +428,7 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 		resp["errors"] = importErrors
 	}
 	respBytes, _ := json.Marshal(resp)
-	fmt.Fprintf(w, "data: {\"type\":\"done\",%s}\n\n", string(respBytes[1:]))
+	fmt.Fprintf(w, "data: {\"type\":\"done\",%s}\n\n", string(respBytes[1:len(respBytes)-1]))
 	flusher.Flush()
 }
 
