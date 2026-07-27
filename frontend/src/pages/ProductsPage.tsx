@@ -82,7 +82,7 @@ export default function ProductsPage() {
 
       if (finalResult) {
         if (finalResult.errors && finalResult.errors.length > 0) {
-          toast(`${finalResult.created} created, ${finalResult.errors.length} errors: ${finalResult.errors.slice(0, 3).join("; ")}`, "error")
+          toast(`${finalResult.created} created, ${finalResult.errors.length} skipped: ${finalResult.errors.slice(0, 3).join("; ")}`, "error")
         } else {
           toast(`${finalResult.created} products imported`, "success")
         }

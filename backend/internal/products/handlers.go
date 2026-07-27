@@ -339,6 +339,7 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 
 	var created int
 	var importErrors []string
+	seenNames := make(map[string]int)
 	for i, row := range records[1:] {
 		if len(row) < 6 {
 			importErrors = append(importErrors, fmt.Sprintf("row %d: too few columns", i+2))
@@ -349,11 +350,17 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 			importErrors = append(importErrors, fmt.Sprintf("row %d: Product is required", i+2))
 			continue
 		}
+		if prevRow, ok := seenNames[name]; ok {
+			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped — '%s' already exists (see row %d)", i+2, name, prevRow))
+			continue
+		}
 		var nameExists int
 		tx.QueryRow("SELECT COUNT(*) FROM products WHERE name = ? AND user_id = ? AND archived_at IS NULL", name, scopeID).Scan(&nameExists)
 		if nameExists > 0 {
+			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped — '%s' already exists on server", i+2, name))
 			continue
 		}
+		seenNames[name] = i + 2
 		opening, err := strconv.Atoi(strings.TrimSpace(row[1]))
 		if err != nil || opening < 0 {
 			importErrors = append(importErrors, fmt.Sprintf("row %d: invalid Opening", i+2))
