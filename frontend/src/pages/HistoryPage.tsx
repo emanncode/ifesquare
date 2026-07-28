@@ -191,7 +191,7 @@ export default function HistoryPage() {
           />
           {isBelowLg && (
             <Dialog open={!!selected} onOpenChange={(o) => { if (!o) { setSelected(null); setDetail(null) } }}>
-              <DialogContent showCloseButton={false} className="max-h-[90svh] flex flex-col gap-0 p-0 pt-0">
+              <DialogContent showCloseButton={false} className="flex max-h-[90svh] flex-col gap-0 p-0 pt-0 sm:max-h-[90svh] sm:overflow-y-auto">
                 <DayDetailPanel
                   selected={selected}
                   detail={detail}
