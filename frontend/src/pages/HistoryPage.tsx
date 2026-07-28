@@ -94,9 +94,9 @@ export default function HistoryPage() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
       transition={{ duration: 0.3 }}
-      className="mx-auto flex h-full flex-col p-[5%] px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
+      className="mx-auto p-[5%] px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
     >
-      <div className="mb-6 flex shrink-0 items-center gap-3">
+      <div className="mb-6 flex items-center gap-3">
         <Button
           type="button"
           variant="outline"
@@ -118,7 +118,7 @@ export default function HistoryPage() {
       </div>
 
       {loading && (
-        <div className="flex min-h-40 shrink-0 items-center justify-center">
+        <div className="flex min-h-40 items-center justify-center">
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
         </div>
       )}
@@ -126,7 +126,7 @@ export default function HistoryPage() {
       {!loading && !error && days.length === 0 && (
         <Card
           hoverable={false}
-          className="flex min-h-40 shrink-0 items-center justify-center rounded-xl py-8 sm:rounded-xl"
+          className="flex min-h-40 items-center justify-center rounded-xl py-8 sm:rounded-xl"
         >
           <p className="text-sm text-muted-foreground">
             No closed days yet. Close today&apos;s ledger to see it here.
@@ -135,12 +135,12 @@ export default function HistoryPage() {
       )}
 
       {!loading && days.length > 0 && (
-        <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] items-stretch">
-          <Card hoverable={false} className="flex min-h-0 flex-col overflow-hidden py-0">
-            <div className="shrink-0 border-b border-border px-5 py-4">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] items-start">
+          <Card hoverable={false} className="overflow-hidden py-0">
+            <div className="border-b border-border px-5 py-4">
               <CardTitle className="text-base">Closed days</CardTitle>
             </div>
-            <ul className="min-h-0 flex-1 divide-y divide-border overflow-y-auto">
+            <ul className="divide-y divide-border">
               {days.map((d) => (
                 <li key={d.date}>
                   <button
