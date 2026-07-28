@@ -66,7 +66,7 @@ export function InsightsCard({
     };
   }, [isDark]);
 
-  const { brand, grid, tick, label } = chartPaint;
+  const { brand, grid, tick, label, pieColors } = chartPaint;
 
   const avgPrice = useMemo(() => {
     if (totalUnits <= 0) return null;
@@ -78,13 +78,13 @@ export function InsightsCard({
 
   const tooltipStyle = {
     contentStyle: {
-      backgroundColor: isDark ? "#1a1a1a" : "#ffffff",
-      border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}`,
+      backgroundColor: "var(--popover)",
+      border: "1px solid var(--border)",
       borderRadius: 8,
-      color: isDark ? "#ffffff" : "#1a1a1a",
+      color: "var(--popover-foreground)",
       fontSize: 12,
     },
-    itemStyle: { color: isDark ? "#ffffff" : "#1a1a1a" },
+    itemStyle: { color: "var(--popover-foreground)" },
   }
 
   return (
@@ -158,7 +158,7 @@ export function InsightsCard({
                             typeof v === "number" ? nairaFmt(v) : String(v ?? "")
                           }
                           style={{
-                            fill: isDark ? "#ffffff" : "#1a1a1a",
+                            fill: label,
                             fontSize: 10,
                             fontWeight: 600,
                           }}
@@ -178,7 +178,7 @@ export function InsightsCard({
                         {pieData.map((_, i) => (
                           <Cell
                             key={i}
-                            fill={`hsl(${150 + (i / Math.max(pieData.length - 1, 1)) * 60}, 65%, ${65 - (i / Math.max(pieData.length - 1, 1)) * 20}%)`}
+                            fill={pieColors[i % pieColors.length]}
                           />
                         ))}
                       </Pie>

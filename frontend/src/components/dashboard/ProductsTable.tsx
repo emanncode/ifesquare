@@ -106,7 +106,7 @@ export function ProductsTable({ rows, hideFinancials }: ProductsTableProps) {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, delay: i * 0.03 }}
-                  whileHover={{ backgroundColor: "var(--primary) / 0.04" }}
+                  whileHover={{ backgroundColor: "color-mix(in srgb, var(--primary) 4%, transparent)" }}
                   className={cn(
                     "border-b border-border/50 last:border-0",
                     r.isLowStock && "border-l-2 border-l-amber-500 bg-amber-500/4",

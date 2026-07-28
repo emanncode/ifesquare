@@ -47,7 +47,7 @@ export default function LoginPage({ onSubmit }: LoginPageProps) {
         aria-hidden
         style={{
           background:
-            "radial-gradient(ellipse 60% 60% at 50% 0%, oklch(0.55 0.15 150 / 0.12), transparent 70%)",
+            "radial-gradient(ellipse 60% 60% at 50% 0%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 70%)",
         }}
       />
 

@@ -87,10 +87,11 @@ export function getChartLabelColor() {
 }
 
 export function getChartColors(isDark: boolean) {
-  if (isDark) return CHART_COLORS_DARK
-  const c1 = cssVar("--chart-1", CHART_COLORS_LIGHT[0])
-  const c2 = cssVar("--chart-2", CHART_COLORS_LIGHT[1])
-  const c3 = cssVar("--chart-3", CHART_COLORS_LIGHT[2])
-  const c4 = cssVar("--chart-4", CHART_COLORS_LIGHT[3])
-  return [c1, c2, c3, c4]
+  const fallbacks = isDark ? CHART_COLORS_DARK : CHART_COLORS_LIGHT
+  return [
+    cssVar("--chart-1", fallbacks[0]),
+    cssVar("--chart-2", fallbacks[1]),
+    cssVar("--chart-3", fallbacks[2]),
+    cssVar("--chart-4", fallbacks[3]),
+  ]
 }

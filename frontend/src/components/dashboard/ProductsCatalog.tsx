@@ -245,7 +245,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
             {sorted.map((r) => (
               <motion.tr
                 key={r.productId}
-                animate={{ boxShadow: justSaved.has(String(r.productId)) ? "inset 0 0 0 9999px rgba(34,197,94,0.10)" : "inset 0 0 0 9999px rgba(34,197,94,0)" }}
+                animate={{ boxShadow: justSaved.has(String(r.productId)) ? "inset 0 0 0 9999px color-mix(in srgb, var(--primary) 10%, transparent)" : "inset 0 0 0 9999px transparent" }}
                 transition={{ duration: 0.6 }}
                 className={cn(
                   "border-b border-border/60 last:border-0 hover:bg-muted/30",

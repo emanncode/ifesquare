@@ -22,7 +22,7 @@ export default function LandingPage() {
           className="absolute inset-0"
           style={{
             background:
-              "radial-gradient(ellipse 90% 55% at 50% -10%, oklch(0.55 0.15 150 / 0.10), transparent 55%)",
+              "radial-gradient(ellipse 90% 55% at 50% -10%, color-mix(in srgb, var(--primary) 10%, transparent), transparent 55%)",
           }}
         />
       </div>
