@@ -411,26 +411,26 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 
 	for i, row := range records[1:] {
 		if len(row) < 6 {
-			importErrors = append(importErrors, fmt.Sprintf("row %d: too few columns", i+2))
+			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – not enough columns (expected 6)", i+2))
 			continue
 		}
 		name := strings.TrimSpace(row[0])
 		if name == "" {
-			importErrors = append(importErrors, fmt.Sprintf("row %d: Product is required", i+2))
+			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – product name is empty", i+2))
 			continue
 		}
 		if prevRow, ok := seenNames[name]; ok {
-			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped — '%s' already exists (see row %d)", i+2, name, prevRow))
+			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – '%s' appears more than once in your CSV (first at row %d)", i+2, name, prevRow))
 			continue
 		}
 		if existingNames[name] {
-			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped — '%s' already exists on server", i+2, name))
+			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – '%s' is already in your product list", i+2, name))
 			continue
 		}
 		seenNames[name] = i + 2
 		opening, err := strconv.Atoi(strings.TrimSpace(row[1]))
 		if err != nil || opening < 0 {
-			importErrors = append(importErrors, fmt.Sprintf("row %d: invalid Opening", i+2))
+			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – Opening must be a positive whole number", i+2))
 			continue
 		}
 		receiptsStr := strings.TrimSpace(row[2])
@@ -438,18 +438,18 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 		if receiptsStr != "" {
 			receipts, err = strconv.Atoi(receiptsStr)
 			if err != nil || receipts < 0 {
-				importErrors = append(importErrors, fmt.Sprintf("row %d: invalid Receipts", i+2))
+				importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – Receipts must be a positive whole number", i+2))
 				continue
 			}
 		}
 		closing, err := strconv.Atoi(strings.TrimSpace(row[3]))
 		if err != nil || closing < 0 {
-			importErrors = append(importErrors, fmt.Sprintf("row %d: invalid Closing", i+2))
+			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – Closing must be a positive whole number", i+2))
 			continue
 		}
 		price, err := parsePrice(strings.TrimSpace(row[4]))
 		if err != nil || price < 0 {
-			importErrors = append(importErrors, fmt.Sprintf("row %d: invalid Price", i+2))
+			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – Price must be a valid number", i+2))
 			continue
 		}
 		lowStockThreshold := 12
@@ -457,7 +457,7 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 		if thresholdStr != "" {
 			t, err := strconv.Atoi(thresholdStr)
 			if err != nil || t < 0 {
-				importErrors = append(importErrors, fmt.Sprintf("row %d: invalid Alert at", i+2))
+				importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – Alert at must be a positive whole number", i+2))
 				continue
 			}
 			lowStockThreshold = t
