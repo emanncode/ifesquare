@@ -21,13 +21,13 @@ export function DayDetailPanel({
   className?: string
 }) {
   return (
-    <Card
+<Card
       hoverable={false}
       className={cn(
         "overflow-hidden py-0",
         dialog
           ? "flex-1 min-h-0 flex flex-col"
-          : "lg:sticky lg:top-6 lg:max-h-[calc(100svh-6rem)] lg:flex lg:flex-col",
+          : "lg:sticky lg:top-6 lg:max-h-[calc(100svh-6rem)] lg:flex lg:flex-col lg:overflow-y-auto",
         className,
       )}
     >
