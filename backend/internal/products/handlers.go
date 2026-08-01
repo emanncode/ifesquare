@@ -425,10 +425,15 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – product name is empty", i+2))
 			continue
 		}
-		opening, err := strconv.Atoi(strings.TrimSpace(row[1]))
-		if err != nil || opening < 0 {
-			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – Opening must be a positive whole number", i+2))
-			continue
+		openingStr := strings.TrimSpace(row[1])
+		var err error
+		opening := 0
+		if openingStr != "" {
+			opening, err = strconv.Atoi(openingStr)
+			if err != nil || opening < 0 {
+				importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – Opening must be a positive whole number", i+2))
+				continue
+			}
 		}
 		receiptsStr := strings.TrimSpace(row[2])
 		receipts := 0
@@ -506,7 +511,10 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 			importErrors = append(importErrors, fmt.Sprintf("batch %d–%d: %s", start+1, end, err.Error()))
 			continue
 		}
-		firstID, _ := res.LastInsertId()
+		// For a multi-row INSERT, LastInsertId returns the rowid of the LAST
+		// inserted row, so the first id is lastID - (len(chunk) - 1).
+		lastID, _ := res.LastInsertId()
+		firstID := lastID - int64(len(chunk)-1)
 
 		// Multi-row INSERT for entries (using sequential IDs).
 		entryChunk := entries[start:end]
@@ -517,7 +525,9 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 			prodID := firstID + int64(j)
 			eargs = append(eargs, scopeID, today, prodID, e.opening, e.receipts, e.closing, e.price)
 		}
-		tx.Exec("INSERT OR IGNORE INTO entries (user_id, day_date, product_id, opening, receipts, closing, price) VALUES "+strings.Join(eph, ", "), eargs...)
+		if _, err := tx.Exec("INSERT OR IGNORE INTO entries (user_id, day_date, product_id, opening, receipts, closing, price) VALUES "+strings.Join(eph, ", "), eargs...); err != nil {
+			importErrors = append(importErrors, fmt.Sprintf("batch %d–%d entries: %s", start+1, end, err.Error()))
+		}
 
 		created += len(chunk)
 		if (created % 5 == 0) || created >= total {
