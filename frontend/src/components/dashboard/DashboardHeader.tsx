@@ -87,7 +87,7 @@ export function DashboardHeader({
               className="h-12 shrink-0 rounded-lg px-6 text-base font-semibold"
               disabled={isDayClosed}
             >
-              {isDayClosed ? "Day closed" : "Close &amp; save day"}
+              {isDayClosed ? "Day closed" : "Close & save day"}
             </Button>
           </DialogTrigger>
           <DialogContent>

@@ -378,14 +378,20 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 	today := time.Now().Format("2006-01-02")
 	tx.Exec("INSERT OR IGNORE INTO days (user_id, date) VALUES (?, ?)", scopeID, today)
 
-	// Batch-load existing product names in one query.
-	existingNames := make(map[string]bool)
-	if nameRows, err := tx.Query("SELECT name FROM products WHERE user_id = ? AND archived_at IS NULL", scopeID); err == nil {
+	// Batch-load existing product names and prices in one query.
+	// Two products may share a name as long as their prices differ, so a row
+	// only counts as a duplicate when both name and price match an existing product.
+	existing := make(map[string]map[int]bool)
+	if nameRows, err := tx.Query("SELECT name, price FROM products WHERE user_id = ? AND archived_at IS NULL", scopeID); err == nil {
 		defer nameRows.Close()
 		for nameRows.Next() {
 			var n string
-			if nameRows.Scan(&n) == nil {
-				existingNames[n] = true
+			var p int
+			if nameRows.Scan(&n, &p) == nil {
+				if existing[n] == nil {
+					existing[n] = make(map[int]bool)
+				}
+				existing[n][p] = true
 			}
 		}
 	}
