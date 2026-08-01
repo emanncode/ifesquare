@@ -413,7 +413,7 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 	var products []pendingProduct
 	var entries []pendingEntry
 	var importErrors []string
-	seenNames := make(map[string]int)
+	seen := make(map[string]map[int]int)
 
 	for i, row := range records[1:] {
 		if len(row) < 6 {
@@ -425,15 +425,6 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – product name is empty", i+2))
 			continue
 		}
-		if prevRow, ok := seenNames[name]; ok {
-			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – '%s' appears more than once in your CSV (first at row %d)", i+2, name, prevRow))
-			continue
-		}
-		if existingNames[name] {
-			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – '%s' is already in your product list", i+2, name))
-			continue
-		}
-		seenNames[name] = i + 2
 		opening, err := strconv.Atoi(strings.TrimSpace(row[1]))
 		if err != nil || opening < 0 {
 			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – Opening must be a positive whole number", i+2))
@@ -469,10 +460,28 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 			lowStockThreshold = t
 		}
 
+		// Two rows are only duplicates when name AND price match, so products
+		// that share a name but differ in price are both imported.
+		if existing[name] == nil {
+			existing[name] = make(map[int]bool)
+		}
+		if existing[name][price] {
+			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – '%s' with price %d is already in your product list", i+2, name, price))
+			continue
+		}
+		if seen[name] == nil {
+			seen[name] = make(map[int]int)
+		}
+		if prevRow, ok := seen[name][price]; ok {
+			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – '%s' with price %d already appears in your CSV (first at row %d)", i+2, name, price, prevRow))
+			continue
+		}
+		seen[name][price] = i + 2
+
 		idx := len(products)
 		products = append(products, pendingProduct{name, price, opening, lowStockThreshold})
 		entries = append(entries, pendingEntry{idx, opening, receipts, closing, price})
-		existingNames[name] = true
+		existing[name][price] = true
 	}
 
 	const chunkSize = 100
@@ -564,6 +573,8 @@ func parsePrice(s string) (int, error) {
 	if s == "" {
 		return 0, fmt.Errorf("empty")
 	}
+	// Strip thousands separators so formatted values like "21,500.00" work.
+	s = strings.ReplaceAll(s, ",", "")
 	if parts := strings.SplitN(s, " ", 2); len(parts) == 2 {
 		whole, err := strconv.ParseFloat(parts[0], 64)
 		if err != nil {
