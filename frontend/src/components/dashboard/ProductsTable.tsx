@@ -36,10 +36,7 @@ export function ProductsTable({ rows, hideFinancials }: ProductsTableProps) {
         )
       : rows;
     const sorted = [...candidate].sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0));
-    const top = sorted.slice(0, 8);
-    const topIds = new Set(top.map((r) => r.id));
-    const extraLowStock = sorted.filter((r) => r.isLowStock && !topIds.has(r.id));
-    return [...top, ...extraLowStock];
+    return sorted.slice(0, 8);
   }, [rows, query]);
 
   return (
@@ -53,7 +50,7 @@ export function ProductsTable({ rows, hideFinancials }: ProductsTableProps) {
             Today&apos;s products
           </CardTitle>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Top products today — manage full catalog on the Products page
+            Top 8 products by revenue today — manage full catalog on the Products page
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
