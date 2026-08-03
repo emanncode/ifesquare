@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/emanncode/ifesquare/backend/internal/auth"
 	"github.com/emanncode/ifesquare/backend/internal/db"
@@ -59,7 +58,7 @@ func runImport(t *testing.T, csvBody string) (map[string]interface{}, []imported
 		}
 	}
 
-	today := time.Now().Format("2006-01-02")
+	today := db.GetToday()
 	rows, err := db.DB.Query(`
 		SELECT p.name, e.opening, e.receipts, e.closing, e.price
 		FROM entries e JOIN products p ON p.id = e.product_id

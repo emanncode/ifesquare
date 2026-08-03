@@ -3,7 +3,6 @@ package ledger
 import (
 	"database/sql"
 	"fmt"
-	"time"
 
 	"github.com/emanncode/ifesquare/backend/internal/db"
 )
@@ -39,7 +38,7 @@ type EntryWithProduct struct {
 }
 
 func GetTodayEntries(userID int64) ([]EntryWithProduct, error) {
-	today := time.Now().Format("2006-01-02")
+	today := db.GetToday()
 
 	var hadEntries int
 	if err := db.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM entries WHERE day_date = ? AND user_id = ?)", today, userID).Scan(&hadEntries); err != nil {

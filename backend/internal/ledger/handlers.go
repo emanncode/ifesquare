@@ -418,7 +418,7 @@ func SyncFromLastClosedHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getToday() string {
-	return time.Now().Format("2006-01-02")
+	return db.GetToday()
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {

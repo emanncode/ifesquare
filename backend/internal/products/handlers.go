@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -375,7 +374,7 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	today := time.Now().Format("2006-01-02")
+	today := db.GetToday()
 	tx.Exec("INSERT OR IGNORE INTO days (user_id, date) VALUES (?, ?)", scopeID, today)
 
 	// Batch-load existing product names and prices in one query.

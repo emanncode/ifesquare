@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	_ "modernc.org/sqlite"
 
@@ -120,4 +121,10 @@ func Close() {
 	if DB != nil {
 		DB.Close()
 	}
+}
+
+// GetToday returns the current date string (YYYY-MM-DD) for the business day,
+// rolling over at 2 AM instead of 12 AM.
+func GetToday() string {
+	return time.Now().Add(-2 * time.Hour).Format("2006-01-02")
 }

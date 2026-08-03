@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/emanncode/ifesquare/backend/internal/auth"
 	"github.com/emanncode/ifesquare/backend/internal/cache"
+	"github.com/emanncode/ifesquare/backend/internal/db"
 )
 
 const cacheKeyPrefix = "analytics:monthly-comparison:"
@@ -18,7 +18,7 @@ func cacheKey(scopeID int64, key string) string {
 
 func MonthlyComparisonHandler(w http.ResponseWriter, r *http.Request) {
 	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
-	today := time.Now().Format("2006-01-02")
+	today := db.GetToday()
 	key := cacheKey(scopeID, cacheKeyPrefix+today)
 
 	if cache.Serve(w, key) {
