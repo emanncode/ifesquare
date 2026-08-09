@@ -28,7 +28,7 @@ function useBelow(mq: string) {
 
 export default function HistoryPage() {
   const { openMobileNav } = useAppShell()
-  const { days, loading, error, refresh, getDay } = useHistory()
+  const { days, setDays, loading, error, refresh, getDay } = useHistory()
   const { toast } = useToast()
   const [selected, setSelected] = useState<string | null>(null)
   const [detail, setDetail] = useState<ApiHistoryDayDetail | null>(null)
@@ -80,6 +80,69 @@ export default function HistoryPage() {
   ) {
     if (!detail) return
     const value = field === "closing" && raw === "" ? null : parseCommaInt(raw)
+
+    // Optimistically update local details and calculations instantly
+    setDetail((prev) => {
+      if (!prev) return prev
+      let updatedTotalUnits = 0
+      let updatedTotalRevenue = 0
+
+      const nextEntries = prev.entries.map((e) => {
+        if (e.product_id !== productId) {
+          const t = e.opening + e.receipts
+          const c = e.closing
+          if (c != null && c >= 0) {
+            const s = Math.max(0, t - c)
+            updatedTotalUnits += s
+            updatedTotalRevenue += s * e.price
+          }
+          return e
+        }
+
+        const nextEntry = { ...e }
+        if (field === "opening") nextEntry.opening = value ?? 0
+        else if (field === "receipts") nextEntry.receipts = value ?? 0
+        else if (field === "closing") nextEntry.closing = value
+        else if (field === "price") nextEntry.price = value ?? 0
+
+        const t = nextEntry.opening + nextEntry.receipts
+        nextEntry.total = t
+
+        const c = nextEntry.closing
+        if (c != null && c >= 0) {
+          const s = Math.max(0, t - c)
+          nextEntry.sales = s
+          nextEntry.amount = s * nextEntry.price
+          updatedTotalUnits += s
+          updatedTotalRevenue += s * nextEntry.price
+        } else {
+          nextEntry.sales = null
+          nextEntry.amount = null
+        }
+
+        return nextEntry
+      })
+
+      // Optimistically update left panel days list totals
+      setDays((prevDays) =>
+        prevDays.map((d) => {
+          if (d.date !== prev.date) return d
+          return {
+            ...d,
+            total_units: updatedTotalUnits,
+            total_revenue: updatedTotalRevenue,
+          }
+        })
+      )
+
+      return {
+        ...prev,
+        entries: nextEntries,
+        total_units: updatedTotalUnits,
+        total_revenue: updatedTotalRevenue,
+      }
+    })
+
     const r = await mutateWithOffline(`/api/ledger/${detail.date}/${productId}`, "PATCH", {
       [field]: value,
     })

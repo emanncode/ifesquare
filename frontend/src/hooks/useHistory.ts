@@ -58,6 +58,7 @@ export function useHistory(limit = 30) {
 
   return {
     days,
+    setDays,
     loading,
     error,
     refresh,
