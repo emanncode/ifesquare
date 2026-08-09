@@ -7,6 +7,10 @@ export type User = {
   owner_id: number | null
   phone_number: string | null
   notify_on_close: boolean
+  email_2_name: string | null
+  email_2_address: string | null
+  email_3_name: string | null
+  email_3_address: string | null
 }
 
 /** GET/POST /api/products */

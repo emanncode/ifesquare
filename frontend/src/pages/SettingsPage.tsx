@@ -13,7 +13,6 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { api, errorMessage } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
-import { cn } from "@/lib/utils";
 import { useAppShell } from "@/components/layout/appShell";
 
 type StaffUser = {
@@ -109,22 +108,20 @@ function AccountTab({
   user: NonNullable<ReturnType<typeof useAuth>["user"]>;
   onSaved: () => void;
 }) {
-  const expectedPhone = user.phone_number ?? "";
-  const expectedNotify = user.notify_on_close;
-  const [phoneNumber, setPhoneNumber] = useState(expectedPhone);
-  const [notifyOnClose, setNotifyOnClose] = useState(expectedNotify);
+  const [email2Name, setEmail2Name] = useState(user.email_2_name ?? "");
+  const [email2Address, setEmail2Address] = useState(user.email_2_address ?? "");
+  const [email3Name, setEmail3Name] = useState(user.email_3_name ?? "");
+  const [email3Address, setEmail3Address] = useState(user.email_3_address ?? "");
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  const [prevExpectedPhone, setPrevExpectedPhone] = useState(expectedPhone);
-  const [prevExpectedNotify, setPrevExpectedNotify] = useState(expectedNotify);
+  const [prevUser, setPrevUser] = useState(user);
 
-  if (prevExpectedPhone !== expectedPhone) {
-    setPrevExpectedPhone(expectedPhone);
-    setPhoneNumber(expectedPhone);
-  }
-  if (prevExpectedNotify !== expectedNotify) {
-    setPrevExpectedNotify(expectedNotify);
-    setNotifyOnClose(expectedNotify);
+  if (prevUser !== user) {
+    setPrevUser(user);
+    setEmail2Name(user.email_2_name ?? "");
+    setEmail2Address(user.email_2_address ?? "");
+    setEmail3Name(user.email_3_name ?? "");
+    setEmail3Address(user.email_3_address ?? "");
   }
 
   async function handleSave() {
@@ -133,8 +130,10 @@ function AccountTab({
       await api("/api/auth/me", {
         method: "PATCH",
         body: {
-          phone_number: phoneNumber.trim() || null,
-          notify_on_close: notifyOnClose,
+          email_2_name: email2Name.trim() || null,
+          email_2_address: email2Address.trim() || null,
+          email_3_name: email3Name.trim() || null,
+          email_3_address: email3Address.trim() || null,
         },
       });
       toast("Settings saved", "success");
@@ -153,45 +152,66 @@ function AccountTab({
       </div>
       <div className="px-5 py-4 space-y-5">
         <div className="space-y-1.5">
-          <Label>Email</Label>
-          <p className="text-sm text-muted-foreground">{user.email}</p>
+          <Label>Primary Account Email (You)</Label>
+          <p className="text-sm font-semibold text-foreground">{user.email}</p>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="phone">Phone number</Label>
-          <Input
-            id="phone"
-            type="tel"
-            placeholder="+2348012345678"
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-          />
+
+        <div className="border-t border-border pt-4 space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Day Summary Email Recipients</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Add up to 2 additional email addresses (maximum of 3 total recipients, including yourself) to receive manual sales summary reports.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="email2Name">Recipient 2 Name</Label>
+              <Input
+                id="email2Name"
+                placeholder="e.g. Manager John"
+                value={email2Name}
+                onChange={(e) => setEmail2Name(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="email2Address">Recipient 2 Email</Label>
+              <Input
+                id="email2Address"
+                type="email"
+                placeholder="e.g. manager@example.com"
+                value={email2Address}
+                onChange={(e) => setEmail2Address(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="email3Name">Recipient 3 Name</Label>
+              <Input
+                id="email3Name"
+                placeholder="e.g. Auditor Jane"
+                value={email3Name}
+                onChange={(e) => setEmail3Name(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="email3Address">Recipient 3 Email</Label>
+              <Input
+                id="email3Address"
+                type="email"
+                placeholder="e.g. auditor@example.com"
+                value={email3Address}
+                onChange={(e) => setEmail3Address(e.target.value)}
+              />
+            </div>
+          </div>
         </div>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <button
-            type="button"
-            role="switch"
-            aria-checked={notifyOnClose}
-            onClick={() => setNotifyOnClose(!notifyOnClose)}
-            className={cn(
-              "relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              notifyOnClose ? "bg-primary" : "bg-input",
-            )}
-          >
-            <span
-              className={cn(
-                "pointer-events-none inline-block size-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200",
-                notifyOnClose ? "translate-x-4" : "translate-x-0",
-              )}
-            />
-          </button>
-          <span className="text-sm font-medium leading-none select-none">
-            Text me a summary when I close the day
-          </span>
-        </label>
-        <div className="flex justify-end pt-1">
+
+        <div className="flex justify-end pt-2 border-t border-border">
           <Button onClick={() => void handleSave()} disabled={saving}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Saving..." : "Save settings"}
           </Button>
         </div>
       </div>

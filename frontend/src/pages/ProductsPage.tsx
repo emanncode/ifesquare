@@ -1,12 +1,13 @@
-import { useRef, useState } from "react"
+import { useRef, useState, useMemo, useEffect } from "react"
 import { motion } from "framer-motion"
-import { Download, Upload, Menu, Loader2 } from "lucide-react"
+import { Download, Upload, Menu, Loader2, Mail, Send } from "lucide-react"
 import { useAppShell } from "@/components/layout/appShell"
 import { ProductsCatalog } from "@/components/dashboard/ProductsCatalog"
 import { useProducts } from "@/components/dashboard/useProducts"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/useToast"
-import { errorMessage } from "@/lib/api"
+import { errorMessage, api } from "@/lib/api"
+import { useAuth } from "@/hooks/useAuth"
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ""
 
@@ -19,9 +20,66 @@ export default function ProductsPage() {
   const { openMobileNav } = useAppShell()
   const { toast } = useToast()
   const { refresh } = useProducts()
+  const { user } = useAuth()
   const fileRef = useRef<HTMLInputElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const [importing, setImporting] = useState(false)
   const [progress, setProgress] = useState<ImportProgress>(null)
+
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [sending, setSending] = useState(false)
+
+  const recipients = useMemo(() => {
+    if (!user) return []
+    const list = [{ id: "self", name: "you", email: user.email }]
+    if (user.email_2_address) {
+      list.push({ id: "email2", name: user.email_2_name || "Recipient 2", email: user.email_2_address })
+    }
+    if (user.email_3_address) {
+      list.push({ id: "email3", name: user.email_3_name || "Recipient 3", email: user.email_3_address })
+    }
+    return list
+  }, [user])
+
+  const [selected, setSelected] = useState<string[]>(["self"])
+
+  // Sync selection with available recipients
+  useEffect(() => {
+    setSelected((prev) => prev.filter((id) => recipients.some((r) => r.id === id)))
+  }, [recipients])
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  async function handleSendSummary() {
+    if (selected.length === 0) return
+    setSending(true)
+    try {
+      const selectedEmails = recipients
+        .filter((r) => selected.includes(r.id))
+        .map((r) => r.email)
+
+      await api("/api/ledger/send-summary", {
+        method: "POST",
+        body: {
+          recipients: selectedEmails,
+        },
+      })
+      toast("Summary email sent successfully", "success")
+      setMenuOpen(false)
+    } catch (err) {
+      toast(errorMessage(err, "Failed to send summary"))
+    } finally {
+      setSending(false)
+    }
+  }
 
   function handleDownloadTemplate() {
     const a = document.createElement("a")
@@ -127,6 +185,76 @@ export default function ProductsPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          {user?.role === "owner" && (
+            <div ref={dropdownRef} className="relative">
+              <Button
+                variant="outline"
+                size="lg"
+                className="rounded-xl gap-2"
+                onClick={() => setMenuOpen((o) => !o)}
+              >
+                <Mail className="size-4" />
+                Send Summary
+              </Button>
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-2 z-50 w-72 rounded-xl border border-border bg-popover text-popover-foreground shadow-lg p-3 space-y-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-foreground">Select Recipients</p>
+                    <p className="text-[10px] text-muted-foreground">Choose who to email the sales summary report.</p>
+                  </div>
+                  
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    <label className="flex items-center gap-2 text-xs font-semibold pb-1.5 border-b border-border select-none cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selected.length === recipients.length && recipients.length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelected(recipients.map((r) => r.id))
+                          } else {
+                            setSelected([])
+                          }
+                        }}
+                        className="rounded border-border text-primary focus:ring-primary"
+                      />
+                      <span>Select all</span>
+                    </label>
+
+                    {recipients.map((r) => (
+                      <label key={r.id} className="flex items-start gap-2 text-xs select-none cursor-pointer hover:text-foreground">
+                        <input
+                          type="checkbox"
+                          checked={selected.includes(r.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelected((prev) => [...prev, r.id])
+                            } else {
+                              setSelected((prev) => prev.filter((id) => id !== r.id))
+                            }
+                          }}
+                          className="mt-0.5 rounded border-border text-primary focus:ring-primary"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate capitalize">{r.name}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{r.email}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+
+                  <Button
+                    size="sm"
+                    className="w-full mt-1 gap-1.5"
+                    disabled={sending || selected.length === 0}
+                    onClick={() => void handleSendSummary()}
+                  >
+                    {sending ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+                    Send Email
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
           <Button
             variant="outline"
             size="lg"

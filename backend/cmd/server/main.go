@@ -196,6 +196,7 @@ func main() {
 			r.With(auth.RequireRole("owner")).Post("/close", ledger.CloseHandler)
 			r.With(auth.RequireRole("owner")).Post("/sync-from-last-closed", ledger.SyncFromLastClosedHandler)
 			r.With(auth.RequireRole("owner")).Patch("/{date}/{productId}", ledger.UpdateEntryHandler)
+			r.With(auth.RequireRole("owner")).Post("/send-summary", ledger.SendSummaryHandler)
 		})
 
 		r.Route("/api/history", func(r chi.Router) {

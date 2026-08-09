@@ -329,16 +329,28 @@ func CloseHandler(w http.ResponseWriter, r *http.Request) {
 	mk := cacheKey(scopeID, "analytics:monthly-comparison:"+today)
 	cache.Invalidate(ck, hk, mk)
 	writeJSON(w, http.StatusOK, map[string]string{"message": "day closed"})
-
-	go sendCloseNotification(scopeID, today)
 }
 
-func sendCloseNotification(scopeID int64, date string) {
-	var email string
-	var phoneNumber sql.NullString
-	var notifyOnClose int
-	err := db.DB.QueryRow("SELECT email, phone_number, notify_on_close FROM users WHERE id = ?", scopeID).Scan(&email, &phoneNumber, &notifyOnClose)
-	if err != nil || notifyOnClose == 0 {
+type sendSummaryReq struct {
+	Date       string   `json:"date"`
+	Recipients []string `json:"recipients"`
+}
+
+func SendSummaryHandler(w http.ResponseWriter, r *http.Request) {
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+
+	var req sendSummaryReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		return
+	}
+
+	if req.Date == "" {
+		req.Date = getToday()
+	}
+
+	if len(req.Recipients) == 0 {
+		http.Error(w, `{"error":"no recipients provided"}`, http.StatusBadRequest)
 		return
 	}
 
@@ -347,9 +359,10 @@ func sendCloseNotification(scopeID int64, date string) {
 		FROM entries e
 		JOIN products p ON p.id = e.product_id
 		WHERE e.day_date = ? AND e.user_id = ?
-	`, date, scopeID)
+	`, req.Date, scopeID)
 	if err != nil {
 		sentry.CaptureException(fmt.Errorf("notify: query entries: %w", err))
+		http.Error(w, `{"error":"failed to query entries"}`, http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -366,6 +379,7 @@ func sendCloseNotification(scopeID int64, date string) {
 		var lowStockThreshold sql.NullInt64
 		if err := rows.Scan(&opening, &receipts, &closing, &price, &name, &lowStockThreshold); err != nil {
 			sentry.CaptureException(fmt.Errorf("notify: scan entry: %w", err))
+			http.Error(w, `{"error":"failed to scan entry"}`, http.StatusInternalServerError)
 			return
 		}
 
@@ -394,23 +408,22 @@ func sendCloseNotification(scopeID int64, date string) {
 	}
 	if err := rows.Err(); err != nil {
 		sentry.CaptureException(fmt.Errorf("notify: rows iter: %w", err))
+		http.Error(w, `{"error":"failed to iterate rows"}`, http.StatusInternalServerError)
 		return
 	}
 
-	msg := buildSummaryMessage(date, totalRevenue, totalUnits, topProduct, lowStockCount)
+	msg := buildSummaryMessage(req.Date, totalRevenue, totalUnits, topProduct, lowStockCount)
+	subject := fmt.Sprintf("Ifesquare: Day Closed Summary - %s", req.Date)
 
-	// Send Email notification
-	subject := fmt.Sprintf("Ifesquare: Day Closed Summary - %s", date)
-	if err := notify.SendEmail(email, subject, msg); err != nil {
-		sentry.CaptureException(fmt.Errorf("notify: send email to %s: %w", email, err))
-	}
-
-	// Send SMS notification if phone number is set
-	if phoneNumber.Valid && phoneNumber.String != "" {
-		if err := notify.SendSMS(phoneNumber.String, msg); err != nil {
-			sentry.CaptureException(fmt.Errorf("notify: send sms: %w", err))
+	for _, recipient := range req.Recipients {
+		if err := notify.SendEmail(recipient, subject, msg); err != nil {
+			sentry.CaptureException(fmt.Errorf("notify: send email to %s: %w", recipient, err))
+			http.Error(w, `{"error":"failed to send email to some recipients"}`, http.StatusInternalServerError)
+			return
 		}
 	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": "summary sent successfully"})
 }
 
 func buildSummaryMessage(date string, totalRevenue, totalUnits int, topProduct string, lowStockCount int) string {
