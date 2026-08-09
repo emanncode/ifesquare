@@ -188,7 +188,11 @@ func Me(w http.ResponseWriter, r *http.Request) {
 	var email2Name, email2Address, email3Name, email3Address sql.NullString
 	err := db.DB.QueryRow("SELECT id, email, role, owner_id, phone_number, notify_on_close, email_2_name, email_2_address, email_3_name, email_3_address FROM users WHERE id = ?", userID).Scan(&id, &email, &role, &ownerID, &phoneNumber, &notifyOnClose, &email2Name, &email2Address, &email3Name, &email3Address)
 	if err != nil {
-		http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+		if err == sql.ErrNoRows {
+			http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+		} else {
+			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -317,7 +321,11 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 	var notifyOnClose int
 	var email2Name, email2Address, email3Name, email3Address sql.NullString
 	if err := db.DB.QueryRow("SELECT id, email, role, owner_id, phone_number, notify_on_close, email_2_name, email_2_address, email_3_name, email_3_address FROM users WHERE id = ?", userID).Scan(&id, &email, &role, &ownerID, &phoneNumber, &notifyOnClose, &email2Name, &email2Address, &email3Name, &email3Address); err != nil {
-		http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+		if err == sql.ErrNoRows {
+			http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+		} else {
+			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		}
 		return
 	}
 	var pn *string
