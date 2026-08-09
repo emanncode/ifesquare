@@ -418,7 +418,7 @@ func SendSummaryHandler(w http.ResponseWriter, r *http.Request) {
 	for _, recipient := range req.Recipients {
 		if err := notify.SendEmail(recipient, subject, msg); err != nil {
 			sentry.CaptureException(fmt.Errorf("notify: send email to %s: %w", recipient, err))
-			http.Error(w, `{"error":"failed to send email to some recipients"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 			return
 		}
 	}
