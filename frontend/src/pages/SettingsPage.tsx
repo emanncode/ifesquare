@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Loader2, Users, History, UserCircle } from "lucide-react";
+import { Loader2, Users, History, UserCircle, Menu } from "lucide-react";
 import { Tabs } from "@/components/ui/Tabs";
 import { TabsList } from "@/components/ui/TabsList";
 import { TabsTrigger } from "@/components/ui/TabsTrigger";
@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { api, errorMessage } from "@/lib/api";
 import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
+import { useAppShell } from "@/components/layout/appShell";
 
 type StaffUser = {
   id: number;
@@ -35,6 +36,7 @@ type AuditEntry = {
 
 export default function SettingsPage() {
   const { user, refresh } = useAuth();
+  const { openMobileNav } = useAppShell();
   const [tab, setTab] = useState("account");
 
   if (!user) return null;
@@ -46,7 +48,21 @@ export default function SettingsPage() {
       transition={{ duration: 0.3 }}
       className="mx-auto p-[5%] px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
     >
-      <h1 className="mb-6 text-2xl font-bold tracking-tight">Settings</h1>
+      <div className="mb-6 flex items-center gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="shrink-0 rounded-xl lg:hidden"
+          onClick={openMobileNav}
+          aria-label="Open menu"
+        >
+          <Menu className="size-5" />
+        </Button>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+        </div>
+      </div>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-6">
