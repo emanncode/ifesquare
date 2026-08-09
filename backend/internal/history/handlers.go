@@ -74,7 +74,7 @@ func GetByDateHandler(w http.ResponseWriter, r *http.Request) {
 		total := e.Opening + e.Receipts
 		var sales any
 		var amount any
-		if e.Closing != nil && *e.Closing > 0 {
+		if e.Closing != nil && *e.Closing >= 0 {
 			s := total - *e.Closing
 			if s < 0 {
 				s = 0
@@ -142,7 +142,7 @@ func ExportCSVHandler(w http.ResponseWriter, r *http.Request) {
 	for _, e := range entries {
 		total := e.Opening + e.Receipts
 		var closing, sales, amount string
-		if e.Closing != nil && *e.Closing > 0 {
+		if e.Closing != nil && *e.Closing >= 0 {
 			closing = fmt.Sprintf("%d", *e.Closing)
 			s := total - *e.Closing
 			if s < 0 {

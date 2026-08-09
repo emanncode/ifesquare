@@ -79,12 +79,14 @@ export default function HistoryPage() {
     raw: string,
   ) {
     if (!detail) return
+    const value = field === "closing" && raw === "" ? null : parseCommaInt(raw)
     const r = await mutateWithOffline(`/api/ledger/${detail.date}/${productId}`, "PATCH", {
-      [field]: parseCommaInt(raw),
+      [field]: value,
     })
     if (r !== null) {
       const data = await getDay(detail.date)
       setDetail(data)
+      void refresh()
     }
   }
 

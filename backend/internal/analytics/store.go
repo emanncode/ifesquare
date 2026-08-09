@@ -85,7 +85,7 @@ func computeMonthlyComparison(currentFrom, currentTo, previousFrom, previousTo s
 		total := e.Opening + e.Receipts
 		sales := 0
 		amount := 0
-		if e.Closing != nil && *e.Closing > 0 {
+		if e.Closing != nil && *e.Closing >= 0 {
 			s := total - *e.Closing
 			if s > 0 {
 				sales = s

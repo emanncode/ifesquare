@@ -97,7 +97,7 @@ func GetTodayEntries(userID int64) ([]EntryWithProduct, error) {
 		if lowStockThreshold != nil {
 			effectiveThreshold = *lowStockThreshold
 		}
-		if e.Closing != nil && *e.Closing > 0 {
+		if e.Closing != nil && *e.Closing >= 0 {
 			e.CurrentStock = *e.Closing
 			e.IsLowStock = *e.Closing <= effectiveThreshold
 		} else {
@@ -147,7 +147,7 @@ func ensureEntries(dayDate string, userID int64) {
 	tx.Commit()
 }
 
-func UpdateEntry(dayDate string, productID int64, userID int64, opening, receipts, closing, price *int) (*Entry, error) {
+func UpdateEntry(dayDate string, productID int64, userID int64, opening, receipts, closing, price *int, updateClosing bool) (*Entry, error) {
 	if opening != nil {
 		if _, err := db.DB.Exec(
 			"UPDATE entries SET opening = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
@@ -165,13 +165,23 @@ func UpdateEntry(dayDate string, productID int64, userID int64, opening, receipt
 			return nil, err
 		}
 	}
-	if closing != nil {
-		_, err := db.DB.Exec(
-			"UPDATE entries SET closing = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
-			*closing, dayDate, productID, userID,
-		)
-		if err != nil {
-			return nil, err
+	if updateClosing {
+		if closing == nil {
+			_, err := db.DB.Exec(
+				"UPDATE entries SET closing = NULL, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
+				dayDate, productID, userID,
+			)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			_, err := db.DB.Exec(
+				"UPDATE entries SET closing = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
+				*closing, dayDate, productID, userID,
+			)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	if price != nil {
@@ -216,7 +226,7 @@ func autoSyncFromLastClosed(today string, userID int64) {
 		SELECT e.product_id, e.closing
 		FROM entries e
 		JOIN products p ON p.id = e.product_id
-		WHERE e.day_date = ? AND e.closing IS NOT NULL AND e.closing > 0 AND e.user_id = ?
+		WHERE e.day_date = ? AND e.closing IS NOT NULL AND e.closing >= 0 AND e.user_id = ?
 	`, prevDate, userID)
 	if err != nil {
 		return
@@ -274,7 +284,7 @@ func SyncFromLastClosedDay(today string, userID int64) (string, error) {
 		SELECT e.product_id, e.closing, p.stock
 		FROM entries e
 		JOIN products p ON p.id = e.product_id
-		WHERE e.day_date = ? AND e.closing IS NOT NULL AND e.closing > 0 AND e.user_id = ?
+		WHERE e.day_date = ? AND e.closing IS NOT NULL AND e.closing >= 0 AND e.user_id = ?
 	`, prevDate, userID)
 	if err != nil {
 		return "", err
@@ -339,7 +349,7 @@ func CloseDay(dayDate string, userID int64) error {
 		SELECT e.id, e.product_id, e.closing
 		FROM entries e
 		JOIN products p ON p.id = e.product_id
-		WHERE e.day_date = ? AND e.user_id = ? AND e.closing IS NOT NULL AND e.closing > 0
+		WHERE e.day_date = ? AND e.user_id = ? AND e.closing IS NOT NULL AND e.closing >= 0
 	`, dayDate, userID)
 	if err != nil {
 		return err

@@ -92,7 +92,7 @@ export type MonthlyComparison = {
 
 export function deriveLedgerRow(e: ApiLedgerEntry): LedgerRow {
   const total = e.opening + e.receipts
-  const hasClosing = e.closing != null && e.closing > 0
+  const hasClosing = e.closing != null && e.closing >= 0
   const sales = hasClosing ? Math.max(0, total - (e.closing as number)) : null
   const amount = sales != null ? sales * e.price : null
   return {
@@ -102,7 +102,7 @@ export function deriveLedgerRow(e: ApiLedgerEntry): LedgerRow {
     stock: e.opening,
     price: e.price,
     receipts: e.receipts,
-    closing: e.closing != null && e.closing > 0 ? e.closing : null,
+    closing: e.closing != null && e.closing >= 0 ? e.closing : null,
     total,
     sales,
     amount,

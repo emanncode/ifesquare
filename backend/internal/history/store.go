@@ -22,14 +22,14 @@ func ListClosedDays(limit int, userID int64) ([]DaySummary, error) {
 		SELECT d.date, d.closed_at,
 		       COALESCE(SUM(
 		         CASE
-		           WHEN e.closing IS NOT NULL AND e.closing > 0
+		           WHEN e.closing IS NOT NULL AND e.closing >= 0
 		           THEN (e.opening + e.receipts - e.closing) * e.price
 		           ELSE 0
 		         END
 		       ), 0) AS total_revenue,
 		       COALESCE(SUM(
 		         CASE
-		           WHEN e.closing IS NOT NULL AND e.closing > 0
+		           WHEN e.closing IS NOT NULL AND e.closing >= 0
 		           THEN (e.opening + e.receipts - e.closing)
 		           ELSE 0
 		         END
@@ -83,7 +83,7 @@ func GetByDate(date string, userID int64) ([]ledger.EntryWithProduct, error) {
 		if lowStockThreshold != nil {
 			effectiveThreshold = *lowStockThreshold
 		}
-		if e.Closing != nil && *e.Closing > 0 {
+		if e.Closing != nil && *e.Closing >= 0 {
 			e.CurrentStock = *e.Closing
 			e.IsLowStock = *e.Closing <= effectiveThreshold
 		} else {

@@ -104,7 +104,7 @@ export function DayDetailPanel({
               <tbody>
                 {detail.entries.map((e) => {
                   const total = e.opening + e.receipts
-                  const sales = e.closing != null && e.closing > 0 ? Math.max(0, total - e.closing) : 0
+                  const sales = e.closing != null && e.closing >= 0 ? Math.max(0, total - e.closing) : 0
                   const amount = sales * e.price
                   const isToday = detail.date === today
                   return (

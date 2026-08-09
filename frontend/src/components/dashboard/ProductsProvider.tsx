@@ -36,7 +36,7 @@ function merge(products: ApiProduct[], entries: ApiLedgerEntry[]): CatalogRow[] 
     const closing = e?.closing ?? null
     const price = e?.price ?? p.price
     const total = opening + receipts
-    const sales = closing != null && closing > 0 ? Math.max(0, total - closing) : 0
+    const sales = closing != null && closing >= 0 ? Math.max(0, total - closing) : 0
     const amount = sales * price
     return {
       productId: p.id,
@@ -169,7 +169,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
           if (field === "name") next.name = value
           else if (field === "opening") next.opening = parseCommaInt(value)
           else if (field === "receipts") next.receipts = parseCommaInt(value)
-          else if (field === "closing") next.closing = parseCommaInt(value) || null
+          else if (field === "closing") next.closing = value === "" ? null : parseCommaInt(value)
           else if (field === "price") next.price = parseCommaInt(value)
           else if (field === "low_stock_threshold") {
             const n = parseCommaInt(value)
@@ -178,7 +178,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
             next.isLowStock = next.currentStock <= next.effectiveThreshold
           }
           next.total = next.opening + next.receipts
-          next.sales = next.closing != null && next.closing > 0 ? Math.max(0, next.total - next.closing) : 0
+          next.sales = next.closing != null && next.closing >= 0 ? Math.max(0, next.total - next.closing) : 0
           next.amount = next.sales * next.price
           return next
         }),
@@ -207,8 +207,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
               ])
               ok = r1 !== null && r2 !== null
             } else if (field === "receipts" || field === "closing") {
-              const body: Record<string, number> = {}
-              body[field] = parseCommaInt(value)
+              const body: Record<string, number | null> = {}
+              body[field] = value === "" ? null : parseCommaInt(value)
               const r = await mutateWithOffline(`/api/ledger/today/${productId}`, "PATCH", body)
               ok = r !== null
             } else if (field === "name") {
@@ -239,6 +239,17 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     async (productId: number) => {
       await api(`/api/products/${productId}`, { method: "DELETE" })
       setRows((prev) => prev.filter((r) => r.productId !== productId))
+    },
+    [],
+  )
+
+  const removeProductsBulk = useCallback(
+    async (productIds: number[]) => {
+      await api("/api/products/archive-bulk", {
+        method: "POST",
+        body: { ids: productIds },
+      })
+      setRows((prev) => prev.filter((r) => !productIds.includes(r.productId)))
     },
     [],
   )
@@ -280,10 +291,11 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       addProducts,
       patchCatalogField,
       removeProduct,
+      removeProductsBulk,
       restoreProduct,
       fetchArchived,
     }),
-    [rows, loading, error, refresh, addProduct, addProducts, patchCatalogField, removeProduct, restoreProduct, fetchArchived],
+    [rows, loading, error, refresh, addProduct, addProducts, patchCatalogField, removeProduct, removeProductsBulk, restoreProduct, fetchArchived],
   )
 
   return (

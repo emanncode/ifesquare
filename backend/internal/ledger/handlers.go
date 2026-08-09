@@ -23,6 +23,25 @@ func cacheKey(scopeID int64, key string) string {
 	return fmt.Sprintf("%d:%s", scopeID, key)
 }
 
+type NullableInt struct {
+	Val *int
+	Set bool
+}
+
+func (n *NullableInt) UnmarshalJSON(data []byte) error {
+	n.Set = true
+	if string(data) == "null" {
+		n.Val = nil
+		return nil
+	}
+	var val int
+	if err := json.Unmarshal(data, &val); err != nil {
+		return err
+	}
+	n.Val = &val
+	return nil
+}
+
 type staffEntryResponse struct {
 	ID                 int64  `json:"id"`
 	DayDate            string `json:"day_date"`
@@ -124,10 +143,10 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		Opening  *int `json:"opening"`
-		Receipts *int `json:"receipts"`
-		Closing  *int `json:"closing"`
-		Price    *int `json:"price"`
+		Opening  *int        `json:"opening"`
+		Receipts *int        `json:"receipts"`
+		Closing  NullableInt `json:"closing"`
+		Price    *int        `json:"price"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
@@ -149,7 +168,7 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"receipts cannot be negative"}`, http.StatusBadRequest)
 		return
 	}
-	if body.Closing != nil && *body.Closing < 0 {
+	if body.Closing.Set && body.Closing.Val != nil && *body.Closing.Val < 0 {
 		http.Error(w, `{"error":"closing cannot be negative"}`, http.StatusBadRequest)
 		return
 	}
@@ -160,7 +179,7 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 
 	today := getToday()
 
-	if body.Closing != nil {
+	if body.Closing.Set && body.Closing.Val != nil {
 		current, err := getEntry(today, productID, scopeID)
 		if err != nil {
 			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
@@ -176,7 +195,7 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 				receipts = *body.Receipts
 			}
 			total := opening + receipts
-			if *body.Closing > total {
+			if *body.Closing.Val > total {
 				http.Error(w, `{"error":"closing cannot exceed total (opening + receipts)"}`, http.StatusBadRequest)
 				return
 			}
@@ -185,7 +204,7 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 
 	before, _ := getEntry(today, productID, scopeID)
 
-	entry, err := UpdateEntry(today, productID, scopeID, body.Opening, body.Receipts, body.Closing, body.Price)
+	entry, err := UpdateEntry(today, productID, scopeID, body.Opening, body.Receipts, body.Closing.Val, body.Price, body.Closing.Set)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
@@ -218,10 +237,10 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		Opening  *int `json:"opening"`
-		Receipts *int `json:"receipts"`
-		Closing  *int `json:"closing"`
-		Price    *int `json:"price"`
+		Opening  *int        `json:"opening"`
+		Receipts *int        `json:"receipts"`
+		Closing  NullableInt `json:"closing"`
+		Price    *int        `json:"price"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
@@ -236,7 +255,7 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"receipts cannot be negative"}`, http.StatusBadRequest)
 		return
 	}
-	if body.Closing != nil && *body.Closing < 0 {
+	if body.Closing.Set && body.Closing.Val != nil && *body.Closing.Val < 0 {
 		http.Error(w, `{"error":"closing cannot be negative"}`, http.StatusBadRequest)
 		return
 	}
@@ -245,7 +264,7 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if body.Closing != nil {
+	if body.Closing.Set && body.Closing.Val != nil {
 		current, err := getEntry(date, productID, scopeID)
 		if err != nil {
 			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
@@ -261,7 +280,7 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 				receipts = *body.Receipts
 			}
 			total := opening + receipts
-			if *body.Closing > total {
+			if *body.Closing.Val > total {
 				http.Error(w, `{"error":"closing cannot exceed total (opening + receipts)"}`, http.StatusBadRequest)
 				return
 			}
@@ -270,7 +289,7 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 
 	before, _ := getEntry(date, productID, scopeID)
 
-	entry, err := UpdateEntry(date, productID, scopeID, body.Opening, body.Receipts, body.Closing, body.Price)
+	entry, err := UpdateEntry(date, productID, scopeID, body.Opening, body.Receipts, body.Closing.Val, body.Price, body.Closing.Set)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return
@@ -286,8 +305,9 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 
 	ck := cacheKey(scopeID, "/api/ledger/today")
 	hk := cacheKey(scopeID, "/api/history/"+date)
+	hl := cacheKey(scopeID, "/api/history")
 	mk := cacheKey(scopeID, "analytics:monthly-comparison:"+getToday())
-	cache.Invalidate(ck, hk, mk)
+	cache.Invalidate(ck, hk, hl, mk)
 	writeJSON(w, http.StatusOK, entry)
 }
 
@@ -350,7 +370,7 @@ func sendCloseNotification(scopeID int64, date string) {
 
 		total := opening + receipts
 		c := int(closing.Int64)
-		if closing.Valid && c > 0 {
+		if closing.Valid && c >= 0 {
 			sold := total - c
 			if sold > 0 {
 				amount := sold * price
