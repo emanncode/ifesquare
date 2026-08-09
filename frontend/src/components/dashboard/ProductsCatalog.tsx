@@ -48,13 +48,29 @@ const SORTABLE_COLUMNS: { key: SortKey; label: string; align?: "left" | "right" 
 ]
 
 export function ProductsCatalog({ importProgress }: { importProgress?: ImportProgress }) {
-  const { rows, loading, error, addProducts, patchCatalogField, removeProduct, restoreProduct, fetchArchived } =
+  const { rows, loading, error, addProducts, patchCatalogField, removeProduct, removeProductsBulk, restoreProduct, fetchArchived } =
     useProducts()
   const { toast } = useToast()
   const [addOpen, setAddOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [sortKey, setSortKey] = useState<SortKey>("name")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+
+  async function handleRemoveBulk() {
+    if (selectedIds.length === 0) return
+    if (!confirm(`Are you sure you want to delete ${selectedIds.length} products?`)) return
+    setBusy(true)
+    try {
+      await removeProductsBulk(selectedIds)
+      setSelectedIds([])
+      toast("Products deleted successfully", "success")
+    } catch (err) {
+      toast(errorMessage(err, "Failed to remove products"))
+    } finally {
+      setBusy(false)
+    }
+  }
   const [searchParams, setSearchParams] = useSearchParams()
   const [lowStockOnly, setLowStockOnly] = useState(() => searchParams.get("filter") === "low-stock")
   const [justSaved, setJustSaved] = useState<Set<string>>(new Set())
@@ -172,6 +188,16 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+              <button
+                type="button"
+                onClick={() => void handleRemoveBulk()}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-destructive/10 px-3 py-1.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/20"
+              >
+                <Trash2 className="size-3.5" />
+                Delete selected ({selectedIds.length})
+              </button>
+            )}
             <button
               type="button"
               onClick={toggleLowStockFilter}
@@ -210,6 +236,20 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
         <table className="w-full min-w-240 border-collapse text-sm [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
           <thead>
             <tr className="border-b border-border/60 bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+              <CatalogTh className="w-10 text-center">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.length === sorted.length && sorted.length > 0}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedIds(sorted.map((r) => r.productId))
+                    } else {
+                      setSelectedIds([])
+                    }
+                  }}
+                  className="rounded border-border text-primary focus:ring-primary"
+                />
+              </CatalogTh>
               <CatalogTh className="w-12 text-center text-nowrap">S/N</CatalogTh>
               {SORTABLE_COLUMNS.map((col) => {
                 const active = sortKey === col.key
@@ -252,6 +292,20 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
                   r.isLowStock && "border-l-2 border-l-amber-500 bg-amber-500/4",
                 )}
               >
+                <CatalogTd className="w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(r.productId)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds((prev) => [...prev, r.productId])
+                      } else {
+                        setSelectedIds((prev) => prev.filter((id) => id !== r.productId))
+                      }
+                    }}
+                    className="rounded border-border text-primary focus:ring-primary"
+                  />
+                </CatalogTd>
                 <CatalogTd className="w-12 text-center text-xs text-muted-foreground">
                   {sorted.indexOf(r) + 1}
                 </CatalogTd>
@@ -318,7 +372,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
             {rows.length === 0 && (
               <tr>
                 <td
-                  colSpan={13}
+                  colSpan={14}
                   className="px-4 py-10 text-center text-sm text-muted-foreground"
                 >
                   {importProgress ? (
@@ -339,6 +393,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
             )}
             {sorted.length > 0 && (
               <tr className="border-t-2 border-border bg-muted/50 font-bold">
+                <CatalogTd />
                 <CatalogTd />
                 <CatalogTd className="text-left text-sm">Total</CatalogTd>
                 <CatalogTd />

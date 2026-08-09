@@ -3,6 +3,7 @@ package products
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/emanncode/ifesquare/backend/internal/db"
@@ -133,6 +134,32 @@ func Archive(id, userID int64) error {
 		return fmt.Errorf("not found")
 	}
 	return nil
+}
+
+func ArchiveBulk(ids []int64, userID int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	tx, err := db.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, 0, len(ids)+1)
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args = append(args, id)
+	}
+	args = append(args, userID)
+
+	query := fmt.Sprintf("UPDATE products SET archived_at = CURRENT_TIMESTAMP WHERE id IN (%s) AND user_id = ? AND archived_at IS NULL", strings.Join(placeholders, ", "))
+	if _, err := tx.Exec(query, args...); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func ListArchived(userID int64) ([]Product, error) {

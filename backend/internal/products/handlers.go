@@ -248,6 +248,39 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "archived"})
 }
 
+func ArchiveBulkHandler(w http.ResponseWriter, r *http.Request) {
+	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
+	user := r.Context().Value(auth.UserKey).(auth.User)
+
+	var body struct {
+		IDs []int64 `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		return
+	}
+
+	if len(body.IDs) == 0 {
+		http.Error(w, `{"error":"no ids provided"}`, http.StatusBadRequest)
+		return
+	}
+
+	if err := ArchiveBulk(body.IDs, scopeID); err != nil {
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+
+	idsStr := fmt.Sprintf("%v", body.IDs)
+	if err := audit_log.Write(scopeID, user.ID, "archive_bulk", "product", idsStr, nil, nil); err != nil {
+		// non-fatal
+	}
+
+	ck := cacheKey(scopeID, "/api/products")
+	ltk := cacheKey(scopeID, "/api/ledger/today")
+	cache.Invalidate(ck, ltk)
+	writeJSON(w, http.StatusOK, map[string]string{"message": "products archived"})
+}
+
 func DeleteAllHandler(w http.ResponseWriter, r *http.Request) {
 	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
 	if err := DeleteAll(scopeID); err != nil {
