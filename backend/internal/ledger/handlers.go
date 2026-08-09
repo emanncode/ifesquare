@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -415,12 +416,20 @@ func SendSummaryHandler(w http.ResponseWriter, r *http.Request) {
 	msg := buildSummaryMessage(req.Date, totalRevenue, totalUnits, topProduct, lowStockCount)
 	subject := fmt.Sprintf("Ifesquare: Day Closed Summary - %s", req.Date)
 
+	var failed []string
+	var lastErr error
 	for _, recipient := range req.Recipients {
 		if err := notify.SendEmail(recipient, subject, msg); err != nil {
 			sentry.CaptureException(fmt.Errorf("notify: send email to %s: %w", recipient, err))
-			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
-			return
+			failed = append(failed, recipient)
+			lastErr = err
 		}
+	}
+
+	if len(failed) > 0 {
+		errMsg := fmt.Sprintf("Failed to send email to: %s. error: %v", strings.Join(failed, ", "), lastErr)
+		http.Error(w, `{"error":"`+errMsg+`"}`, http.StatusInternalServerError)
+		return
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "summary sent successfully"})
