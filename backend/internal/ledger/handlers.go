@@ -334,10 +334,11 @@ func CloseHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func sendCloseNotification(scopeID int64, date string) {
+	var email string
 	var phoneNumber sql.NullString
 	var notifyOnClose int
-	err := db.DB.QueryRow("SELECT phone_number, notify_on_close FROM users WHERE id = ?", scopeID).Scan(&phoneNumber, &notifyOnClose)
-	if err != nil || !phoneNumber.Valid || notifyOnClose == 0 {
+	err := db.DB.QueryRow("SELECT email, phone_number, notify_on_close FROM users WHERE id = ?", scopeID).Scan(&email, &phoneNumber, &notifyOnClose)
+	if err != nil || notifyOnClose == 0 {
 		return
 	}
 
@@ -397,8 +398,18 @@ func sendCloseNotification(scopeID int64, date string) {
 	}
 
 	msg := buildSummaryMessage(date, totalRevenue, totalUnits, topProduct, lowStockCount)
-	if err := notify.SendSMS(phoneNumber.String, msg); err != nil {
-		sentry.CaptureException(fmt.Errorf("notify: send sms: %w", err))
+
+	// Send Email notification
+	subject := fmt.Sprintf("Ifesquare: Day Closed Summary - %s", date)
+	if err := notify.SendEmail(email, subject, msg); err != nil {
+		sentry.CaptureException(fmt.Errorf("notify: send email to %s: %w", email, err))
+	}
+
+	// Send SMS notification if phone number is set
+	if phoneNumber.Valid && phoneNumber.String != "" {
+		if err := notify.SendSMS(phoneNumber.String, msg); err != nil {
+			sentry.CaptureException(fmt.Errorf("notify: send sms: %w", err))
+		}
 	}
 }
 
