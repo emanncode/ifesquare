@@ -105,6 +105,11 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
   )
   const sorted = useMemo(() => sortRows(filteredRows, sortKey, sortDir), [filteredRows, sortKey, sortDir])
 
+  // Synchronize selection state with visible list of products when filters are toggled
+  useEffect(() => {
+    setSelectedIds((prev) => prev.filter((id) => sorted.some((r) => r.productId === id)))
+  }, [sorted])
+
   function toggleSort(key: SortKey) {
     if (key === sortKey) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"))
