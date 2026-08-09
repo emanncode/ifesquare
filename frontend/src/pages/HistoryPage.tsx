@@ -182,7 +182,7 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      {loading && (
+      {loading && days.length === 0 && (
         <div className="flex min-h-40 items-center justify-center">
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
         </div>
@@ -199,7 +199,7 @@ export default function HistoryPage() {
         </Card>
       )}
 
-      {!loading && days.length > 0 && (
+      {days.length > 0 && (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] items-start">
           <Card hoverable={false} className="overflow-hidden py-0">
             <div className="border-b border-border px-5 py-4">
