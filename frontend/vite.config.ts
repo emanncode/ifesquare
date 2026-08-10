@@ -26,7 +26,7 @@ export default defineConfig({
       workbox: {
         runtimeCaching: [
           {
-            urlPattern: /\/api\/(products|ledger\/today|history|analytics\/monthly-comparison|users|audit-log)(\/.*)?$/,
+            urlPattern: /\/api\/(auth\/me|products|ledger\/today|history|analytics\/monthly-comparison|users|audit-log)(\/.*)?$/,
             method: "GET",
             handler: "NetworkFirst",
             options: { cacheName: "api-cache-v2", networkTimeoutSeconds: 3 },

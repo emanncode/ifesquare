@@ -26,7 +26,6 @@ export function useHistory(limit = 30) {
           setError(
             errorMessage(err, "Failed to load history"),
           )
-          setDays([])
         }
       } finally {
         if (!cancelled) setLoading(false)

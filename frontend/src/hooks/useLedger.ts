@@ -53,7 +53,6 @@ export function useLedger() {
       } catch (err) {
         if (!cancelled) {
           setError(errorMessage(err, "Failed to load ledger"))
-          setEntries([])
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -63,6 +62,15 @@ export function useLedger() {
       cancelled = true
     }
   }, [isAuthenticated])
+
+  // Re-pull server truth once the offline queue has been fully replayed.
+  useEffect(() => {
+    function onSync() {
+      void load()
+    }
+    window.addEventListener("app-data-sync", onSync)
+    return () => window.removeEventListener("app-data-sync", onSync)
+  }, [load])
 
   const refresh = useCallback(async () => {
     if (!isAuthenticated) return
@@ -82,7 +90,7 @@ export function useLedger() {
       await api("/api/ledger/close", { method: "POST" })
     } catch (err) {
       if (isNetworkError(err)) {
-        throw new Error("Can't close the day while offline — reconnect and try again.")
+        throw new Error("Can't close the day while offline — reconnect and try again.", { cause: err })
       }
       throw err
     }
