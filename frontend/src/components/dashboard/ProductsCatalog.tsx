@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
 import { motion } from "framer-motion"
-import { ArrowUp, ArrowUpDown, Loader2, Trash2, AlertTriangle, X, RotateCcw, Archive } from "lucide-react"
+import { ArrowUp, ArrowUpDown, Loader2, Trash2, AlertTriangle, Search, X, RotateCcw, Archive } from "lucide-react"
 import { useSearchParams } from "react-router-dom"
 import { Card } from "@/components/ui/Card"
 import { CardTitle } from "@/components/ui/CardTitle"
+import { Input } from "@/components/ui/input"
 import { fmtInt, nairaFmt, stripNonDigits } from "./format"
 import { AddProductDialog } from "./AddProductDialog"
 import { useProducts } from "./useProducts"
@@ -56,6 +57,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
   const [sortKey, setSortKey] = useState<SortKey>("name")
   const [sortDir, setSortDir] = useState<SortDir>("asc")
   const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [query, setQuery] = useState("")
 
   async function handleRemoveBulk() {
     if (selectedIds.length === 0) return
@@ -99,10 +101,12 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
     if (error) toast(error)
   }, [error, toast])
 
-  const filteredRows = useMemo(
-    () => (lowStockOnly ? rows.filter((r) => r.isLowStock) : rows),
-    [rows, lowStockOnly],
-  )
+  const filteredRows = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    let result = lowStockOnly ? rows.filter((r) => r.isLowStock) : rows
+    if (q) result = result.filter((r) => r.name.toLowerCase().includes(q))
+    return result
+  }, [rows, lowStockOnly, query])
   const sorted = useMemo(() => sortRows(filteredRows, sortKey, sortDir), [filteredRows, sortKey, sortDir])
 
   // Synchronize selection state with visible list of products when filters are toggled
@@ -148,10 +152,10 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
     }
   }
 
-  async function handleRestore(productId: number) {
+  async function handleRestore(row: CatalogRow) {
     try {
-      await restoreProduct(productId)
-      setArchivedRows((prev) => prev.filter((r) => r.productId !== productId))
+      await restoreProduct(row.productId, row)
+      setArchivedRows((prev) => prev.filter((r) => r.productId !== row.productId))
       toast("Product restored", "success")
     } catch (err) {
       toast(errorMessage(err, "Failed to restore"))
@@ -183,61 +187,84 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
 
   return (
     <Card hoverable={false} className="overflow-hidden py-0">
-        <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle className="text-base">Products</CardTitle>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {importProgress
-                ? `Importing ${importProgress.current} of ${importProgress.total} products…`
-                : `Synced with the server catalog${busy ? " · saving…" : ""}`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {selectedIds.length > 0 && (
+        <div className="border-b border-border px-5 py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-base">Products</CardTitle>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {importProgress
+                  ? `Importing ${importProgress.current} of ${importProgress.total} products…`
+                  : `Synced with the server catalog${busy ? " · saving…" : ""}`}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedIds.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void handleRemoveBulk()}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-destructive/10 px-3 py-1.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/20"
+                >
+                  <Trash2 className="size-3.5" />
+                  Delete selected ({selectedIds.length})
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => void handleRemoveBulk()}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-destructive/10 px-3 py-1.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/20"
+                onClick={toggleLowStockFilter}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors",
+                  lowStockOnly
+                    ? "bg-amber-500/12 text-amber-700 dark:text-amber-400"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80",
+                )}
               >
-                <Trash2 className="size-3.5" />
-                Delete selected ({selectedIds.length})
+                <AlertTriangle className="size-3.5" />
+                Low stock only
+              </button>
+              <button
+                type="button"
+                onClick={() => void toggleArchived()}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors",
+                  showArchived
+                    ? "bg-primary/10 text-primary"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80",
+                )}
+              >
+                <Archive className="size-3.5" />
+                {showArchived ? "Hide archived" : "Show archived"}
+              </button>
+              <AddProductDialog
+                open={addOpen}
+                onOpenChange={setAddOpen}
+                onSubmit={(forms) => void handleAddMany(forms)}
+              />
+            </div>
+          </div>
+          <div className="relative mt-4 w-full sm:max-w-xs">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search products…"
+              aria-label="Search products"
+              className="h-9 w-full rounded-xl pl-9 pr-9"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <X className="size-4" />
               </button>
             )}
-            <button
-              type="button"
-              onClick={toggleLowStockFilter}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors",
-                lowStockOnly
-                  ? "bg-amber-500/12 text-amber-700 dark:text-amber-400"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80",
-              )}
-            >
-              <AlertTriangle className="size-3.5" />
-              Low stock only
-            </button>
-            <button
-              type="button"
-              onClick={() => void toggleArchived()}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors",
-                showArchived
-                  ? "bg-primary/10 text-primary"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80",
-              )}
-            >
-              <Archive className="size-3.5" />
-              {showArchived ? "Hide archived" : "Show archived"}
-            </button>
-            <AddProductDialog
-              open={addOpen}
-              onOpenChange={setAddOpen}
-              onSubmit={(forms) => void handleAddMany(forms)}
-            />
           </div>
         </div>
 
-      <div className="overflow-x-auto">
+      <div className="max-h-[calc(100vh-16rem)] overflow-y-auto overflow-x-auto relative">
         <table className="w-full min-w-240 border-collapse text-sm [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0">
           <thead>
             <tr className="border-b border-border/60 bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
@@ -396,6 +423,16 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
                 </td>
               </tr>
             )}
+            {rows.length > 0 && sorted.length === 0 && (
+              <tr>
+                <td
+                  colSpan={14}
+                  className="px-4 py-10 text-center text-sm text-muted-foreground"
+                >
+                  No products match “{query.trim()}”
+                </td>
+              </tr>
+            )}
             {sorted.length > 0 && (
               <tr className="border-t-2 border-border bg-muted/50 font-bold">
                 <CatalogTd />
@@ -447,7 +484,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
                     <CatalogTd align="right">
                       <button
                         type="button"
-                        onClick={() => void handleRestore(r.productId)}
+                        onClick={() => void handleRestore(r)}
                         className="inline-flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80"
                       >
                         <RotateCcw className="size-3.5" />

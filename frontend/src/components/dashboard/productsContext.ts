@@ -24,7 +24,7 @@ export type ProductsContextValue = {
   ) => void
   removeProduct: (productId: number) => Promise<void>
   removeProductsBulk: (productIds: number[]) => Promise<void>
-  restoreProduct: (productId: number) => Promise<void>
+  restoreProduct: (productId: number, row: CatalogRow) => Promise<void>
   fetchArchived: () => Promise<CatalogRow[]>
 }
 

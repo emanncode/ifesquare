@@ -1,7 +1,9 @@
-import { Download, Loader2, X } from "lucide-react"
+import { useState } from "react"
+import { Download, Loader2, Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/Card"
 import { CardTitle } from "@/components/ui/CardTitle"
+import { Input } from "@/components/ui/input"
 import { fmtInt, formatDate, nairaFmt } from "./format"
 import { HistoryEditableTd } from "./HistoryEditableTd"
 import type { ApiHistoryDayDetail } from "@/lib/types"
@@ -20,6 +22,29 @@ export function DayDetailPanel({
   dialog?: boolean
   className?: string
 }) {
+  const [query, setQuery] = useState("")
+  const q = query.trim().toLowerCase()
+  const entries = detail
+    ? q
+      ? detail.entries.filter((e) => e.product_name.toLowerCase().includes(q))
+      : detail.entries
+    : []
+  const units = entries.reduce(
+    (sum, e) =>
+      sum +
+      (e.closing != null && e.closing >= 0
+        ? Math.max(0, e.opening + e.receipts - e.closing)
+        : 0),
+    0,
+  )
+  const revenue = entries.reduce(
+    (sum, e) =>
+      sum +
+      (e.closing != null && e.closing >= 0
+        ? Math.max(0, e.opening + e.receipts - e.closing) * e.price
+        : 0),
+    0,
+  )
   return (
 <Card
       hoverable={false}
@@ -81,6 +106,28 @@ export function DayDetailPanel({
           <p className="text-sm text-destructive">{detailError}</p>
         )}
         {detail && !detailLoading && (
+          <>
+            <div className="relative mb-3">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search products…"
+                aria-label="Search products"
+                className="h-9 w-full rounded-xl pl-9 pr-9"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search"
+                  className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+            </div>
           <div className="overflow-x-auto">
             {detail.date === today && (
               <p className="mb-3 text-xs text-muted-foreground">
@@ -102,7 +149,7 @@ export function DayDetailPanel({
                 </tr>
               </thead>
               <tbody>
-                {detail.entries.map((e) => {
+                {entries.map((e) => {
                   const total = e.opening + e.receipts
                   const sales = e.closing != null && e.closing >= 0 ? Math.max(0, total - e.closing) : 0
                   const amount = sales * e.price
@@ -148,6 +195,16 @@ export function DayDetailPanel({
                     </tr>
                   )
                 })}
+                {entries.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-4 py-10 text-center text-sm text-muted-foreground"
+                    >
+                      No products match “{query.trim()}”
+                    </td>
+                  </tr>
+                )}
               </tbody>
               <tfoot>
                 <tr className="border-t border-border bg-muted/30">
@@ -157,16 +214,17 @@ export function DayDetailPanel({
                   <td />
                   <td />
                   <td className="px-2 py-3 text-right font-bold tabular-nums">
-                    {fmtInt(detail.total_units)}
+                    {fmtInt(units)}
                   </td>
                   <td />
                   <td className="px-2 py-3 text-right font-bold tabular-nums text-primary">
-                    {nairaFmt(detail.total_revenue)}
+                    {nairaFmt(revenue)}
                   </td>
                 </tr>
               </tfoot>
             </table>
           </div>
+          </>
         )}
       </div>
     </Card>
