@@ -60,15 +60,17 @@ export function DashboardHeader({
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {dateLabel}
             </p>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={onRefresh}
               className="inline-flex size-7 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label="Refresh ledger"
               title="Refresh"
             >
               <RefreshCw className="size-3.5" />
-            </button>
+            </Button>
           </div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             Today&apos;s ledger
