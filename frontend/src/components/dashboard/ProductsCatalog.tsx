@@ -60,11 +60,11 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
   const [query, setQuery] = useState("")
 
   async function handleRemoveBulk() {
-    if (selectedIds.length === 0) return
-    if (!confirm(`Are you sure you want to delete ${selectedIds.length} products?`)) return
+    if (visibleSelectedIds.length === 0) return
+    if (!confirm(`Are you sure you want to delete ${visibleSelectedIds.length} products?`)) return
     setBusy(true)
     try {
-      await removeProductsBulk(selectedIds)
+      await removeProductsBulk(visibleSelectedIds)
       setSelectedIds([])
       toast("Products deleted successfully", "success")
     } catch (err) {
@@ -109,10 +109,10 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
   }, [rows, lowStockOnly, query])
   const sorted = useMemo(() => sortRows(filteredRows, sortKey, sortDir), [filteredRows, sortKey, sortDir])
 
-  // Synchronize selection state with visible list of products when filters are toggled
-  useEffect(() => {
-    setSelectedIds((prev) => prev.filter((id) => sorted.some((r) => r.productId === id)))
-  }, [sorted])
+  const visibleSelectedIds = useMemo(
+    () => selectedIds.filter((id) => sorted.some((r) => r.productId === id)),
+    [selectedIds, sorted],
+  )
 
   function toggleSort(key: SortKey) {
     if (key === sortKey) {
@@ -198,14 +198,14 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {selectedIds.length > 0 && (
+              {visibleSelectedIds.length > 0 && (
                 <button
                   type="button"
                   onClick={() => void handleRemoveBulk()}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-destructive/10 px-3 py-1.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/20"
                 >
                   <Trash2 className="size-3.5" />
-                  Delete selected ({selectedIds.length})
+                  Delete selected ({visibleSelectedIds.length})
                 </button>
               )}
               <button
@@ -271,7 +271,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
               <CatalogTh className="w-10 text-center">
                 <input
                   type="checkbox"
-                  checked={selectedIds.length === sorted.length && sorted.length > 0}
+                  checked={visibleSelectedIds.length === sorted.length && sorted.length > 0}
                   onChange={(e) => {
                     if (e.target.checked) {
                       setSelectedIds(sorted.map((r) => r.productId))
@@ -327,7 +327,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
                 <CatalogTd className="w-10 text-center">
                   <input
                     type="checkbox"
-                    checked={selectedIds.includes(r.productId)}
+                    checked={visibleSelectedIds.includes(r.productId)}
                     onChange={(e) => {
                       if (e.target.checked) {
                         setSelectedIds((prev) => [...prev, r.productId])

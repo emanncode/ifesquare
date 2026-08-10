@@ -43,10 +43,10 @@ export default function ProductsPage() {
 
   const [selected, setSelected] = useState<string[]>(["self"])
 
-  // Sync selection with available recipients
-  useEffect(() => {
-    setSelected((prev) => prev.filter((id) => recipients.some((r) => r.id === id)))
-  }, [recipients])
+  const visibleSelected = useMemo(
+    () => selected.filter((id) => recipients.some((r) => r.id === id)),
+    [selected, recipients],
+  )
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -59,11 +59,11 @@ export default function ProductsPage() {
   }, [])
 
   async function handleSendSummary() {
-    if (selected.length === 0) return
+    if (visibleSelected.length === 0) return
     setSending(true)
     try {
       const selectedEmails = recipients
-        .filter((r) => selected.includes(r.id))
+        .filter((r) => visibleSelected.includes(r.id))
         .map((r) => r.email)
 
       await api("/api/ledger/send-summary", {
@@ -207,7 +207,7 @@ export default function ProductsPage() {
                     <label className="flex items-center gap-2 text-xs font-semibold pb-1.5 border-b border-border select-none cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={selected.length === recipients.length && recipients.length > 0}
+                        checked={visibleSelected.length === recipients.length && recipients.length > 0}
                         onChange={(e) => {
                           if (e.target.checked) {
                             setSelected(recipients.map((r) => r.id))
@@ -224,7 +224,7 @@ export default function ProductsPage() {
                       <label key={r.id} className="flex items-start gap-2 text-xs select-none cursor-pointer hover:text-foreground">
                         <input
                           type="checkbox"
-                          checked={selected.includes(r.id)}
+                          checked={visibleSelected.includes(r.id)}
                           onChange={(e) => {
                             if (e.target.checked) {
                               setSelected((prev) => [...prev, r.id])
