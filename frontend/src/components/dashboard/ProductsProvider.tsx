@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react"
 import { api, ApiError, mutateWithOffline, errorMessage } from "@/lib/api"
+import { queueMutation, removeMutation } from "@/lib/offlineQueue"
 import type { ApiLedgerEntry, ApiProduct, TodayResponse } from "@/lib/types"
 import { parseCommaInt } from "./format"
 import { useToast } from "@/hooks/useToast"
@@ -49,7 +50,7 @@ function merge(products: ApiProduct[], entries: ApiLedgerEntry[]): CatalogRow[] 
       sales,
       amount,
       lowStockThreshold: p.low_stock_threshold,
-      effectiveThreshold: e?.effective_threshold ?? 10,
+      effectiveThreshold: e?.effective_threshold ?? 12,
       currentStock: e?.current_stock ?? 0,
       isLowStock: e?.is_low_stock ?? false,
     }
@@ -62,6 +63,56 @@ function todayEntries(ledger: TodayResponse | unknown): ApiLedgerEntry[] {
     return (ledger as TodayResponse).entries
   }
   return []
+}
+
+/** Temp ids are negative so they can never collide with real server ids. */
+let tempSeq = 0
+function nextTempId(): number {
+  return -(++tempSeq)
+}
+
+/** Tracks offline-created (queued) products: tempId -> queued mutation id. */
+const offlineCreates = new Map<number, string>()
+
+function makeTempRow(productId: number, f: NewProductForm): CatalogRow {
+  const opening = parseCommaInt(f.opening)
+  const receipts = parseCommaInt(f.receipts)
+  const closing = f.closing === "" ? null : parseCommaInt(f.closing)
+  const price = parseCommaInt(f.price)
+  const total = opening + receipts
+  const sales = closing != null && closing >= 0 ? Math.max(0, total - closing) : 0
+  const amount = sales * price
+  const lowStockThreshold = f.lowStockThreshold ? parseCommaInt(f.lowStockThreshold) : null
+  const currentStock = closing != null && closing >= 0 ? closing : total
+  return {
+    productId,
+    name: f.name.trim(),
+    opening,
+    receipts,
+    closing,
+    price,
+    total,
+    sales,
+    amount,
+    lowStockThreshold,
+    effectiveThreshold: lowStockThreshold ?? 12,
+    currentStock,
+    isLowStock: currentStock <= (lowStockThreshold ?? 12),
+  }
+}
+
+function productBody(f: NewProductForm): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    name: f.name.trim(),
+    opening: parseCommaInt(f.opening),
+    receipts: parseCommaInt(f.receipts),
+    closing: f.closing === "" ? null : parseCommaInt(f.closing),
+    price: parseCommaInt(f.price),
+  }
+  if (f.lowStockThreshold) {
+    body.low_stock_threshold = parseCommaInt(f.lowStockThreshold)
+  }
+  return body
 }
 
 export function ProductsProvider({ children }: { children: ReactNode }) {
@@ -84,7 +135,6 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       setRows(merge(products ?? [], todayEntries(ledger)))
     } catch (err) {
       setError(formatError(err))
-      setRows([])
     } finally {
       setLoading(false)
     }
@@ -106,7 +156,6 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         if (!cancelled) {
           setError(formatError(err))
-          setRows([])
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -117,19 +166,39 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     }
   }, [isAuthenticated])
 
+  // Re-pull server truth once the offline queue has been fully replayed.
+  useEffect(() => {
+    function onSync() {
+      void refresh()
+    }
+    function onSkipped(e: Event) {
+      const n = (e as CustomEvent<{ skipped?: number }>).detail?.skipped ?? 0
+      if (n > 0) {
+        toast(`${n} offline change${n === 1 ? "" : "s"} couldn't be synced — please review`)
+      }
+    }
+    window.addEventListener("app-data-sync", onSync)
+    window.addEventListener("app-sync-skipped", onSkipped)
+    return () => {
+      window.removeEventListener("app-data-sync", onSync)
+      window.removeEventListener("app-sync-skipped", onSkipped)
+    }
+  }, [refresh, toast])
+
   const addProduct = useCallback(
     async (form: NewProductForm) => {
       if (!form.name.trim()) return
-      const body: Record<string, unknown> = {
-        name: form.name.trim(),
-        stock: parseCommaInt(form.stock),
-        price: parseCommaInt(form.price),
+      const body = productBody(form)
+      try {
+        await api<ApiProduct>("/api/products", { method: "POST", body })
+        await refresh()
+      } catch (err) {
+        if (err instanceof ApiError) throw err
+        const tempId = nextTempId()
+        const mutationId = await queueMutation("/api/products", "POST", body, { tempId })
+        offlineCreates.set(tempId, mutationId)
+        setRows((prev) => [...prev, makeTempRow(tempId, form)])
       }
-      if (form.lowStockThreshold) {
-        body.low_stock_threshold = parseCommaInt(form.lowStockThreshold)
-      }
-      const r = await mutateWithOffline<ApiProduct>("/api/products", "POST", body)
-      if (r !== null) await refresh()
     },
     [refresh],
   )
@@ -138,20 +207,27 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     async (forms: NewProductForm[]) => {
       const valid = forms.filter((f) => f.name.trim())
       if (valid.length === 0) return
-      const r = await mutateWithOffline("/api/products", "POST", {
-        products: valid.map((f) => {
-          const p: Record<string, unknown> = {
-            name: f.name.trim(),
-            stock: parseCommaInt(f.stock),
-            price: parseCommaInt(f.price),
-          }
-          if (f.lowStockThreshold) {
-            p.low_stock_threshold = parseCommaInt(f.lowStockThreshold)
-          }
-          return p
-        }),
-      })
-      if (r !== null) await refresh()
+      try {
+        await api("/api/products", {
+          method: "POST",
+          body: {
+            products: valid.map((f) => productBody(f)),
+          },
+        })
+        await refresh()
+      } catch (err) {
+        if (err instanceof ApiError) throw err
+        // Queue each product individually so single-create responses can
+        // reconcile later queued edits that reference their temp ids.
+        const tempRows: CatalogRow[] = []
+        for (const f of valid) {
+          const tempId = nextTempId()
+          const mutationId = await queueMutation("/api/products", "POST", productBody(f), { tempId })
+          offlineCreates.set(tempId, mutationId)
+          tempRows.push(makeTempRow(tempId, f))
+        }
+        setRows((prev) => [...prev, ...tempRows])
+      }
     },
     [refresh],
   )
@@ -174,7 +250,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
           else if (field === "low_stock_threshold") {
             const n = parseCommaInt(value)
             next.lowStockThreshold = value === "" ? null : n
-            next.effectiveThreshold = value === "" ? 10 : n
+            next.effectiveThreshold = value === "" ? 12 : n
             next.isLowStock = next.currentStock <= next.effectiveThreshold
           }
           next.total = next.opening + next.receipts
@@ -235,31 +311,52 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     [],
   )
 
-  const removeProduct = useCallback(
-    async (productId: number) => {
-      await api(`/api/products/${productId}`, { method: "DELETE" })
-      setRows((prev) => prev.filter((r) => r.productId !== productId))
-    },
-    [],
-  )
+  const removeProduct = useCallback(async (productId: number) => {
+    const mutationId = offlineCreates.get(productId)
+    if (mutationId != null) {
+      // Offline-created product: cancel the queued create instead of
+      // queueing a delete for an id the server has never seen.
+      try {
+        await removeMutation(mutationId)
+      } catch {
+        // already replayed — the id no longer exists; drop silently
+      }
+      offlineCreates.delete(productId)
+    } else {
+      await mutateWithOffline(`/api/products/${productId}`, "DELETE", undefined)
+    }
+    setRows((prev) => prev.filter((r) => r.productId !== productId))
+  }, [])
 
-  const removeProductsBulk = useCallback(
-    async (productIds: number[]) => {
-      await api("/api/products/archive-bulk", {
-        method: "POST",
-        body: { ids: productIds },
-      })
-      setRows((prev) => prev.filter((r) => !productIds.includes(r.productId)))
-    },
-    [],
-  )
+  const removeProductsBulk = useCallback(async (productIds: number[]) => {
+    const realIds: number[] = []
+    for (const id of productIds) {
+      const mutationId = offlineCreates.get(id)
+      if (mutationId != null) {
+        try {
+          await removeMutation(mutationId)
+        } catch {
+          // ignore — already replayed
+        }
+        offlineCreates.delete(id)
+      } else {
+        realIds.push(id)
+      }
+    }
+    if (realIds.length > 0) {
+      await mutateWithOffline("/api/products/archive-bulk", "POST", { ids: realIds })
+    }
+    setRows((prev) => prev.filter((r) => !productIds.includes(r.productId)))
+  }, [])
 
   const restoreProduct = useCallback(
-    async (productId: number) => {
-      await api(`/api/products/${productId}/restore`, { method: "POST" })
-      await refresh()
+    async (productId: number, row: CatalogRow) => {
+      await mutateWithOffline(`/api/products/${productId}/restore`, "POST", undefined)
+      setRows((prev) =>
+        prev.some((r) => r.productId === productId) ? prev : [row, ...prev],
+      )
     },
-    [refresh],
+    [],
   )
 
   const fetchArchived = useCallback(async (): Promise<CatalogRow[]> => {
@@ -275,7 +372,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       sales: 0,
       amount: 0,
       lowStockThreshold: p.low_stock_threshold,
-      effectiveThreshold: 10,
+      effectiveThreshold: 12,
       currentStock: p.stock,
       isLowStock: false,
     }))
