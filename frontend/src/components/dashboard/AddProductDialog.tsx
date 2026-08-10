@@ -65,8 +65,8 @@ export function AddProductDialog({
   function handleSubmit() {
     const filled = rows
       .filter((r) => r.name.trim())
-      .map(({ name, stock, price, lowStockThreshold }) => {
-        const p: NewProductForm = { name, stock, price }
+      .map(({ name, opening, receipts, closing, price, lowStockThreshold }) => {
+        const p: NewProductForm = { name, opening, receipts, closing, price }
         if (lowStockThreshold) p.lowStockThreshold = lowStockThreshold
         return p
       })
@@ -127,7 +127,7 @@ export function AddProductDialog({
                     htmlFor={`${row.key}-name`}
                     className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
                   >
-                    Name
+                    Product
                   </Label>
                   <Input
                     id={`${row.key}-name`}
@@ -139,50 +139,80 @@ export function AddProductDialog({
                     className="h-8 text-sm"
                   />
                 </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="grid gap-1">
-                      <Label
-                        htmlFor={`${row.key}-stock`}
-                        className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-                      >
-                        Stock
-                      </Label>
-                      <NumericInput
-                        id={`${row.key}-stock`}
-                        value={row.stock}
-                        onChange={(v) => updateRow(row.key, { stock: v })}
-                        placeholder="—"
-                      />
-                    </div>
-                    <div className="grid gap-1">
-                      <Label
-                        htmlFor={`${row.key}-price`}
-                        className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-                      >
-                        Price
-                      </Label>
-                      <NumericInput
-                        id={`${row.key}-price`}
-                        value={row.price}
-                        onChange={(v) => updateRow(row.key, { price: v })}
-                        placeholder="—"
-                      />
-                    </div>
-                    <div className="grid gap-1">
-                      <Label
-                        htmlFor={`${row.key}-alert`}
-                        className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-                      >
-                        Alert below
-                      </Label>
-                      <NumericInput
-                        id={`${row.key}-alert`}
-                        value={row.lowStockThreshold ?? ""}
-                        onChange={(v) => updateRow(row.key, { lowStockThreshold: v })}
-                        placeholder="10 (default)"
-                      />
-                    </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="grid gap-1">
+                    <Label
+                      htmlFor={`${row.key}-opening`}
+                      className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                    >
+                      Opening
+                    </Label>
+                    <NumericInput
+                      id={`${row.key}-opening`}
+                      value={row.opening}
+                      onChange={(v) => updateRow(row.key, { opening: v })}
+                      placeholder="0"
+                    />
                   </div>
+                  <div className="grid gap-1">
+                    <Label
+                      htmlFor={`${row.key}-receipts`}
+                      className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                    >
+                      Receipts
+                    </Label>
+                    <NumericInput
+                      id={`${row.key}-receipts`}
+                      value={row.receipts}
+                      onChange={(v) => updateRow(row.key, { receipts: v })}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    <Label
+                      htmlFor={`${row.key}-closing`}
+                      className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                    >
+                      Closing
+                    </Label>
+                    <NumericInput
+                      id={`${row.key}-closing`}
+                      value={row.closing}
+                      onChange={(v) => updateRow(row.key, { closing: v })}
+                      placeholder="—"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="grid gap-1">
+                    <Label
+                      htmlFor={`${row.key}-price`}
+                      className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                    >
+                      Price
+                    </Label>
+                    <NumericInput
+                      id={`${row.key}-price`}
+                      value={row.price}
+                      onChange={(v) => updateRow(row.key, { price: v })}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    <Label
+                      htmlFor={`${row.key}-alert`}
+                      className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                    >
+                      Alert at
+                    </Label>
+                    <NumericInput
+                      id={`${row.key}-alert`}
+                      value={row.lowStockThreshold ?? ""}
+                      onChange={(v) => updateRow(row.key, { lowStockThreshold: v })}
+                      placeholder="12 (default)"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           ))}

@@ -56,93 +56,143 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	type inputProduct struct {
+		Name              string `json:"name"`
+		Price             int    `json:"price"`
+		Opening           int    `json:"opening"`
+		Receipts          *int   `json:"receipts"`
+		Closing           *int   `json:"closing"`
+		LowStockThreshold *int   `json:"low_stock_threshold"`
+	}
+
+	var inputs []inputProduct
+	isBulk := false
+
 	if productsRaw, ok := raw["products"]; ok {
-		var products []struct {
-			Name              string `json:"name"`
-			Price             int    `json:"price"`
-			Stock             int    `json:"stock"`
-			LowStockThreshold *int   `json:"low_stock_threshold"`
-		}
-		if err := json.Unmarshal(productsRaw, &products); err != nil {
+		if err := json.Unmarshal(productsRaw, &inputs); err != nil {
 			http.Error(w, `{"error":"invalid products array"}`, http.StatusBadRequest)
 			return
 		}
-		for _, p := range products {
-			if p.Name == "" {
-				http.Error(w, `{"error":"name is required"}`, http.StatusBadRequest)
-				return
-			}
-			if p.Price < 0 {
-				http.Error(w, `{"error":"price cannot be negative"}`, http.StatusBadRequest)
-				return
-			}
-			if p.Stock < 0 {
-				http.Error(w, `{"error":"stock cannot be negative"}`, http.StatusBadRequest)
-				return
-			}
-			if p.LowStockThreshold != nil && *p.LowStockThreshold < 0 {
-				http.Error(w, `{"error":"low_stock_threshold cannot be negative"}`, http.StatusBadRequest)
-				return
-			}
-			created, err := Create(scopeID, p.Name, p.Price, p.Stock, p.LowStockThreshold)
-			if err != nil {
-				http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
-				return
-			}
-			if err := audit_log.Write(scopeID, user.ID, "create", "product", strconv.FormatInt(created.ID, 10), nil,
-				map[string]interface{}{"name": p.Name, "price": p.Price, "stock": p.Stock},
-			); err != nil {
-				// non-fatal
-			}
+		isBulk = true
+	} else {
+		var single inputProduct
+		if err := json.Unmarshal(body, &single); err != nil {
+			http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+			return
 		}
-		ck := cacheKey(scopeID, "/api/products")
-		ltk := cacheKey(scopeID, "/api/ledger/today")
-		cache.Invalidate(ck, ltk)
-		writeJSON(w, http.StatusCreated, map[string]string{"message": "products created"})
-		return
+		inputs = append(inputs, single)
 	}
 
-	var pData struct {
-		Name              string `json:"name"`
-		Price             int    `json:"price"`
-		Stock             int    `json:"stock"`
-		LowStockThreshold *int   `json:"low_stock_threshold"`
-	}
-	if err := json.Unmarshal(body, &pData); err != nil {
-		http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
-		return
-	}
-	if pData.Name == "" {
-		http.Error(w, `{"error":"name is required"}`, http.StatusBadRequest)
-		return
-	}
-	if pData.Price < 0 {
-		http.Error(w, `{"error":"price cannot be negative"}`, http.StatusBadRequest)
-		return
-	}
-	if pData.Stock < 0 {
-		http.Error(w, `{"error":"stock cannot be negative"}`, http.StatusBadRequest)
-		return
-	}
-	if pData.LowStockThreshold != nil && *pData.LowStockThreshold < 0 {
-		http.Error(w, `{"error":"low_stock_threshold cannot be negative"}`, http.StatusBadRequest)
-		return
+	// Validation
+	for _, p := range inputs {
+		if p.Name == "" {
+			http.Error(w, `{"error":"name is required"}`, http.StatusBadRequest)
+			return
+		}
+		if p.Price < 0 {
+			http.Error(w, `{"error":"price cannot be negative"}`, http.StatusBadRequest)
+			return
+		}
+		if p.Opening < 0 {
+			http.Error(w, `{"error":"opening cannot be negative"}`, http.StatusBadRequest)
+			return
+		}
+		if p.Receipts != nil && *p.Receipts < 0 {
+			http.Error(w, `{"error":"receipts cannot be negative"}`, http.StatusBadRequest)
+			return
+		}
+		if p.Closing != nil && *p.Closing < 0 {
+			http.Error(w, `{"error":"closing cannot be negative"}`, http.StatusBadRequest)
+			return
+		}
+		if p.LowStockThreshold != nil && *p.LowStockThreshold < 0 {
+			http.Error(w, `{"error":"low_stock_threshold cannot be negative"}`, http.StatusBadRequest)
+			return
+		}
 	}
 
-	p, err := Create(scopeID, pData.Name, pData.Price, pData.Stock, pData.LowStockThreshold)
+	// Begin Transaction
+	tx, err := db.DB.Begin()
 	if err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"cannot start transaction"}`, http.StatusInternalServerError)
 		return
 	}
-	if err := audit_log.Write(scopeID, user.ID, "create", "product", strconv.FormatInt(p.ID, 10), nil,
-		map[string]interface{}{"name": pData.Name, "price": pData.Price, "stock": pData.Stock},
-	); err != nil {
-		// non-fatal
+	defer tx.Rollback()
+
+	today := db.GetToday()
+	if _, err := tx.Exec("INSERT OR IGNORE INTO days (user_id, date) VALUES (?, ?)", scopeID, today); err != nil {
+		http.Error(w, `{"error":"failed to ensure day: `+err.Error()+`"}`, http.StatusInternalServerError)
+		return
 	}
+
+	var createdProducts []*Product
+
+	for _, p := range inputs {
+		threshold := 12
+		if p.LowStockThreshold != nil {
+			threshold = *p.LowStockThreshold
+		}
+
+		receiptsVal := 0
+		if p.Receipts != nil {
+			receiptsVal = *p.Receipts
+		}
+
+		// 1. Insert product
+		res, err := tx.Exec(
+			"INSERT INTO products (name, price, stock, low_stock_threshold, user_id) VALUES (?, ?, ?, ?, ?)",
+			p.Name, p.Price, p.Opening, threshold, scopeID,
+		)
+		if err != nil {
+			http.Error(w, `{"error":"failed to create product: `+err.Error()+`"}`, http.StatusInternalServerError)
+			return
+		}
+		productID, _ := res.LastInsertId()
+
+		// 2. Insert ledger entry for today
+		_, err = tx.Exec(
+			"INSERT OR IGNORE INTO entries (user_id, day_date, product_id, opening, receipts, closing, price) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			scopeID, today, productID, p.Opening, receiptsVal, p.Closing, p.Price,
+		)
+		if err != nil {
+			http.Error(w, `{"error":"failed to create ledger entry: `+err.Error()+`"}`, http.StatusInternalServerError)
+			return
+		}
+
+		// Fetch the created product to return (only needed if single, but let's fetch it)
+		var cp Product
+		err = tx.QueryRow(
+			"SELECT id, name, price, stock, low_stock_threshold, archived_at, created_at FROM products WHERE id = ?", productID,
+		).Scan(&cp.ID, &cp.Name, &cp.Price, &cp.Stock, &cp.LowStockThreshold, &cp.ArchivedAt, &cp.CreatedAt)
+		if err == nil {
+			createdProducts = append(createdProducts, &cp)
+		}
+
+		if err := audit_log.Write(scopeID, user.ID, "create", "product", strconv.FormatInt(productID, 10), nil,
+			map[string]interface{}{"name": p.Name, "price": p.Price, "stock": p.Opening},
+		); err != nil {
+			// non-fatal
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, `{"error":"failed to commit transaction: `+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+
 	ck := cacheKey(scopeID, "/api/products")
 	ltk := cacheKey(scopeID, "/api/ledger/today")
 	cache.Invalidate(ck, ltk)
-	writeJSON(w, http.StatusCreated, p)
+
+	if isBulk {
+		writeJSON(w, http.StatusCreated, map[string]string{"message": "products created"})
+	} else {
+		if len(createdProducts) > 0 {
+			writeJSON(w, http.StatusCreated, createdProducts[0])
+		} else {
+			writeJSON(w, http.StatusCreated, map[string]string{"message": "product created"})
+		}
+	}
 }
 
 func UpdateHandler(w http.ResponseWriter, r *http.Request) {

@@ -25,7 +25,9 @@ export type CatalogRow = {
 
 export type NewProductForm = {
   name: string
-  stock: string
+  opening: string
+  receipts: string
+  closing: string
   price: string
   lowStockThreshold?: string
 }

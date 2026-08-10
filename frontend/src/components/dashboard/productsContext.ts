@@ -3,7 +3,9 @@ import type { CatalogRow, NewProductForm } from "./types"
 
 export const emptyForm: NewProductForm = {
   name: "",
-  stock: "",
+  opening: "",
+  receipts: "",
+  closing: "",
   price: "",
   lowStockThreshold: "",
 }

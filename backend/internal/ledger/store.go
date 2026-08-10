@@ -7,7 +7,7 @@ import (
 	"github.com/emanncode/ifesquare/backend/internal/db"
 )
 
-var defaultThreshold = 10
+var defaultThreshold = 12
 
 func SetDefaultThreshold(n int) {
 	defaultThreshold = n
