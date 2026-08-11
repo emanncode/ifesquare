@@ -219,6 +219,14 @@
   animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+@utility scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-float,
   .animate-float-delayed,
