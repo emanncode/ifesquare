@@ -9,7 +9,7 @@ const stats = [
 export function StatsSection() {
   return (
     <FadeUp delay={0.1}>
-      <div className="mt-14 grid w-full grid-cols-3 gap-4 px-[5%] lg:gap-8">
+      <div className="mt-14 grid w-full grid-cols-1 gap-4 px-[5%] md:grid-cols-3 lg:gap-8">
         {stats.map((s) => (
           <div
             key={s.label}

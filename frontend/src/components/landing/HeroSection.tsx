@@ -53,7 +53,7 @@ function MockupTable() {
 export function HeroSection() {
   return (
     <FadeUp>
-      <div className="w-full px-[10%] text-center">
+      <div className="w-full px-4 sm:px-[10%] text-center">
         <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-4 py-2 text-xs font-medium text-primary backdrop-blur-sm">
           <Sparkles className="size-4" />
           Shop ledger & sales analytics
@@ -88,7 +88,7 @@ export function HeroSection() {
         </div>
 
         <div className="mx-auto mt-12 max-w-lg space-y-4">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <MockupCard icon={Wallet} label="Revenue" value="₦39,100" accent />
             <MockupCard icon={Package} label="Units sold" value="62" />
             <MockupCard icon={TrendingUp} label="Top product" value="Rice" />
