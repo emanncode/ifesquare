@@ -165,26 +165,28 @@ export default function ProductsPage() {
       transition={{ duration: 0.3 }}
       className="mx-auto p-[5%] px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
     >
-      <div className="mb-6 flex items-center gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="shrink-0 rounded-xl lg:hidden"
-          onClick={openMobileNav}
-          aria-label="Open menu"
-        >
-          <Menu className="size-5" />
-        </Button>
-        <div className="flex-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Catalog
-          </p>
-          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-foreground">
-            Products
-          </h1>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="shrink-0 rounded-xl lg:hidden"
+            onClick={openMobileNav}
+            aria-label="Open menu"
+          >
+            <Menu className="size-5" />
+          </Button>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Catalog
+            </p>
+            <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-foreground">
+              Products
+            </h1>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {user?.role === "owner" && (
             <div ref={dropdownRef} className="relative">
               <Button
@@ -197,61 +199,67 @@ export default function ProductsPage() {
                 Send Summary
               </Button>
               {menuOpen && (
-                <div className="absolute right-0 top-full mt-2 z-50 w-72 rounded-xl border border-border bg-popover text-popover-foreground shadow-lg p-3 space-y-3">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold text-foreground">Select Recipients</p>
-                    <p className="text-[10px] text-muted-foreground">Choose who to email the sales summary report.</p>
-                  </div>
-                  
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    <label className="flex items-center gap-2 text-xs font-semibold pb-1.5 border-b border-border select-none cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={visibleSelected.length === recipients.length && recipients.length > 0}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelected(recipients.map((r) => r.id))
-                          } else {
-                            setSelected([])
-                          }
-                        }}
-                        className="rounded border-border text-primary focus:ring-primary"
-                      />
-                      <span>Select all</span>
-                    </label>
-
-                    {recipients.map((r) => (
-                      <label key={r.id} className="flex items-start gap-2 text-xs select-none cursor-pointer hover:text-foreground">
+                <>
+                  <div
+                    className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] sm:hidden"
+                    onClick={() => setMenuOpen(false)}
+                  />
+                  <div className="fixed inset-x-4 bottom-4 top-auto z-50 rounded-xl border border-border bg-popover text-popover-foreground shadow-lg p-3 space-y-3 sm:absolute sm:inset-x-auto sm:right-0 sm:left-auto sm:top-full sm:bottom-auto sm:w-72 sm:mt-2">
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-foreground">Select Recipients</p>
+                      <p className="text-[10px] text-muted-foreground">Choose who to email the sales summary report.</p>
+                    </div>
+                    
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      <label className="flex items-center gap-2 text-xs font-semibold pb-1.5 border-b border-border select-none cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={visibleSelected.includes(r.id)}
+                          checked={visibleSelected.length === recipients.length && recipients.length > 0}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelected((prev) => [...prev, r.id])
+                              setSelected(recipients.map((r) => r.id))
                             } else {
-                              setSelected((prev) => prev.filter((id) => id !== r.id))
+                              setSelected([])
                             }
                           }}
-                          className="mt-0.5 rounded border-border text-primary focus:ring-primary"
+                          className="rounded border-border text-primary focus:ring-primary"
                         />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate capitalize">{r.name}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">{r.email}</p>
-                        </div>
+                        <span>Select all</span>
                       </label>
-                    ))}
-                  </div>
 
-                  <Button
-                    size="sm"
-                    className="w-full mt-1 gap-1.5"
-                    disabled={sending || selected.length === 0}
-                    onClick={() => void handleSendSummary()}
-                  >
-                    {sending ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
-                    Send Email
-                  </Button>
-                </div>
+                      {recipients.map((r) => (
+                        <label key={r.id} className="flex items-start gap-2 text-xs select-none cursor-pointer hover:text-foreground">
+                          <input
+                            type="checkbox"
+                            checked={visibleSelected.includes(r.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelected((prev) => [...prev, r.id])
+                              } else {
+                                setSelected((prev) => prev.filter((id) => id !== r.id))
+                              }
+                            }}
+                            className="mt-0.5 rounded border-border text-primary focus:ring-primary"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate capitalize">{r.name}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{r.email}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+
+                    <Button
+                      size="sm"
+                      className="w-full mt-1 gap-1.5"
+                      disabled={sending || selected.length === 0}
+                      onClick={() => void handleSendSummary()}
+                    >
+                      {sending ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+                      Send Email
+                    </Button>
+                  </div>
+                </>
               )}
             </div>
           )}
