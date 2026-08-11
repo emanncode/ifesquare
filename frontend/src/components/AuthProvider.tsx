@@ -54,6 +54,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error: null,
   })
 
+  const refresh = useCallback(async () => {
+    setState((s) => ({ ...s, loading: true, error: null }))
+    try {
+      const user = await api<User>("/api/auth/me")
+      setState({ user, loading: false, error: null })
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setState({ user: null, loading: false, error: null })
+        return
+      }
+      setState({
+        user: null,
+        loading: false,
+        error: err instanceof Error ? err.message : "Failed to load session",
+      })
+    }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
 
@@ -88,23 +106,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const refresh = useCallback(async () => {
-    setState((s) => ({ ...s, loading: true, error: null }))
-    try {
-      const user = await api<User>("/api/auth/me")
-      setState({ user, loading: false, error: null })
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        setState({ user: null, loading: false, error: null })
-        return
+  // Sync auth state across tabs when localStorage changes (e.g. login/logout in another tab)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === SESSION_KEY) {
+        if (!e.newValue) {
+          setState({ user: null, loading: false, error: null })
+        } else {
+          void refresh()
+        }
       }
-      setState({
-        user: null,
-        loading: false,
-        error: err instanceof Error ? err.message : "Failed to load session",
-      })
     }
-  }, [])
+    window.addEventListener("storage", handleStorageChange)
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+    }
+  }, [refresh])
+
+  // Handle page restore from Back/Forward cache (bfcache)
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        void refresh()
+      }
+    }
+    window.addEventListener("pageshow", handlePageShow)
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow)
+    }
+  }, [refresh])
 
   const login = useCallback(async (email: string, password: string) => {
     try {

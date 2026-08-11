@@ -15,8 +15,31 @@ type QueuedMutation = {
   tempId?: number;
 };
 
+const syncChannel =
+  typeof window !== "undefined" && typeof BroadcastChannel !== "undefined"
+    ? new BroadcastChannel("ifesquare-sync")
+    : null;
+
+if (syncChannel) {
+  syncChannel.onmessage = (event) => {
+    if (typeof window !== "undefined" && event.data && typeof event.data === "object") {
+      const { type, detail } = event.data;
+      if (type === "pending-sync-change") {
+        window.dispatchEvent(new CustomEvent("pending-sync-change"));
+      } else if (type === "app-data-sync") {
+        window.dispatchEvent(new CustomEvent("app-data-sync", { detail }));
+      } else if (type === "app-sync-skipped") {
+        window.dispatchEvent(new CustomEvent("app-sync-skipped", { detail }));
+      }
+    }
+  };
+}
+
 function dispatchChange() {
-  window.dispatchEvent(new CustomEvent("pending-sync-change"));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("pending-sync-change"));
+    syncChannel?.postMessage({ type: "pending-sync-change" });
+  }
 }
 
 export async function queueMutation(
@@ -57,15 +80,39 @@ export async function getPendingCount() {
 
 /**
  * Replays queued mutations in insertion order.
- * - Network failures stop the loop (still offline).
- * - Permanent failures (4xx/5xx) drop that mutation so it can't block the rest.
- * - Single-product creates return the server id, which is used to rewrite
- *   later queued URLs that referenced the offline temp id.
- * - After a full flush, dispatches `app-data-sync` so data hooks re-pull.
+ * - Uses Web Locks to prevent concurrent execution across multiple tabs.
  */
 export async function replayQueue(): Promise<{ replayed: number; skipped: number }> {
+  if (typeof navigator === "undefined" || !navigator.locks) {
+    return unsafeReplayQueue();
+  }
+
+  const result = await navigator.locks.request(
+    "ifesquare-offline-replay-lock",
+    { ifAvailable: true },
+    async (lock) => {
+      if (!lock) {
+        // Lock already held by another tab - skip
+        return { replayed: 0, skipped: 0 };
+      }
+      return unsafeReplayQueue();
+    }
+  );
+
+  return result ?? { replayed: 0, skipped: 0 };
+}
+
+/**
+ * Performs actual queue replay without safety locks.
+ * Called internally after lock acquisition.
+ */
+async function unsafeReplayQueue(): Promise<{ replayed: number; skipped: number }> {
   const db = await dbPromise;
   const pending = await db.getAll("pending-mutations");
+  if (pending.length === 0) {
+    return { replayed: 0, skipped: 0 };
+  }
+
   const idMapping = new Map<number, number>(); // tempId -> real product id
   let replayed = 0;
   let skipped = 0;
@@ -116,11 +163,18 @@ export async function replayQueue(): Promise<{ replayed: number; skipped: number
   }
 
   dispatchChange();
-  if (replayed > 0) {
-    window.dispatchEvent(new CustomEvent("app-data-sync", { detail: { replayed } }));
-  }
-  if (skipped > 0) {
-    window.dispatchEvent(new CustomEvent("app-sync-skipped", { detail: { skipped } }));
+
+  if (typeof window !== "undefined") {
+    if (replayed > 0) {
+      const detail = { replayed };
+      window.dispatchEvent(new CustomEvent("app-data-sync", { detail }));
+      syncChannel?.postMessage({ type: "app-data-sync", detail });
+    }
+    if (skipped > 0) {
+      const detail = { skipped };
+      window.dispatchEvent(new CustomEvent("app-sync-skipped", { detail }));
+      syncChannel?.postMessage({ type: "app-sync-skipped", detail });
+    }
   }
   return { replayed, skipped };
 }
