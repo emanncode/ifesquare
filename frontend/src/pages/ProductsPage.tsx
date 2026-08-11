@@ -41,7 +41,7 @@ export default function ProductsPage() {
     return list
   }, [user])
 
-  const [selected, setSelected] = useState<string[]>(["self"])
+  const [selected, setSelected] = useState<string[]>(["self", "email2", "email3"])
 
   const visibleSelected = useMemo(
     () => selected.filter((id) => recipients.some((r) => r.id === id)),
