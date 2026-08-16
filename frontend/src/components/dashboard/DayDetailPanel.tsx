@@ -17,7 +17,7 @@ export function DayDetailPanel({
   detailLoading: boolean
   detailError: string | null
   today: string
-  patchEntry: (productId: number, field: "opening" | "receipts" | "closing" | "price", raw: string) => Promise<void>
+  patchEntry: (productId: number, field: "opening" | "receipts" | "closing" | "price", raw: string) => Promise<boolean | void>
   onClose: () => void
   dialog?: boolean
   className?: string
@@ -169,8 +169,8 @@ export function DayDetailPanel({
                         </>
                       ) : (
                         <>
-                          <HistoryEditableTd value={e.opening} onChange={(v) => void patchEntry(e.product_id, "opening", v)} />
-                          <HistoryEditableTd value={e.receipts} onChange={(v) => void patchEntry(e.product_id, "receipts", v)} />
+                          <HistoryEditableTd value={e.opening} onChange={(v) => patchEntry(e.product_id, "opening", v)} />
+                          <HistoryEditableTd value={e.receipts} onChange={(v) => patchEntry(e.product_id, "receipts", v)} />
                         </>
                       )}
                       <td className="px-2 py-3 text-right tabular-nums font-medium text-foreground">
@@ -179,7 +179,7 @@ export function DayDetailPanel({
                       {isToday ? (
                         <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">{e.closing == null ? "—" : fmtInt(e.closing)}</td>
                       ) : (
-                        <HistoryEditableTd value={e.closing} onChange={(v) => void patchEntry(e.product_id, "closing", v)} placeholder="—" />
+                        <HistoryEditableTd value={e.closing} onChange={(v) => patchEntry(e.product_id, "closing", v)} placeholder="—" />
                       )}
                       <td className="px-2 py-3 text-right tabular-nums font-semibold text-foreground">
                         {fmtInt(sales)}
@@ -187,7 +187,7 @@ export function DayDetailPanel({
                       {isToday ? (
                         <td className="px-2 py-3 text-right tabular-nums text-muted-foreground">{nairaFmt(e.price)}</td>
                       ) : (
-                        <HistoryEditableTd value={e.price} onChange={(v) => void patchEntry(e.product_id, "price", v)} />
+                        <HistoryEditableTd value={e.price} onChange={(v) => patchEntry(e.product_id, "price", v)} />
                       )}
                       <td className="px-2 py-3 text-right font-semibold tabular-nums text-primary">
                         {nairaFmt(amount)}

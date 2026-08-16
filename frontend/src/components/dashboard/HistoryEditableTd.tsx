@@ -7,7 +7,7 @@ export function HistoryEditableTd({
   placeholder = "—",
 }: {
   value: number | null
-  onChange: (v: string) => void
+  onChange: (v: string) => void | Promise<void | boolean>
   placeholder?: string
 }) {
   const rawProp = value != null ? String(value) : ""
@@ -31,10 +31,18 @@ export function HistoryEditableTd({
           const digits = stripNonDigits(e.target.value)
           setDisplay(formatWithCommas(digits))
         }}
-        onBlur={(e) => {
+        onBlur={async (e) => {
           const digits = stripNonDigits(e.target.value)
           const raw = digits || ""
-          if (raw !== rawProp) onChange(raw)
+          if (raw !== rawProp) {
+            const res = onChange(raw)
+            if (res instanceof Promise) {
+              const ok = await res
+              if (ok === false) {
+                setDisplay(expected)
+              }
+            }
+          }
         }}
         className="h-8 w-full min-w-16 border-b border-dashed border-border bg-transparent text-right text-sm text-foreground outline-none transition-colors focus:border-solid focus:border-primary"
       />

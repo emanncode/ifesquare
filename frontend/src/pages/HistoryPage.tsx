@@ -11,7 +11,7 @@ import { DayDetailPanel } from "@/components/dashboard/DayDetailPanel"
 import { fmtInt, formatDate, nairaFmt, parseCommaInt } from "@/components/dashboard/format"
 import { useHistory } from "@/hooks/useHistory"
 import { useToast } from "@/hooks/useToast"
-import { mutateWithOffline, errorMessage } from "@/lib/api"
+import { mutateWithOffline, errorMessage, ApiError } from "@/lib/api"
 import type { ApiHistoryDayDetail } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -77,9 +77,30 @@ export default function HistoryPage() {
     productId: number,
     field: "opening" | "receipts" | "closing" | "price",
     raw: string,
-  ) {
-    if (!detail) return
+  ): Promise<boolean> {
+    if (!detail) return false
     const value = field === "closing" && raw === "" ? null : parseCommaInt(raw)
+
+    // Client-side validation: closing cannot exceed total (opening + receipts)
+    const entry = detail.entries.find((e) => e.product_id === productId)
+    if (entry) {
+      let nextOpening = entry.opening
+      let nextReceipts = entry.receipts
+      let nextClosing = entry.closing
+
+      if (field === "opening") nextOpening = value ?? 0
+      else if (field === "receipts") nextReceipts = value ?? 0
+      else if (field === "closing") nextClosing = value
+
+      const nextTotal = nextOpening + nextReceipts
+      if (nextClosing !== null && nextClosing > nextTotal) {
+        toast("closing cannot exceed total (opening + receipts)")
+        return false
+      }
+    }
+
+    const prevDetail = detail
+    const prevDays = days
 
     // Optimistically update local details and calculations instantly
     setDetail((prev) => {
@@ -124,8 +145,8 @@ export default function HistoryPage() {
       })
 
       // Optimistically update left panel days list totals
-      setDays((prevDays) =>
-        prevDays.map((d) => {
+      setDays((prevDaysList) =>
+        prevDaysList.map((d) => {
           if (d.date !== prev.date) return d
           return {
             ...d,
@@ -143,13 +164,25 @@ export default function HistoryPage() {
       }
     })
 
-    const r = await mutateWithOffline(`/api/ledger/${detail.date}/${productId}`, "PATCH", {
-      [field]: value,
-    })
-    if (r !== null) {
-      const data = await getDay(detail.date)
-      setDetail(data)
-      void refresh()
+    try {
+      const r = await mutateWithOffline(`/api/ledger/${detail.date}/${productId}`, "PATCH", {
+        [field]: value,
+      })
+      if (r !== null) {
+        const data = await getDay(detail.date)
+        setDetail(data)
+        void refresh()
+      }
+      return true
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        window.location.href = "/login"
+        return false
+      }
+      toast(errorMessage(err, "Failed to update"))
+      setDetail(prevDetail)
+      setDays(prevDays)
+      return false
     }
   }
 
