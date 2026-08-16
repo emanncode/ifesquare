@@ -238,6 +238,24 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       field: "name" | "opening" | "receipts" | "closing" | "price" | "low_stock_threshold",
       value: string,
     ) => {
+      // Client-side validation: closing cannot exceed total (opening + receipts)
+      const current = rows.find((r) => r.productId === productId)
+      if (current) {
+        let nextOpening = current.opening
+        let nextReceipts = current.receipts
+        let nextClosing = current.closing
+
+        if (field === "opening") nextOpening = parseCommaInt(value)
+        else if (field === "receipts") nextReceipts = parseCommaInt(value)
+        else if (field === "closing") nextClosing = value === "" ? null : parseCommaInt(value)
+
+        const nextTotal = nextOpening + nextReceipts
+        if (nextClosing !== null && nextClosing > nextTotal) {
+          toast("closing cannot exceed total (opening + receipts)")
+          return
+        }
+      }
+
       setRows((prev) =>
         prev.map((r) => {
           if (r.productId !== productId) return r
@@ -304,11 +322,12 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
               return
             }
             toast(formatError(err))
+            void refresh()
           }
         }, 500),
       )
     },
-    [],
+    [rows, refresh, toast],
   )
 
   const removeProduct = useCallback(async (productId: number) => {

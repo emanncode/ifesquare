@@ -33,6 +33,9 @@ export function CatalogNumericTd({
           setDisplay(formatWithCommas(digits))
           onChange(digits)
         }}
+        onBlur={() => {
+          setDisplay(expected)
+        }}
         className="h-9 w-24 border-b border-dashed border-border bg-transparent text-right text-sm text-foreground outline-none transition-colors focus:border-solid focus:border-primary"
       />
     </td>
