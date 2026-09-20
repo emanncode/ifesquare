@@ -105,17 +105,23 @@ export default function DashboardPage() {
     .filter((r) => (r.amount ?? 0) > 0)
     .map((r) => ({ name: r.name, value: Math.round(r.amount ?? 0) }))
 
-  const lineData = useMemo(
-    () => [
-      { date: "Mon", Revenue: Math.round(totalRevenue * 0.72) },
-      { date: "Tue", Revenue: Math.round(totalRevenue * 0.81) },
-      { date: "Wed", Revenue: Math.round(totalRevenue * 0.64) },
-      { date: "Thu", Revenue: Math.round(totalRevenue * 0.9) },
-      { date: "Fri", Revenue: Math.round(totalRevenue * 0.95) },
-      { date: "Today", Revenue: Math.round(totalRevenue) },
-    ],
-    [totalRevenue],
-  )
+  const lineData = useMemo(() => {
+    if (recentDays.length === 0) {
+      return [
+        { date: "Start", Revenue: 0 },
+        { date: "Today", Revenue: Math.round(totalRevenue) },
+      ]
+    }
+    const past = [...recentDays].reverse().map((d) => {
+      const parts = d.date.split("-")
+      const label = parts.length === 3 ? `${parts[1]}/${parts[2]}` : d.date
+      return {
+        date: label,
+        Revenue: Math.round(d.total_revenue),
+      }
+    })
+    return [...past, { date: "Today", Revenue: Math.round(totalRevenue) }]
+  }, [recentDays, totalRevenue])
 
   const revenueSpark = useMemo(() => {
     const past = recentDays.map((d) => d.total_revenue)
