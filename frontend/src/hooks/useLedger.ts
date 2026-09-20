@@ -52,7 +52,12 @@ export function useLedger() {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(errorMessage(err, "Failed to load ledger"))
+          setError(
+            errorMessage(
+              err,
+              "Unable to load today's records. Bad network connection — please check your internet and reload.",
+            ),
+          )
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -79,7 +84,12 @@ export function useLedger() {
     try {
       await load()
     } catch (err) {
-      setError(errorMessage(err, "Failed to load ledger"))
+      setError(
+        errorMessage(
+          err,
+          "Unable to load today's records. Bad network connection — please check your internet and reload.",
+        ),
+      )
     } finally {
       setLoading(false)
     }
@@ -90,7 +100,10 @@ export function useLedger() {
       await api("/api/ledger/close", { method: "POST" })
     } catch (err) {
       if (isNetworkError(err)) {
-        throw new Error("Can't close the day while offline — reconnect and try again.", { cause: err })
+        throw new Error(
+          "Unable to close the business day while offline. Bad network connection — please check your internet and try again.",
+          { cause: err },
+        )
       }
       throw err
     }

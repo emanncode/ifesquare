@@ -68,7 +68,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
       setSelectedIds([])
       toast("Products deleted successfully", "success")
     } catch (err) {
-      toast(errorMessage(err, "Failed to remove products"))
+      toast(errorMessage(err, "Unable to delete products. Please try again."))
     } finally {
       setBusy(false)
     }
@@ -129,7 +129,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
       await addProducts(forms)
       toast("Products added", "success")
     } catch (err) {
-      toast(errorMessage(err, "Failed to add products"))
+      toast(errorMessage(err, "Unable to add products. Please check your inputs and try again."))
     } finally {
       setBusy(false)
     }
@@ -140,7 +140,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
       await patchCatalogField(productId, field, value)
       flashRow(String(productId))
     } catch (err) {
-      toast(errorMessage(err, "Failed to update"))
+      toast(errorMessage(err, "Unable to update product. Please try again."))
     }
   }
 
@@ -148,7 +148,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
     try {
       await removeProduct(productId)
     } catch (err) {
-      toast(errorMessage(err, "Failed to remove"))
+      toast(errorMessage(err, "Unable to remove product. Please try again."))
     }
   }
 
@@ -158,7 +158,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
       setArchivedRows((prev) => prev.filter((r) => r.productId !== row.productId))
       toast("Product restored", "success")
     } catch (err) {
-      toast(errorMessage(err, "Failed to restore"))
+      toast(errorMessage(err, "Unable to restore product. Please try again."))
     }
   }
 
@@ -169,7 +169,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
         const data = await fetchArchived()
         setArchivedRows(data)
       } catch (err) {
-        toast(errorMessage(err, "Failed to load archived"))
+        toast(errorMessage(err, "Unable to load archived products. Please reload the page."))
       } finally {
         setArchivedLoading(false)
       }

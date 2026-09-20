@@ -75,7 +75,7 @@ export default function ProductsPage() {
       toast("Summary email sent successfully", "success")
       setMenuOpen(false)
     } catch (err) {
-      toast(errorMessage(err, "Failed to send summary"))
+      toast(errorMessage(err, "Unable to send summary email. Please try again."))
     } finally {
       setSending(false)
     }
@@ -115,15 +115,27 @@ export default function ProductsPage() {
       function processLine(line: string) {
         if (!line.startsWith("data: ")) return
         const json = line.slice(6)
-        const evt = JSON.parse(json)
+        let evt: {
+          type?: string
+          total?: number
+          current?: number
+          created?: number
+          errors?: string[]
+          message?: string
+        }
+        try {
+          evt = JSON.parse(json)
+        } catch {
+          throw new Error("Unable to read import progress from the server. Please reload the page.")
+        }
         if (evt.type === "start") {
-          setProgress({ current: 0, total: evt.total })
+          setProgress({ current: 0, total: evt.total ?? 0 })
         } else if (evt.type === "progress") {
-          setProgress({ current: evt.current, total: evt.total })
+          setProgress({ current: evt.current ?? 0, total: evt.total ?? 0 })
         } else if (evt.type === "done") {
-          finalResult = { created: evt.created, errors: evt.errors }
+          finalResult = { created: evt.created ?? 0, errors: evt.errors }
         } else if (evt.type === "error") {
-          throw new Error(evt.message)
+          throw new Error(evt.message || "An error occurred during import. Please try again.")
         }
       }
 
@@ -148,7 +160,7 @@ export default function ProductsPage() {
         }
       }
     } catch (err) {
-      toast(errorMessage(err, "Import failed"))
+      toast(errorMessage(err, "Unable to import products. Please check the file and try again."))
     } finally {
       setImporting(false)
       setProgress(null)

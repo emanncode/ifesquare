@@ -67,7 +67,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState({
         user: null,
         loading: false,
-        error: err instanceof Error ? err.message : "Failed to load session",
+        error: errorMessage(
+          err,
+          "Unable to load your session. Please reload or sign in again.",
+        ),
       })
     }
   }, [])
@@ -96,7 +99,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState({
           user: null,
           loading: false,
-          error: errorMessage(err, "Failed to load session"),
+          error: errorMessage(
+            err,
+            "Unable to load your session. Please reload or sign in again.",
+          ),
         })
       }
     })()

@@ -1,5 +1,11 @@
 import { Component, type ErrorInfo, type ReactNode } from "react"
 import { AlertTriangle, RefreshCw } from "lucide-react"
+import {
+  isJsonParseError,
+  isNetworkError,
+  JSON_PARSE_ERROR_MSG,
+  NETWORK_ERROR_MSG,
+} from "@/lib/api"
 
 type Props = {
   children: ReactNode
@@ -21,7 +27,10 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     if (typeof window !== "undefined" && "SENTRY_DSN" in window) {
       try {
-        const Sentry = (window as any).Sentry
+        const win = window as unknown as {
+          Sentry?: { captureException?: (err: unknown, ctx?: unknown) => void }
+        }
+        const Sentry = win.Sentry
         if (Sentry?.captureException) {
           Sentry.captureException(error, { extra: { componentStack: info.componentStack } })
         }
@@ -29,6 +38,14 @@ export class ErrorBoundary extends Component<Props, State> {
         // silent
       }
     }
+  }
+
+  private formatErrorMessage(): string {
+    const err = this.state.error
+    if (!err) return "An unexpected error occurred."
+    if (isNetworkError(err)) return NETWORK_ERROR_MSG
+    if (isJsonParseError(err)) return JSON_PARSE_ERROR_MSG
+    return err.message || "An unexpected error occurred."
   }
 
   render() {
@@ -39,7 +56,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <AlertTriangle className="size-10 text-destructive" />
           <h1 className="text-xl font-bold text-foreground">Something went wrong</h1>
           <p className="max-w-md text-sm text-muted-foreground">
-            {this.state.error?.message ?? "An unexpected error occurred."}
+            {this.formatErrorMessage()}
           </p>
           <button
             onClick={() => window.location.reload()}

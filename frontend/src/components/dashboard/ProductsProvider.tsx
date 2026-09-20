@@ -19,7 +19,10 @@ function formatError(err: unknown): string {
   if (err instanceof ApiError && err.status >= 500) {
     return "A server error occurred. Please try again later."
   }
-  return errorMessage(err, "Failed to load products")
+  return errorMessage(
+    err,
+    "Unable to load products. Bad network connection — please check your internet and reload the page.",
+  )
 }
 
 function merge(products: ApiProduct[], entries: ApiLedgerEntry[]): CatalogRow[] {
@@ -251,7 +254,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
         const nextTotal = nextOpening + nextReceipts
         if (nextClosing !== null && nextClosing > nextTotal) {
-          toast("closing cannot exceed total (opening + receipts)")
+          toast("Closing stock cannot exceed total stock (opening + receipts).")
           return
         }
       }

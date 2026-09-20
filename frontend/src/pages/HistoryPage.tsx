@@ -67,7 +67,7 @@ export default function HistoryPage() {
       setDetail(data)
     } catch (err) {
       setDetail(null)
-      setDetailError(errorMessage(err, "Failed to load day"))
+      setDetailError(errorMessage(err, "Unable to load records for this day. Please try again."))
     } finally {
       setDetailLoading(false)
     }
@@ -94,7 +94,7 @@ export default function HistoryPage() {
 
       const nextTotal = nextOpening + nextReceipts
       if (nextClosing !== null && nextClosing > nextTotal) {
-        toast("closing cannot exceed total (opening + receipts)")
+        toast("Closing stock cannot exceed total stock (opening + receipts).")
         return false
       }
     }
@@ -179,7 +179,7 @@ export default function HistoryPage() {
         window.location.href = "/login"
         return false
       }
-      toast(errorMessage(err, "Failed to update"))
+      toast(errorMessage(err, "Unable to update sales record. Please try again."))
       setDetail(prevDetail)
       setDays(prevDays)
       return false

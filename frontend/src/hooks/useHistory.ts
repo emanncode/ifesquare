@@ -24,7 +24,10 @@ export function useHistory(limit = 30) {
       } catch (err) {
         if (!cancelled) {
           setError(
-            errorMessage(err, "Failed to load history"),
+            errorMessage(
+              err,
+              "Unable to load sales history. Bad network connection — please check your internet and reload.",
+            ),
           )
         }
       } finally {
@@ -45,7 +48,12 @@ export function useHistory(limit = 30) {
       )
       setDays(data ?? [])
     } catch (err) {
-      setError(errorMessage(err, "Failed to load history"))
+      setError(
+        errorMessage(
+          err,
+          "Unable to load sales history. Bad network connection — please check your internet and reload.",
+        ),
+      )
     } finally {
       setLoading(false)
     }

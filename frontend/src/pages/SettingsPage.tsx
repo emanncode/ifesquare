@@ -138,8 +138,8 @@ function AccountTab({
       });
       toast("Settings saved", "success");
       onSaved();
-    } catch {
-      toast("Failed to save settings");
+    } catch (err) {
+      toast(errorMessage(err, "Unable to save account settings. Please try again."));
     } finally {
       setSaving(false);
     }
@@ -232,8 +232,8 @@ function UsersTab() {
     try {
       const data = await api<StaffUser[]>("/api/users");
       setUsers(data ?? []);
-    } catch {
-      toast("Failed to load users");
+    } catch (err) {
+      toast(errorMessage(err, "Unable to load staff accounts. Please reload the page."));
     } finally {
       setLoading(false);
     }
@@ -245,8 +245,8 @@ function UsersTab() {
       try {
         const data = await api<StaffUser[]>("/api/users");
         if (!cancelled) setUsers(data ?? []);
-      } catch {
-        if (!cancelled) toast("Failed to load users");
+      } catch (err) {
+        if (!cancelled) toast(errorMessage(err, "Unable to load staff accounts. Please reload the page."));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -268,7 +268,7 @@ function UsersTab() {
       setPassword("");
       await loadUsers();
     } catch (err) {
-      toast(errorMessage(err, "Failed to create user"));
+      toast(errorMessage(err, "Unable to create staff account. Please try again."));
     } finally {
       setCreating(false);
     }
@@ -285,8 +285,8 @@ function UsersTab() {
         "success",
       );
       await loadUsers();
-    } catch {
-      toast("Failed to update user");
+    } catch (err) {
+      toast(errorMessage(err, "Unable to update staff account. Please try again."));
     }
   }
 
@@ -387,8 +387,8 @@ function ActivityTab() {
       try {
         const data = await api<AuditEntry[]>("/api/audit-log?limit=100");
         if (!cancelled) setEntries(data ?? []);
-      } catch {
-        if (!cancelled) toast("Failed to load activity log");
+      } catch (err) {
+        if (!cancelled) toast(errorMessage(err, "Unable to load activity log. Please reload the page."));
       } finally {
         if (!cancelled) setLoading(false);
       }

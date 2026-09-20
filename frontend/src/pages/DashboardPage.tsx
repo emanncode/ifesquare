@@ -85,7 +85,12 @@ export default function DashboardPage() {
       clearPrefetchCache()
       window.dispatchEvent(new CustomEvent("day-closed"))
     } catch (err) {
-      toast(errorMessage(err, "Failed to close day"))
+      toast(
+        errorMessage(
+          err,
+          "Unable to close the business day. Bad network connection — please check your internet and reload.",
+        ),
+      )
     } finally {
       setClosing(false)
     }
