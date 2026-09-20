@@ -31,10 +31,10 @@ type userResp struct {
 
 // Login error codes returned in {"error":"..."}.
 const (
-	errInvalidBody       = "invalid body"
-	errInvalidCredentials = "invalid credentials"
-	errTooManyAttempts   = "too many attempts"
-	errTokenIssue        = "could not generate token"
+	errInvalidBody        = "The request format is invalid. Please check your information and try again."
+	errInvalidCredentials = "Email or password is incorrect."
+	errTooManyAttempts    = "Too many sign-in attempts. Please wait a few moments before trying again."
+	errTokenIssue         = "Unable to create authentication session. Please try again."
 )
 
 // writeAuthError responds with a JSON error body and status.
@@ -147,30 +147,30 @@ func ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(req.NewPassword) < 6 {
-		writeAuthError(w, http.StatusBadRequest, "password too short (min 6 characters)")
+		writeAuthError(w, http.StatusBadRequest, "Password must be at least 6 characters long.")
 		return
 	}
 
 	var hash string
 	err := db.DB.QueryRow("SELECT password_hash FROM users WHERE id = ?", userID).Scan(&hash)
 	if err != nil {
-		http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+		http.Error(w, `{"error":"User account could not be found."}`, http.StatusNotFound)
 		return
 	}
 
 	if !CheckPassword(hash, req.OldPassword) {
-		writeAuthError(w, http.StatusUnauthorized, "wrong password")
+		writeAuthError(w, http.StatusUnauthorized, "The current password you entered is incorrect.")
 		return
 	}
 
 	newHash, err := HashPassword(req.NewPassword)
 	if err != nil {
-		http.Error(w, `{"error":"could not hash password"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to secure password. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 
 	if _, err := db.DB.Exec("UPDATE users SET password_hash = ? WHERE id = ?", newHash, userID); err != nil {
-		http.Error(w, `{"error":"could not update password"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to update password. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -189,9 +189,9 @@ func Me(w http.ResponseWriter, r *http.Request) {
 	err := db.DB.QueryRow("SELECT id, email, role, owner_id, phone_number, notify_on_close, email_2_name, email_2_address, email_3_name, email_3_address FROM users WHERE id = ?", userID).Scan(&id, &email, &role, &ownerID, &phoneNumber, &notifyOnClose, &email2Name, &email2Address, &email3Name, &email3Address)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+			http.Error(w, `{"error":"User account could not be found."}`, http.StatusNotFound)
 		} else {
-			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to load user profile. Please try again."}`, http.StatusInternalServerError)
 		}
 		return
 	}
@@ -250,7 +250,7 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 			v = *req.PhoneNumber
 		}
 		if _, err := db.DB.Exec("UPDATE users SET phone_number = ? WHERE id = ?", v, userID); err != nil {
-			http.Error(w, `{"error":"could not update phone number"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to update phone number. Please try again."}`, http.StatusInternalServerError)
 			return
 		}
 	}
@@ -260,7 +260,7 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 			v = 1
 		}
 		if _, err := db.DB.Exec("UPDATE users SET notify_on_close = ? WHERE id = ?", v, userID); err != nil {
-			http.Error(w, `{"error":"could not update notification preference"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to update notification preference. Please try again."}`, http.StatusInternalServerError)
 			return
 		}
 	}
@@ -272,7 +272,7 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 			v = *req.Email2Name
 		}
 		if _, err := db.DB.Exec("UPDATE users SET email_2_name = ? WHERE id = ?", v, userID); err != nil {
-			http.Error(w, `{"error":"could not update email 2 name"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to update secondary email name. Please try again."}`, http.StatusInternalServerError)
 			return
 		}
 	}
@@ -284,7 +284,7 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 			v = *req.Email2Address
 		}
 		if _, err := db.DB.Exec("UPDATE users SET email_2_address = ? WHERE id = ?", v, userID); err != nil {
-			http.Error(w, `{"error":"could not update email 2 address"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to update secondary email address. Please try again."}`, http.StatusInternalServerError)
 			return
 		}
 	}
@@ -296,7 +296,7 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 			v = *req.Email3Name
 		}
 		if _, err := db.DB.Exec("UPDATE users SET email_3_name = ? WHERE id = ?", v, userID); err != nil {
-			http.Error(w, `{"error":"could not update email 3 name"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to update third email name. Please try again."}`, http.StatusInternalServerError)
 			return
 		}
 	}
@@ -308,7 +308,7 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 			v = *req.Email3Address
 		}
 		if _, err := db.DB.Exec("UPDATE users SET email_3_address = ? WHERE id = ?", v, userID); err != nil {
-			http.Error(w, `{"error":"could not update email 3 address"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to update third email address. Please try again."}`, http.StatusInternalServerError)
 			return
 		}
 	}
@@ -322,9 +322,9 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 	var email2Name, email2Address, email3Name, email3Address sql.NullString
 	if err := db.DB.QueryRow("SELECT id, email, role, owner_id, phone_number, notify_on_close, email_2_name, email_2_address, email_3_name, email_3_address FROM users WHERE id = ?", userID).Scan(&id, &email, &role, &ownerID, &phoneNumber, &notifyOnClose, &email2Name, &email2Address, &email3Name, &email3Address); err != nil {
 		if err == sql.ErrNoRows {
-			http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+			http.Error(w, `{"error":"User account could not be found."}`, http.StatusNotFound)
 		} else {
-			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to load updated user profile. Please try again."}`, http.StatusInternalServerError)
 		}
 		return
 	}

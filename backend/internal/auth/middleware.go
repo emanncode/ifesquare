@@ -37,7 +37,7 @@ func RequireRole(role string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, ok := r.Context().Value(UserKey).(User)
 			if !ok || user.Role != role {
-				http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+				http.Error(w, `{"error":"You do not have permission to perform this action."}`, http.StatusForbidden)
 				return
 			}
 			next.ServeHTTP(w, r)
@@ -49,13 +49,13 @@ func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("token")
 		if err != nil {
-			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+			http.Error(w, `{"error":"Your session has expired or you are not signed in. Please log in again."}`, http.StatusUnauthorized)
 			return
 		}
 
 		claims, err := ParseToken(jwtSecret, cookie.Value)
 		if err != nil {
-			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+			http.Error(w, `{"error":"Your session has expired or you are not signed in. Please log in again."}`, http.StatusUnauthorized)
 			return
 		}
 
@@ -71,7 +71,7 @@ func Middleware(next http.Handler) http.Handler {
 				Secure:   secure,
 				MaxAge:   -1,
 			})
-			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+			http.Error(w, `{"error":"Your session has expired or you are not signed in. Please log in again."}`, http.StatusUnauthorized)
 			return
 		}
 
@@ -85,7 +85,7 @@ func Middleware(next http.Handler) http.Handler {
 			claims.UserID,
 		).Scan(&role, &ownerID, &active, &phoneNumber, &notifyOnClose)
 		if err != nil || active == 0 {
-			http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+			http.Error(w, `{"error":"Your account has been deactivated or does not exist. Please contact your manager."}`, http.StatusUnauthorized)
 			return
 		}
 
