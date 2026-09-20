@@ -3,6 +3,7 @@ package products
 import (
 	"database/sql"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -72,16 +73,20 @@ func Update(id, userID int64, fields map[string]interface{}) (*Product, error) {
 		return Get(id, userID)
 	}
 
+	keys := make([]string, 0, len(fields))
+	for k := range fields {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
 	q := "UPDATE products SET "
-	args := []interface{}{}
-	i := 0
-	for k, v := range fields {
+	args := make([]interface{}, 0, len(keys)+2)
+	for i, k := range keys {
 		if i > 0 {
 			q += ", "
 		}
 		q += k + " = ?"
-		args = append(args, v)
-		i++
+		args = append(args, fields[k])
 	}
 	q += " WHERE id = ? AND user_id = ?"
 	args = append(args, id, userID)

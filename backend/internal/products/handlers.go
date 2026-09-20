@@ -457,6 +457,7 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 		flusher.Flush()
 		return
 	}
+	defer tx.Rollback()
 
 	today := db.GetToday()
 	tx.Exec("INSERT OR IGNORE INTO days (user_id, date) VALUES (?, ?)", scopeID, today)
@@ -477,6 +478,7 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 				existing[n][p] = true
 			}
 		}
+		nameRows.Close()
 	}
 
 	type pendingProduct struct {

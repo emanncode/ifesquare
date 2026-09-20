@@ -138,12 +138,12 @@ func ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.OldPassword == "" || req.NewPassword == "" {
-		writeAuthError(w, http.StatusBadRequest, "missing fields")
+	if strings.TrimSpace(req.OldPassword) == "" || strings.TrimSpace(req.NewPassword) == "" {
+		writeAuthError(w, http.StatusBadRequest, "Please enter both your current password and a new password.")
 		return
 	}
 	if req.NewPassword == req.OldPassword {
-		writeAuthError(w, http.StatusBadRequest, "new password must differ from old")
+		writeAuthError(w, http.StatusBadRequest, "Your new password must be different from your current password.")
 		return
 	}
 	if len(req.NewPassword) < 6 {

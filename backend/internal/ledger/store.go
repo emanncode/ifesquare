@@ -233,19 +233,44 @@ func autoSyncFromLastClosed(today string, userID int64) {
 	}
 	defer rows.Close()
 
+	type syncItem struct {
+		productID int64
+		closing   int64
+	}
+	var items []syncItem
 	for rows.Next() {
 		var productID, closing int64
 		if err := rows.Scan(&productID, &closing); err != nil {
 			return
 		}
-		db.DB.Exec(
-			"UPDATE entries SET opening = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
-			closing, today, productID, userID,
-		)
-		db.DB.Exec(
-			"UPDATE products SET stock = ? WHERE id = ? AND user_id = ?", closing, productID, userID,
-		)
+		items = append(items, syncItem{productID: productID, closing: closing})
 	}
+	rows.Close()
+
+	if len(items) == 0 {
+		return
+	}
+
+	tx, err := db.DB.Begin()
+	if err != nil {
+		return
+	}
+	defer tx.Rollback()
+
+	for _, item := range items {
+		if _, err := tx.Exec(
+			"UPDATE entries SET opening = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
+			item.closing, today, item.productID, userID,
+		); err != nil {
+			return
+		}
+		if _, err := tx.Exec(
+			"UPDATE products SET stock = ? WHERE id = ? AND user_id = ?", item.closing, item.productID, userID,
+		); err != nil {
+			return
+		}
+	}
+	_ = tx.Commit()
 }
 
 func SyncFromLastClosedDay(today string, userID int64) (string, error) {
@@ -354,14 +379,22 @@ func CloseDay(dayDate string, userID int64) error {
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
-
+	type closeProduct struct {
+		productID int64
+		closing   int64
+	}
+	var toUpdate []closeProduct
 	for rows.Next() {
 		var entryID, productID, closing int64
 		if err := rows.Scan(&entryID, &productID, &closing); err != nil {
 			return err
 		}
-		if _, err := tx.Exec("UPDATE products SET stock = ? WHERE id = ? AND user_id = ?", closing, productID, userID); err != nil {
+		toUpdate = append(toUpdate, closeProduct{productID: productID, closing: closing})
+	}
+	rows.Close()
+
+	for _, p := range toUpdate {
+		if _, err := tx.Exec("UPDATE products SET stock = ? WHERE id = ? AND user_id = ?", p.closing, p.productID, userID); err != nil {
 			return err
 		}
 	}
