@@ -126,6 +126,14 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
+  useEffect(() => {
+    const timers = debounceTimers.current
+    return () => {
+      timers.forEach((t) => clearTimeout(t))
+      timers.clear()
+    }
+  }, [])
+
   const refresh = useCallback(async () => {
     if (!isAuthenticated) return
     setLoading(true)

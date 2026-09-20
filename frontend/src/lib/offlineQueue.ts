@@ -155,6 +155,10 @@ async function unsafeReplayQueue(): Promise<{ replayed: number; skipped: number 
       }
       await db.delete("pending-mutations", item.id);
       replayed++;
+    } else if (res.status === 401) {
+      // Session expired while offline — keep pending mutations queued
+      // so user does not lose data once they sign back in.
+      break;
     } else {
       // Server rejected it (validation, already deleted, etc.) — drop and continue.
       await db.delete("pending-mutations", item.id);

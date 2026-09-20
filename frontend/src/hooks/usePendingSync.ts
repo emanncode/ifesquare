@@ -9,13 +9,17 @@ export function usePendingSync() {
   }, [])
 
   useEffect(() => {
-    refresh()
+    void refresh()
     const handler = () => { void refresh() }
+    const onlineHandler = () => {
+      void replayQueue()
+      void refresh()
+    }
     window.addEventListener("pending-sync-change", handler)
-    window.addEventListener("online", () => { void replayQueue(); void refresh() })
+    window.addEventListener("online", onlineHandler)
     return () => {
       window.removeEventListener("pending-sync-change", handler)
-      window.removeEventListener("online", () => { void replayQueue(); void refresh() })
+      window.removeEventListener("online", onlineHandler)
     }
   }, [refresh])
 
