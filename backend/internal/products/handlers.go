@@ -31,6 +31,7 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 	products, err := List(scopeID)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to load products. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	if products == nil {
@@ -46,13 +47,13 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, `{"error":"cannot read body"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Unable to read product information. Please try again."}`, http.StatusBadRequest)
 		return
 	}
 
 	raw := make(map[string]json.RawMessage)
 	if err := json.Unmarshal(body, &raw); err != nil {
-		http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"The request format is invalid. Please check product details and try again."}`, http.StatusBadRequest)
 		return
 	}
 
@@ -70,14 +71,14 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	if productsRaw, ok := raw["products"]; ok {
 		if err := json.Unmarshal(productsRaw, &inputs); err != nil {
-			http.Error(w, `{"error":"invalid products array"}`, http.StatusBadRequest)
+			http.Error(w, `{"error":"The products list format is invalid. Please check your data and try again."}`, http.StatusBadRequest)
 			return
 		}
 		isBulk = true
 	} else {
 		var single inputProduct
 		if err := json.Unmarshal(body, &single); err != nil {
-			http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+			http.Error(w, `{"error":"The request format is invalid. Please check product details and try again."}`, http.StatusBadRequest)
 			return
 		}
 		inputs = append(inputs, single)
@@ -86,27 +87,27 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 	// Validation
 	for _, p := range inputs {
 		if p.Name == "" {
-			http.Error(w, `{"error":"name is required"}`, http.StatusBadRequest)
+			http.Error(w, `{"error":"Product name is required."}`, http.StatusBadRequest)
 			return
 		}
 		if p.Price < 0 {
-			http.Error(w, `{"error":"price cannot be negative"}`, http.StatusBadRequest)
+			http.Error(w, `{"error":"Price cannot be a negative number."}`, http.StatusBadRequest)
 			return
 		}
 		if p.Opening < 0 {
-			http.Error(w, `{"error":"opening cannot be negative"}`, http.StatusBadRequest)
+			http.Error(w, `{"error":"Opening stock cannot be a negative number."}`, http.StatusBadRequest)
 			return
 		}
 		if p.Receipts != nil && *p.Receipts < 0 {
-			http.Error(w, `{"error":"receipts cannot be negative"}`, http.StatusBadRequest)
+			http.Error(w, `{"error":"Receipts cannot be a negative number."}`, http.StatusBadRequest)
 			return
 		}
 		if p.Closing != nil && *p.Closing < 0 {
-			http.Error(w, `{"error":"closing cannot be negative"}`, http.StatusBadRequest)
+			http.Error(w, `{"error":"Closing stock cannot be a negative number."}`, http.StatusBadRequest)
 			return
 		}
 		if p.LowStockThreshold != nil && *p.LowStockThreshold < 0 {
-			http.Error(w, `{"error":"low_stock_threshold cannot be negative"}`, http.StatusBadRequest)
+			http.Error(w, `{"error":"Low stock alert threshold cannot be a negative number."}`, http.StatusBadRequest)
 			return
 		}
 	}
@@ -114,14 +115,14 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 	// Begin Transaction
 	tx, err := db.DB.Begin()
 	if err != nil {
-		http.Error(w, `{"error":"cannot start transaction"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to save products due to a database error. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	defer tx.Rollback()
 
 	today := db.GetToday()
 	if _, err := tx.Exec("INSERT OR IGNORE INTO days (user_id, date) VALUES (?, ?)", scopeID, today); err != nil {
-		http.Error(w, `{"error":"failed to ensure day: `+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to initialize today's records. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -144,7 +145,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 			p.Name, p.Price, p.Opening, threshold, scopeID,
 		)
 		if err != nil {
-			http.Error(w, `{"error":"failed to create product: `+err.Error()+`"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to create product. Please try again."}`, http.StatusInternalServerError)
 			return
 		}
 		productID, _ := res.LastInsertId()
@@ -155,7 +156,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 			scopeID, today, productID, p.Opening, receiptsVal, p.Closing, p.Price,
 		)
 		if err != nil {
-			http.Error(w, `{"error":"failed to create ledger entry: `+err.Error()+`"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to create stock entry. Please try again."}`, http.StatusInternalServerError)
 			return
 		}
 
@@ -176,7 +177,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := tx.Commit(); err != nil {
-		http.Error(w, `{"error":"failed to commit transaction: `+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to complete saving products. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -201,13 +202,13 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		http.Error(w, `{"error":"invalid id"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Invalid product ID."}`, http.StatusBadRequest)
 		return
 	}
 
 	var body map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"The request format is invalid. Please check and try again."}`, http.StatusBadRequest)
 		return
 	}
 
@@ -220,20 +221,20 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if name, ok := fields["name"]; ok && name == "" {
-		http.Error(w, `{"error":"name cannot be empty"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Product name cannot be empty."}`, http.StatusBadRequest)
 		return
 	}
 	if price, ok := fields["price"]; ok {
 		pf, ok2 := toFloat(price)
 		if !ok2 || pf < 0 {
-			http.Error(w, `{"error":"price cannot be negative"}`, http.StatusBadRequest)
+			http.Error(w, `{"error":"Price cannot be a negative number."}`, http.StatusBadRequest)
 			return
 		}
 	}
 	if stock, ok := fields["stock"]; ok {
 		sf, ok2 := toFloat(stock)
 		if !ok2 || sf < 0 {
-			http.Error(w, `{"error":"stock cannot be negative"}`, http.StatusBadRequest)
+			http.Error(w, `{"error":"Stock cannot be a negative number."}`, http.StatusBadRequest)
 			return
 		}
 	}
@@ -241,7 +242,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		if threshold != nil {
 			tf, ok2 := toFloat(threshold)
 			if !ok2 || tf < 0 {
-				http.Error(w, `{"error":"low_stock_threshold cannot be negative"}`, http.StatusBadRequest)
+				http.Error(w, `{"error":"Low stock alert threshold cannot be a negative number."}`, http.StatusBadRequest)
 				return
 			}
 			fields["low_stock_threshold"] = int(tf)
@@ -254,11 +255,11 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 
 	p, err := Update(id, scopeID, fields)
 	if err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to update product. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	if p == nil {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		http.Error(w, `{"error":"Product not found."}`, http.StatusNotFound)
 		return
 	}
 
@@ -278,14 +279,14 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		http.Error(w, `{"error":"invalid id"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Invalid product ID."}`, http.StatusBadRequest)
 		return
 	}
 
 	before, _ := Get(id, scopeID)
 
 	if err := Archive(id, scopeID); err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to archive product. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -306,17 +307,17 @@ func ArchiveBulkHandler(w http.ResponseWriter, r *http.Request) {
 		IDs []int64 `json:"ids"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"The request format is invalid. Please try again."}`, http.StatusBadRequest)
 		return
 	}
 
 	if len(body.IDs) == 0 {
-		http.Error(w, `{"error":"no ids provided"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"No products were selected."}`, http.StatusBadRequest)
 		return
 	}
 
 	if err := ArchiveBulk(body.IDs, scopeID); err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to archive selected products. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -334,7 +335,7 @@ func ArchiveBulkHandler(w http.ResponseWriter, r *http.Request) {
 func DeleteAllHandler(w http.ResponseWriter, r *http.Request) {
 	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
 	if err := DeleteAll(scopeID); err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to delete products. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	ck := cacheKey(scopeID, "/api/products")
@@ -346,7 +347,7 @@ func DeleteAllHandler(w http.ResponseWriter, r *http.Request) {
 func ArchiveAllHandler(w http.ResponseWriter, r *http.Request) {
 	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
 	if err := ArchiveAll(scopeID); err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to archive products. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	ck := cacheKey(scopeID, "/api/products")
@@ -369,7 +370,7 @@ func ListArchivedHandler(w http.ResponseWriter, r *http.Request) {
 	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
 	products, err := ListArchived(scopeID)
 	if err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to load archived products. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	if products == nil {
@@ -384,14 +385,14 @@ func RestoreHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		http.Error(w, `{"error":"invalid id"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Invalid product ID."}`, http.StatusBadRequest)
 		return
 	}
 
 	before, _ := Get(id, scopeID)
 
 	if err := Restore(id, scopeID); err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to restore product. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -410,7 +411,7 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, `{"error":"cannot read body"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Unable to read the uploaded CSV file. Please try again."}`, http.StatusBadRequest)
 		return
 	}
 
@@ -420,24 +421,24 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	records, err := rd.ReadAll()
 	if err != nil {
-		http.Error(w, `{"error":"invalid CSV: `+err.Error()+`"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Invalid CSV file format. Please check the file and try again."}`, http.StatusBadRequest)
 		return
 	}
 
 	if len(records) < 2 {
-		http.Error(w, `{"error":"CSV must have a header row and at least one data row"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"The CSV file must contain a header row and at least one product row."}`, http.StatusBadRequest)
 		return
 	}
 
 	header := records[0]
 	if len(header) < 6 || header[0] != "Product" || header[1] != "Opening" || header[2] != "Receipts" || header[3] != "Closing" || header[4] != "Price" || header[5] != "Alert at" {
-		http.Error(w, `{"error":"CSV header must have columns: Product,Opening,Receipts,Closing,Price,Alert at"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"CSV header must contain columns: Product, Opening, Receipts, Closing, Price, Alert at"}`, http.StatusBadRequest)
 		return
 	}
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http.Error(w, `{"error":"streaming not supported"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Real-time progress streaming is not supported by your connection."}`, http.StatusInternalServerError)
 		return
 	}
 
