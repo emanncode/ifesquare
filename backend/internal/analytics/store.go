@@ -50,13 +50,10 @@ func computeDateRanges(today string) (currentFrom, currentTo, previousFrom, prev
 
 func computeMonthlyComparison(currentFrom, currentTo, previousFrom, previousTo string, userID int64) (*MonthlyComparison, error) {
 	rows, err := db.DB.Query(`
-		SELECT e.id, e.day_date, e.product_id, e.opening, e.receipts, e.closing, e.price,
-		       e.created_at, e.updated_at, p.name
-		FROM entries e
-		JOIN products p ON p.id = e.product_id
-		WHERE ((e.day_date BETWEEN ? AND ?) OR (e.day_date BETWEEN ? AND ?))
-		  AND e.user_id = ?
-		ORDER BY e.day_date
+		SELECT day_date, opening, receipts, closing, price
+		FROM entries
+		WHERE ((day_date BETWEEN ? AND ?) OR (day_date BETWEEN ? AND ?))
+		  AND user_id = ?
 	`, currentFrom, currentTo, previousFrom, previousTo, userID)
 	if err != nil {
 		return nil, err
@@ -66,34 +63,25 @@ func computeMonthlyComparison(currentFrom, currentTo, previousFrom, previousTo s
 	var currentRev, currentUnits, prevRev, prevUnits int
 
 	for rows.Next() {
-		var e struct {
-			ID          int64
-			DayDate     string
-			ProductID   int64
-			Opening     int
-			Receipts    int
-			Closing     *int
-			Price       int
-			CreatedAt   string
-			UpdatedAt   string
-			ProductName string
-		}
-		if err := rows.Scan(&e.ID, &e.DayDate, &e.ProductID, &e.Opening, &e.Receipts, &e.Closing, &e.Price, &e.CreatedAt, &e.UpdatedAt, &e.ProductName); err != nil {
+		var dayDate string
+		var opening, receipts, price int
+		var closing *int
+		if err := rows.Scan(&dayDate, &opening, &receipts, &closing, &price); err != nil {
 			return nil, err
 		}
 
-		total := e.Opening + e.Receipts
+		total := opening + receipts
 		sales := 0
 		amount := 0
-		if e.Closing != nil && *e.Closing >= 0 {
-			s := total - *e.Closing
+		if closing != nil && *closing >= 0 {
+			s := total - *closing
 			if s > 0 {
 				sales = s
-				amount = s * e.Price
+				amount = s * price
 			}
 		}
 
-		if e.DayDate >= currentFrom && e.DayDate <= currentTo {
+		if dayDate >= currentFrom && dayDate <= currentTo {
 			currentRev += amount
 			currentUnits += sales
 		} else {

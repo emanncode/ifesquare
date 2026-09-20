@@ -3,6 +3,7 @@ package ledger
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/emanncode/ifesquare/backend/internal/db"
 )
@@ -72,6 +73,10 @@ func GetTodayEntries(userID int64) ([]EntryWithProduct, error) {
 		autoSyncFromLastClosed(today, userID)
 	}
 
+	return GetEntriesForDate(today, userID)
+}
+
+func GetEntriesForDate(dayDate string, userID int64) ([]EntryWithProduct, error) {
 	rows, err := db.DB.Query(`
 		SELECT e.id, e.day_date, e.product_id, e.opening, e.receipts, e.closing, e.price, e.created_at, e.updated_at,
 		       p.name, p.low_stock_threshold, p.stock
@@ -79,7 +84,7 @@ func GetTodayEntries(userID int64) ([]EntryWithProduct, error) {
 		JOIN products p ON p.id = e.product_id
 		WHERE e.day_date = ? AND e.user_id = ?
 		ORDER BY p.name
-	`, today, userID)
+	`, dayDate, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -148,47 +153,35 @@ func ensureEntries(dayDate string, userID int64) {
 }
 
 func UpdateEntry(dayDate string, productID int64, userID int64, opening, receipts, closing, price *int, updateClosing bool) (*Entry, error) {
+	var sets []string
+	var args []interface{}
+
 	if opening != nil {
-		if _, err := db.DB.Exec(
-			"UPDATE entries SET opening = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
-			*opening, dayDate, productID, userID,
-		); err != nil {
-			return nil, err
-		}
+		sets = append(sets, "opening = ?")
+		args = append(args, *opening)
 	}
 	if receipts != nil {
-		_, err := db.DB.Exec(
-			"UPDATE entries SET receipts = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
-			*receipts, dayDate, productID, userID,
-		)
-		if err != nil {
-			return nil, err
-		}
+		sets = append(sets, "receipts = ?")
+		args = append(args, *receipts)
 	}
 	if updateClosing {
 		if closing == nil {
-			_, err := db.DB.Exec(
-				"UPDATE entries SET closing = NULL, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
-				dayDate, productID, userID,
-			)
-			if err != nil {
-				return nil, err
-			}
+			sets = append(sets, "closing = NULL")
 		} else {
-			_, err := db.DB.Exec(
-				"UPDATE entries SET closing = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
-				*closing, dayDate, productID, userID,
-			)
-			if err != nil {
-				return nil, err
-			}
+			sets = append(sets, "closing = ?")
+			args = append(args, *closing)
 		}
 	}
 	if price != nil {
-		if _, err := db.DB.Exec(
-			"UPDATE entries SET price = ?, updated_at = CURRENT_TIMESTAMP WHERE day_date = ? AND product_id = ? AND user_id = ?",
-			*price, dayDate, productID, userID,
-		); err != nil {
+		sets = append(sets, "price = ?")
+		args = append(args, *price)
+	}
+
+	if len(sets) > 0 {
+		sets = append(sets, "updated_at = CURRENT_TIMESTAMP")
+		q := fmt.Sprintf("UPDATE entries SET %s WHERE day_date = ? AND product_id = ? AND user_id = ?", strings.Join(sets, ", "))
+		args = append(args, dayDate, productID, userID)
+		if _, err := db.DB.Exec(q, args...); err != nil {
 			return nil, err
 		}
 	}

@@ -177,9 +177,7 @@ func ChangePassword(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "password changed"})
 }
 
-func Me(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(UserIDKey).(int64)
-
+func getUserProfile(userID int64) (*userResp, error) {
 	var id int64
 	var email, role string
 	var ownerID sql.NullInt64
@@ -188,12 +186,7 @@ func Me(w http.ResponseWriter, r *http.Request) {
 	var email2Name, email2Address, email3Name, email3Address sql.NullString
 	err := db.DB.QueryRow("SELECT id, email, role, owner_id, phone_number, notify_on_close, email_2_name, email_2_address, email_3_name, email_3_address FROM users WHERE id = ?", userID).Scan(&id, &email, &role, &ownerID, &phoneNumber, &notifyOnClose, &email2Name, &email2Address, &email3Name, &email3Address)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			http.Error(w, `{"error":"User account could not be found."}`, http.StatusNotFound)
-		} else {
-			http.Error(w, `{"error":"Unable to load user profile. Please try again."}`, http.StatusInternalServerError)
-		}
-		return
+		return nil, err
 	}
 
 	var pn *string
@@ -205,12 +198,20 @@ func Me(w http.ResponseWriter, r *http.Request) {
 		oid = &ownerID.Int64
 	}
 	var e2n, e2a, e3n, e3a *string
-	if email2Name.Valid { e2n = &email2Name.String }
-	if email2Address.Valid { e2a = &email2Address.String }
-	if email3Name.Valid { e3n = &email3Name.String }
-	if email3Address.Valid { e3a = &email3Address.String }
+	if email2Name.Valid {
+		e2n = &email2Name.String
+	}
+	if email2Address.Valid {
+		e2a = &email2Address.String
+	}
+	if email3Name.Valid {
+		e3n = &email3Name.String
+	}
+	if email3Address.Valid {
+		e3a = &email3Address.String
+	}
 
-	writeJSON(w, http.StatusOK, userResp{
+	return &userResp{
 		ID:            id,
 		Email:         email,
 		Role:          role,
@@ -221,7 +222,21 @@ func Me(w http.ResponseWriter, r *http.Request) {
 		Email2Address: e2a,
 		Email3Name:    e3n,
 		Email3Address: e3a,
-	})
+	}, nil
+}
+
+func Me(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(UserIDKey).(int64)
+	resp, err := getUserProfile(userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, `{"error":"User account could not be found."}`, http.StatusNotFound)
+		} else {
+			http.Error(w, `{"error":"Unable to load user profile. Please try again."}`, http.StatusInternalServerError)
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 type updateMeReq struct {
@@ -242,85 +257,69 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var sets []string
+	var args []interface{}
+
 	if req.PhoneNumber != nil {
-		var v any
+		sets = append(sets, "phone_number = ?")
 		if *req.PhoneNumber == "" {
-			v = nil
+			args = append(args, nil)
 		} else {
-			v = *req.PhoneNumber
-		}
-		if _, err := db.DB.Exec("UPDATE users SET phone_number = ? WHERE id = ?", v, userID); err != nil {
-			http.Error(w, `{"error":"Unable to update phone number. Please try again."}`, http.StatusInternalServerError)
-			return
+			args = append(args, *req.PhoneNumber)
 		}
 	}
 	if req.NotifyOnClose != nil {
+		sets = append(sets, "notify_on_close = ?")
 		v := 0
 		if *req.NotifyOnClose {
 			v = 1
 		}
-		if _, err := db.DB.Exec("UPDATE users SET notify_on_close = ? WHERE id = ?", v, userID); err != nil {
-			http.Error(w, `{"error":"Unable to update notification preference. Please try again."}`, http.StatusInternalServerError)
-			return
-		}
+		args = append(args, v)
 	}
 	if req.Email2Name != nil {
-		var v any
+		sets = append(sets, "email_2_name = ?")
 		if *req.Email2Name == "" {
-			v = nil
+			args = append(args, nil)
 		} else {
-			v = *req.Email2Name
-		}
-		if _, err := db.DB.Exec("UPDATE users SET email_2_name = ? WHERE id = ?", v, userID); err != nil {
-			http.Error(w, `{"error":"Unable to update secondary email name. Please try again."}`, http.StatusInternalServerError)
-			return
+			args = append(args, *req.Email2Name)
 		}
 	}
 	if req.Email2Address != nil {
-		var v any
+		sets = append(sets, "email_2_address = ?")
 		if *req.Email2Address == "" {
-			v = nil
+			args = append(args, nil)
 		} else {
-			v = *req.Email2Address
-		}
-		if _, err := db.DB.Exec("UPDATE users SET email_2_address = ? WHERE id = ?", v, userID); err != nil {
-			http.Error(w, `{"error":"Unable to update secondary email address. Please try again."}`, http.StatusInternalServerError)
-			return
+			args = append(args, *req.Email2Address)
 		}
 	}
 	if req.Email3Name != nil {
-		var v any
+		sets = append(sets, "email_3_name = ?")
 		if *req.Email3Name == "" {
-			v = nil
+			args = append(args, nil)
 		} else {
-			v = *req.Email3Name
-		}
-		if _, err := db.DB.Exec("UPDATE users SET email_3_name = ? WHERE id = ?", v, userID); err != nil {
-			http.Error(w, `{"error":"Unable to update third email name. Please try again."}`, http.StatusInternalServerError)
-			return
+			args = append(args, *req.Email3Name)
 		}
 	}
 	if req.Email3Address != nil {
-		var v any
+		sets = append(sets, "email_3_address = ?")
 		if *req.Email3Address == "" {
-			v = nil
+			args = append(args, nil)
 		} else {
-			v = *req.Email3Address
+			args = append(args, *req.Email3Address)
 		}
-		if _, err := db.DB.Exec("UPDATE users SET email_3_address = ? WHERE id = ?", v, userID); err != nil {
-			http.Error(w, `{"error":"Unable to update third email address. Please try again."}`, http.StatusInternalServerError)
+	}
+
+	if len(sets) > 0 {
+		q := fmt.Sprintf("UPDATE users SET %s WHERE id = ?", strings.Join(sets, ", "))
+		args = append(args, userID)
+		if _, err := db.DB.Exec(q, args...); err != nil {
+			http.Error(w, `{"error":"Unable to update user profile. Please try again."}`, http.StatusInternalServerError)
 			return
 		}
 	}
 
-	// Return updated user
-	var id int64
-	var email, role string
-	var ownerID sql.NullInt64
-	var phoneNumber sql.NullString
-	var notifyOnClose int
-	var email2Name, email2Address, email3Name, email3Address sql.NullString
-	if err := db.DB.QueryRow("SELECT id, email, role, owner_id, phone_number, notify_on_close, email_2_name, email_2_address, email_3_name, email_3_address FROM users WHERE id = ?", userID).Scan(&id, &email, &role, &ownerID, &phoneNumber, &notifyOnClose, &email2Name, &email2Address, &email3Name, &email3Address); err != nil {
+	resp, err := getUserProfile(userID)
+	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, `{"error":"User account could not be found."}`, http.StatusNotFound)
 		} else {
@@ -328,32 +327,7 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	var pn *string
-	if phoneNumber.Valid {
-		pn = &phoneNumber.String
-	}
-	var oid *int64
-	if ownerID.Valid {
-		oid = &ownerID.Int64
-	}
-	var e2n, e2a, e3n, e3a *string
-	if email2Name.Valid { e2n = &email2Name.String }
-	if email2Address.Valid { e2a = &email2Address.String }
-	if email3Name.Valid { e3n = &email3Name.String }
-	if email3Address.Valid { e3a = &email3Address.String }
-
-	writeJSON(w, http.StatusOK, userResp{
-		ID:            id,
-		Email:         email,
-		Role:          role,
-		OwnerID:       oid,
-		PhoneNumber:   pn,
-		NotifyOnClose: notifyOnClose != 0,
-		Email2Name:    e2n,
-		Email2Address: e2a,
-		Email3Name:    e3n,
-		Email3Address: e3a,
-	})
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {

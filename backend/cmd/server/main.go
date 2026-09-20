@@ -83,12 +83,14 @@ func main() {
 	// The global cache preload was removed because there is no user context at startup.
 
 	// Keep Turso connection warm — ping every 30s to prevent cold starts
-	go func() {
-		for {
-			time.Sleep(30 * time.Second)
-			db.DB.Exec("SELECT 1")
-		}
-	}()
+	if tursoURL != "" {
+		go func() {
+			for {
+				time.Sleep(30 * time.Second)
+				db.DB.Exec("SELECT 1")
+			}
+		}()
+	}
 
 	if *email != "" {
 		fmt.Print("Password: ")
@@ -148,6 +150,8 @@ func main() {
 
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
+	r.Use(chimw.Compress(5))
+	r.Use(chimw.Timeout(60 * time.Second))
 	allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
 	origins := []string{"http://localhost:5173", "http://localhost:4173", "http://localhost:3000"}
 	if allowedOrigin != "" {

@@ -36,10 +36,27 @@ func (rl *rateLimiter) allow(key string) (bool, time.Duration) {
 	if len(valid) >= rl.max {
 		oldest := valid[0]
 		retryAfter := rl.window - now.Sub(oldest)
+		rl.attempts[key] = valid
 		return false, retryAfter
 	}
 
 	rl.attempts[key] = append(valid, now)
+
+	// Clean up stale map keys periodically when map grows
+	if len(rl.attempts) > 100 {
+		for k, times := range rl.attempts {
+			var hasRecent bool
+			for _, t := range times {
+				if t.After(cutoff) {
+					hasRecent = true
+					break
+				}
+			}
+			if !hasRecent {
+				delete(rl.attempts, k)
+			}
+		}
+	}
 	return true, 0
 }
 

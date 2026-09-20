@@ -43,21 +43,6 @@ func (n *NullableInt) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type staffEntryResponse struct {
-	ID                 int64  `json:"id"`
-	DayDate            string `json:"day_date"`
-	ProductID          int64  `json:"product_id"`
-	ProductName        string `json:"product_name"`
-	Opening            int    `json:"opening"`
-	Receipts           int    `json:"receipts"`
-	Closing            *int   `json:"closing"`
-	EffectiveThreshold int    `json:"effective_threshold"`
-	CurrentStock       int    `json:"current_stock"`
-	IsLowStock         bool   `json:"is_low_stock"`
-	CreatedAt          string `json:"created_at"`
-	UpdatedAt          string `json:"updated_at"`
-}
-
 func TodayHandler(w http.ResponseWriter, r *http.Request) {
 	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
 	user := r.Context().Value(auth.UserKey).(auth.User)
@@ -81,44 +66,9 @@ func TodayHandler(w http.ResponseWriter, r *http.Request) {
 	var closedAt sql.NullString
 	db.DB.QueryRow("SELECT closed_at FROM days WHERE user_id = ? AND date = ?", scopeID, today).Scan(&closedAt)
 
-	type todayEntry struct {
-		ID                 int64   `json:"id"`
-		DayDate            string  `json:"day_date"`
-		ProductID          int64   `json:"product_id"`
-		ProductName        string  `json:"product_name"`
-		Opening            int     `json:"opening"`
-		Receipts           int     `json:"receipts"`
-		Closing            *int    `json:"closing"`
-		Price              int     `json:"price"`
-		EffectiveThreshold int     `json:"effective_threshold"`
-		CurrentStock       int     `json:"current_stock"`
-		IsLowStock         bool    `json:"is_low_stock"`
-		CreatedAt          string  `json:"created_at"`
-		UpdatedAt          string  `json:"updated_at"`
-	}
-
-	respEntries := make([]todayEntry, 0, len(entries))
-	for _, e := range entries {
-		respEntries = append(respEntries, todayEntry{
-			ID:                 e.ID,
-			DayDate:            e.DayDate,
-			ProductID:          e.ProductID,
-			ProductName:        e.ProductName,
-			Opening:            e.Opening,
-			Receipts:           e.Receipts,
-			Closing:            e.Closing,
-			Price:              e.Price,
-			EffectiveThreshold: e.EffectiveThreshold,
-			CurrentStock:       e.CurrentStock,
-			IsLowStock:         e.IsLowStock,
-			CreatedAt:          e.CreatedAt,
-			UpdatedAt:          e.UpdatedAt,
-		})
-	}
-
 	type todayResponse struct {
-		Entries  []todayEntry `json:"entries"`
-		ClosedAt *string      `json:"closed_at"`
+		Entries  []EntryWithProduct `json:"entries"`
+		ClosedAt *string            `json:"closed_at"`
 	}
 
 	var closedAtPtr *string
@@ -126,7 +76,7 @@ func TodayHandler(w http.ResponseWriter, r *http.Request) {
 		closedAtPtr = &closedAt.String
 	}
 
-	resp := todayResponse{Entries: respEntries, ClosedAt: closedAtPtr}
+	resp := todayResponse{Entries: entries, ClosedAt: closedAtPtr}
 	if !isStaff {
 		cache.Set(ck, resp)
 	}

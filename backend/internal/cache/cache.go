@@ -94,17 +94,11 @@ func Set(key string, v interface{}) error {
 }
 
 func Invalidate(keys ...string) {
-	Default.mu.Lock()
-	defer Default.mu.Unlock()
-	for _, key := range keys {
-		delete(Default.items, key)
-	}
+	Default.Invalidate(keys...)
 }
 
 func InvalidateAll() {
-	Default.mu.Lock()
-	defer Default.mu.Unlock()
-	Default.items = make(map[string]*entry)
+	Default.InvalidateAll()
 }
 
 func Keys() []string {
