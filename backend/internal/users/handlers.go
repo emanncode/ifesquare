@@ -29,7 +29,7 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 		scopeID, scopeID,
 	)
 	if err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to load staff accounts. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -39,7 +39,7 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 		var u staffUserResp
 		var active int
 		if err := rows.Scan(&u.ID, &u.Email, &u.Role, &active); err != nil {
-			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to load staff accounts. Please try again."}`, http.StatusInternalServerError)
 			return
 		}
 		u.Active = active == 1
@@ -60,23 +60,23 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"The request format is invalid. Please check user details and try again."}`, http.StatusBadRequest)
 		return
 	}
 
 	req.Email = emailLower(req.Email)
 	if req.Email == "" || req.Password == "" {
-		http.Error(w, `{"error":"email and password are required"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Please provide both an email address and a password."}`, http.StatusBadRequest)
 		return
 	}
 	if len(req.Password) < 6 {
-		http.Error(w, `{"error":"password too short (min 6 characters)"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Password must be at least 6 characters long."}`, http.StatusBadRequest)
 		return
 	}
 
 	hash, err := auth.HashPassword(req.Password)
 	if err != nil {
-		http.Error(w, `{"error":"could not hash password"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to secure password. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -86,10 +86,10 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		if isDuplicate(err) {
-			http.Error(w, `{"error":"email already in use"}`, http.StatusConflict)
+			http.Error(w, `{"error":"An account with this email address already exists."}`, http.StatusConflict)
 			return
 		}
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to create staff user account. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -116,7 +116,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		http.Error(w, `{"error":"invalid id"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Invalid staff user ID."}`, http.StatusBadRequest)
 		return
 	}
 
@@ -124,11 +124,11 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		Active *bool `json:"active"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"The request format is invalid. Please check your inputs and try again."}`, http.StatusBadRequest)
 		return
 	}
 	if req.Active == nil {
-		http.Error(w, `{"error":"active field is required"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Account active status is required."}`, http.StatusBadRequest)
 		return
 	}
 
@@ -142,12 +142,12 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request) {
 		activeInt, id, scopeID,
 	)
 	if err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to update staff user account. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {
-		http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
+		http.Error(w, `{"error":"Staff user could not be found."}`, http.StatusNotFound)
 		return
 	}
 
