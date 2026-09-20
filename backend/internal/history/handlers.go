@@ -35,7 +35,7 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 
 	days, err := ListClosedDays(limit, scopeID)
 	if err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to load history records. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	if days == nil {
@@ -49,7 +49,7 @@ func GetByDateHandler(w http.ResponseWriter, r *http.Request) {
 	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
 	date := chi.URLParam(r, "date")
 	if date == "" {
-		http.Error(w, `{"error":"date required"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Date is required."}`, http.StatusBadRequest)
 		return
 	}
 
@@ -60,7 +60,7 @@ func GetByDateHandler(w http.ResponseWriter, r *http.Request) {
 
 	entries, err := GetByDate(date, scopeID)
 	if err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to load records for the selected date. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	if entries == nil {
@@ -120,13 +120,13 @@ func ExportCSVHandler(w http.ResponseWriter, r *http.Request) {
 	scopeID := r.Context().Value(auth.ScopeIDKey).(int64)
 	date := chi.URLParam(r, "date")
 	if date == "" {
-		http.Error(w, `{"error":"date required"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Date is required."}`, http.StatusBadRequest)
 		return
 	}
 
 	entries, err := GetByDate(date, scopeID)
 	if err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to load export records. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -173,7 +173,7 @@ func ExportCSVHandler(w http.ResponseWriter, r *http.Request) {
 
 	wr.Flush()
 	if err := wr.Error(); err != nil {
-		http.Error(w, `{"error":"csv write error"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to generate CSV export file. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 }

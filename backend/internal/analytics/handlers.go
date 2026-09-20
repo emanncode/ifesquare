@@ -29,7 +29,7 @@ func MonthlyComparisonHandler(w http.ResponseWriter, r *http.Request) {
 
 	result, err := computeMonthlyComparison(currentFrom, currentTo, previousFrom, previousTo, scopeID)
 	if err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to compute monthly comparison analytics. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 

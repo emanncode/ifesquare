@@ -53,7 +53,7 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.DB.Query(q, args...)
 	if err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to load activity logs. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -62,7 +62,7 @@ func ListHandler(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var e AuditEntry
 		if err := rows.Scan(&e.ID, &e.ScopeID, &e.UserID, &e.Action, &e.EntityType, &e.EntityID, &e.Before, &e.After, &e.CreatedAt); err != nil {
-			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to load activity logs. Please try again."}`, http.StatusInternalServerError)
 			return
 		}
 		entries = append(entries, e)
