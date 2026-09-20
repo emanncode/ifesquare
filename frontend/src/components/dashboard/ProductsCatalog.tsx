@@ -109,10 +109,7 @@ export function ProductsCatalog({ importProgress }: { importProgress?: ImportPro
   }, [rows, lowStockOnly, query])
   const sorted = useMemo(() => sortRows(filteredRows, sortKey, sortDir), [filteredRows, sortKey, sortDir])
 
-  const visibleSelectedIds = useMemo(
-    () => selectedIds.filter((id) => sorted.some((r) => r.productId === id)),
-    [selectedIds, sorted],
-  )
+  const visibleSelectedIds = selectedIds.filter((id) => sorted.some((r) => r.productId === id))
 
   function toggleSort(key: SortKey) {
     if (key === sortKey) {

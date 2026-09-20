@@ -40,10 +40,13 @@ export function usePrefetch() {
   }, [prefetchDashboard, prefetchProducts, prefetchHistory])
 
   const scheduleIdle = useCallback((fn: () => void) => {
-    if ("requestIdleCallback" in window) {
-      raf.current = (window as any).requestIdleCallback(fn, { timeout: 2000 })
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const win = window as Window & {
+        requestIdleCallback: (callback: () => void, options?: { timeout: number }) => number
+      }
+      raf.current = win.requestIdleCallback(fn, { timeout: 2000 })
     } else {
-      raf.current = (window as any).setTimeout(fn, 0)
+      raf.current = globalThis.setTimeout(fn, 0)
     }
   }, [])
 

@@ -32,13 +32,17 @@ function getStoredLoginTime(): number | null {
 function setStoredLoginTime() {
   try {
     localStorage.setItem(SESSION_KEY, String(Date.now()))
-  } catch {}
+  } catch {
+    // Ignore localStorage write errors (e.g. private mode quota)
+  }
 }
 
 function clearStoredLoginTime() {
   try {
     localStorage.removeItem(SESSION_KEY)
-  } catch {}
+  } catch {
+    // Ignore localStorage access errors
+  }
 }
 
 function isSessionExpired(): boolean {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, Users, History, UserCircle, Menu } from "lucide-react";
 import { Tabs } from "@/components/ui/Tabs";
@@ -227,7 +227,7 @@ function UsersTab() {
   const [creating, setCreating] = useState(false);
   const { toast } = useToast();
 
-  async function loadUsers() {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
       const data = await api<StaffUser[]>("/api/users");
@@ -237,22 +237,27 @@ function UsersTab() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [toast]);
 
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
-      try {
-        const data = await api<StaffUser[]>("/api/users");
+    api<StaffUser[]>("/api/users")
+      .then((data) => {
         if (!cancelled) setUsers(data ?? []);
-      } catch (err) {
-        if (!cancelled) toast(errorMessage(err, "Unable to load staff accounts. Please reload the page."));
-      } finally {
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          toast(errorMessage(err, "Unable to load staff accounts. Please reload the page."));
+        }
+      })
+      .finally(() => {
         if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [toast]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -396,7 +401,7 @@ function ActivityTab() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [toast]);
 
   const formatAction = (action: string) => {
     switch (action) {
