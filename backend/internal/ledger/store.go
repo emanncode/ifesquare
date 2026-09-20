@@ -257,7 +257,7 @@ func SyncFromLastClosedDay(today string, userID int64) (string, error) {
 		LIMIT 1
 	`, today, userID).Scan(&prevDate)
 	if err == sql.ErrNoRows {
-		return "", fmt.Errorf("no previous closed day found")
+		return "", fmt.Errorf("No previous closed day was found to sync from.")
 	}
 	if err != nil {
 		return "", err
@@ -271,7 +271,7 @@ func SyncFromLastClosedDay(today string, userID int64) (string, error) {
 		return "", err
 	}
 	if hasData > 0 {
-		return "", fmt.Errorf("today already has entries with data; sync only works on a fresh day")
+		return "", fmt.Errorf("Today already has stock entries recorded. Sync only works on a fresh day.")
 	}
 
 	_, err = db.DB.Exec("INSERT OR IGNORE INTO days (user_id, date) VALUES (?, ?)", userID, today)

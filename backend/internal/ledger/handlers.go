@@ -70,7 +70,7 @@ func TodayHandler(w http.ResponseWriter, r *http.Request) {
 
 	entries, err := GetTodayEntries(scopeID)
 	if err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to load today's records. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	if entries == nil {
@@ -139,7 +139,7 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 	productIDStr := chi.URLParam(r, "productId")
 	productID, err := strconv.ParseInt(productIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, `{"error":"invalid product id"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Invalid product ID."}`, http.StatusBadRequest)
 		return
 	}
 
@@ -150,31 +150,31 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 		Price    *int        `json:"price"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"The request format is invalid. Please check your inputs and try again."}`, http.StatusBadRequest)
 		return
 	}
 
 	if user.Role == "staff" {
 		if body.Price != nil || body.Opening != nil {
-			http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+			http.Error(w, `{"error":"You do not have permission to modify price or opening stock."}`, http.StatusForbidden)
 			return
 		}
 	}
 
 	if body.Opening != nil && *body.Opening < 0 {
-		http.Error(w, `{"error":"opening cannot be negative"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Opening stock cannot be a negative number."}`, http.StatusBadRequest)
 		return
 	}
 	if body.Receipts != nil && *body.Receipts < 0 {
-		http.Error(w, `{"error":"receipts cannot be negative"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Receipts cannot be a negative number."}`, http.StatusBadRequest)
 		return
 	}
 	if body.Closing.Set && body.Closing.Val != nil && *body.Closing.Val < 0 {
-		http.Error(w, `{"error":"closing cannot be negative"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Closing stock cannot be a negative number."}`, http.StatusBadRequest)
 		return
 	}
 	if body.Price != nil && *body.Price < 0 {
-		http.Error(w, `{"error":"price cannot be negative"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Price cannot be a negative number."}`, http.StatusBadRequest)
 		return
 	}
 
@@ -183,7 +183,7 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 	if body.Closing.Set && body.Closing.Val != nil {
 		current, err := getEntry(today, productID, scopeID)
 		if err != nil {
-			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to verify current stock levels. Please try again."}`, http.StatusInternalServerError)
 			return
 		}
 		if current != nil {
@@ -197,7 +197,7 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			total := opening + receipts
 			if *body.Closing.Val > total {
-				http.Error(w, `{"error":"closing cannot exceed total (opening + receipts)"}`, http.StatusBadRequest)
+				http.Error(w, `{"error":"Closing stock cannot exceed total stock (opening + receipts)."}`, http.StatusBadRequest)
 				return
 			}
 		}
@@ -207,11 +207,11 @@ func UpdateTodayEntryHandler(w http.ResponseWriter, r *http.Request) {
 
 	entry, err := UpdateEntry(today, productID, scopeID, body.Opening, body.Receipts, body.Closing.Val, body.Price, body.Closing.Set)
 	if err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to update record. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	if entry == nil {
-		http.Error(w, `{"error":"entry not found"}`, http.StatusNotFound)
+		http.Error(w, `{"error":"Record not found."}`, http.StatusNotFound)
 		return
 	}
 
@@ -233,7 +233,7 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 	productIDStr := chi.URLParam(r, "productId")
 	productID, err := strconv.ParseInt(productIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, `{"error":"invalid product id"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Invalid product ID."}`, http.StatusBadRequest)
 		return
 	}
 
@@ -244,31 +244,31 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 		Price    *int        `json:"price"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"The request format is invalid. Please check your inputs and try again."}`, http.StatusBadRequest)
 		return
 	}
 
 	if body.Opening != nil && *body.Opening < 0 {
-		http.Error(w, `{"error":"opening cannot be negative"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Opening stock cannot be a negative number."}`, http.StatusBadRequest)
 		return
 	}
 	if body.Receipts != nil && *body.Receipts < 0 {
-		http.Error(w, `{"error":"receipts cannot be negative"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Receipts cannot be a negative number."}`, http.StatusBadRequest)
 		return
 	}
 	if body.Closing.Set && body.Closing.Val != nil && *body.Closing.Val < 0 {
-		http.Error(w, `{"error":"closing cannot be negative"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Closing stock cannot be a negative number."}`, http.StatusBadRequest)
 		return
 	}
 	if body.Price != nil && *body.Price < 0 {
-		http.Error(w, `{"error":"price cannot be negative"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Price cannot be a negative number."}`, http.StatusBadRequest)
 		return
 	}
 
 	if body.Closing.Set && body.Closing.Val != nil {
 		current, err := getEntry(date, productID, scopeID)
 		if err != nil {
-			http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to verify current stock levels. Please try again."}`, http.StatusInternalServerError)
 			return
 		}
 		if current != nil {
@@ -282,7 +282,7 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			total := opening + receipts
 			if *body.Closing.Val > total {
-				http.Error(w, `{"error":"closing cannot exceed total (opening + receipts)"}`, http.StatusBadRequest)
+				http.Error(w, `{"error":"Closing stock cannot exceed total stock (opening + receipts)."}`, http.StatusBadRequest)
 				return
 			}
 		}
@@ -292,11 +292,11 @@ func UpdateEntryHandler(w http.ResponseWriter, r *http.Request) {
 
 	entry, err := UpdateEntry(date, productID, scopeID, body.Opening, body.Receipts, body.Closing.Val, body.Price, body.Closing.Set)
 	if err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to update record. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	if entry == nil {
-		http.Error(w, `{"error":"entry not found"}`, http.StatusNotFound)
+		http.Error(w, `{"error":"Record not found."}`, http.StatusNotFound)
 		return
 	}
 
@@ -317,7 +317,7 @@ func CloseHandler(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(auth.UserKey).(auth.User)
 	today := getToday()
 	if err := CloseDay(today, scopeID); err != nil {
-		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to close the business day. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -342,7 +342,7 @@ func SendSummaryHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req sendSummaryReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"The request format is invalid. Please check your inputs and try again."}`, http.StatusBadRequest)
 		return
 	}
 
@@ -351,7 +351,7 @@ func SendSummaryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(req.Recipients) == 0 {
-		http.Error(w, `{"error":"no recipients provided"}`, http.StatusBadRequest)
+		http.Error(w, `{"error":"Please provide at least one recipient email address."}`, http.StatusBadRequest)
 		return
 	}
 
@@ -363,7 +363,7 @@ func SendSummaryHandler(w http.ResponseWriter, r *http.Request) {
 	`, req.Date, scopeID)
 	if err != nil {
 		sentry.CaptureException(fmt.Errorf("notify: query entries: %w", err))
-		http.Error(w, `{"error":"failed to query entries"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to load today's records for email summary. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -380,7 +380,7 @@ func SendSummaryHandler(w http.ResponseWriter, r *http.Request) {
 		var lowStockThreshold sql.NullInt64
 		if err := rows.Scan(&opening, &receipts, &closing, &price, &name, &lowStockThreshold); err != nil {
 			sentry.CaptureException(fmt.Errorf("notify: scan entry: %w", err))
-			http.Error(w, `{"error":"failed to scan entry"}`, http.StatusInternalServerError)
+			http.Error(w, `{"error":"Unable to process stock records for email summary. Please try again."}`, http.StatusInternalServerError)
 			return
 		}
 
@@ -409,7 +409,7 @@ func SendSummaryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := rows.Err(); err != nil {
 		sentry.CaptureException(fmt.Errorf("notify: rows iter: %w", err))
-		http.Error(w, `{"error":"failed to iterate rows"}`, http.StatusInternalServerError)
+		http.Error(w, `{"error":"Unable to complete summary generation. Please try again."}`, http.StatusInternalServerError)
 		return
 	}
 
@@ -417,17 +417,15 @@ func SendSummaryHandler(w http.ResponseWriter, r *http.Request) {
 	subject := fmt.Sprintf("Ifesquare: Day Closed Summary - %s", req.Date)
 
 	var failed []string
-	var lastErr error
 	for _, recipient := range req.Recipients {
 		if err := notify.SendEmail(recipient, subject, msg); err != nil {
 			sentry.CaptureException(fmt.Errorf("notify: send email to %s: %w", recipient, err))
 			failed = append(failed, recipient)
-			lastErr = err
 		}
 	}
 
 	if len(failed) > 0 {
-		errMsg := fmt.Sprintf("Failed to send email to: %s. error: %v", strings.Join(failed, ", "), lastErr)
+		errMsg := fmt.Sprintf("Unable to send summary email to: %s. Please try again.", strings.Join(failed, ", "))
 		http.Error(w, `{"error":"`+errMsg+`"}`, http.StatusInternalServerError)
 		return
 	}
