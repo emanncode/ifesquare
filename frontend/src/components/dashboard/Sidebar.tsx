@@ -1,6 +1,6 @@
 import { useContext, useEffect } from "react";
 import { LayoutGroup, motion } from "framer-motion";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { BookOpen, Package, History, LogOut, X, AlertTriangle, Settings } from "lucide-react";
 import { usePendingSync } from "@/hooks/usePendingSync";
 import { usePrefetch } from "@/hooks/usePrefetch";
@@ -30,19 +30,19 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
     "/app": prefetchDashboard,
     "/app/products": prefetchProducts,
     "/app/history": prefetchHistory,
-    "/app/settings": () => {},
+    "/app/settings": () => { },
   }
 
   const navItems = isStaff
     ? [
-        { label: "Today's ledger", icon: BookOpen, to: "/app", end: true },
-      ] as const
+      { label: "Today's ledger", icon: BookOpen, to: "/app", end: true },
+    ] as const
     : [
-        { label: "Today's ledger", icon: BookOpen, to: "/app", end: true },
-        { label: "Products", icon: Package, to: "/app/products", end: false },
-        { label: "History", icon: History, to: "/app/history", end: false },
-        { label: "Settings", icon: Settings, to: "/app/settings", end: false },
-      ] as const;
+      { label: "Today's ledger", icon: BookOpen, to: "/app", end: true },
+      { label: "Products", icon: Package, to: "/app/products", end: false },
+      { label: "History", icon: History, to: "/app/history", end: false },
+      { label: "Settings", icon: Settings, to: "/app/settings", end: false },
+    ] as const;
 
   // Close the mobile drawer after navigation
   useEffect(() => {
@@ -97,8 +97,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         )}
       >
         <div className="mb-10 flex shrink-0 items-center justify-between gap-2 px-2">
-          <NavLink
-            to="/app"
+          <div
             onClick={onClose}
             className="flex min-w-0 items-center gap-2.5"
           >
@@ -106,7 +105,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             <span className="truncate text-xl font-bold tracking-tight text-foreground">
               Ifesquare
             </span>
-          </NavLink>
+          </div>
           {onClose && (
             <Button
               type="button"
