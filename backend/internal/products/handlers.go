@@ -128,6 +128,8 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 
 	var createdProducts []*Product
 
+	var auditFuncs []func()
+
 	for _, p := range inputs {
 		threshold := 12
 		if p.LowStockThreshold != nil {
@@ -169,16 +171,23 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 			createdProducts = append(createdProducts, &cp)
 		}
 
-		if err := audit_log.Write(scopeID, user.ID, "create", "product", strconv.FormatInt(productID, 10), nil,
-			map[string]interface{}{"name": p.Name, "price": p.Price, "stock": p.Opening},
-		); err != nil {
-			// non-fatal
-		}
+		// Save the audit log to run after transaction commits
+		auditFuncs = append(auditFuncs, func(pid int64, name string, price, stock int) func() {
+			return func() {
+				_ = audit_log.Write(scopeID, user.ID, "create", "product", strconv.FormatInt(pid, 10), nil,
+					map[string]interface{}{"name": name, "price": price, "stock": stock},
+				)
+			}
+		}(productID, p.Name, p.Price, p.Opening))
 	}
 
 	if err := tx.Commit(); err != nil {
 		http.Error(w, `{"error":"Unable to complete saving products. Please try again."}`, http.StatusInternalServerError)
 		return
+	}
+
+	for _, fn := range auditFuncs {
+		fn()
 	}
 
 	ck := cacheKey(scopeID, "/api/products")
