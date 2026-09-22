@@ -109,6 +109,7 @@ func GetByDateHandler(w http.ResponseWriter, r *http.Request) {
 	result := map[string]interface{}{
 		"date":          date,
 		"entries":       out,
+		"total_amount":  totalRevenue,
 		"total_revenue": totalRevenue,
 		"total_units":   totalUnits,
 	}
@@ -169,7 +170,7 @@ func ExportCSVHandler(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	wr.Write([]string{"Total", "", "", "", "", fmt.Sprintf("%d", totalUnits), "", fmt.Sprintf("%d", totalRevenue)})
+	wr.Write([]string{"Total Amount", "", "", "", "", fmt.Sprintf("%d", totalUnits), "", fmt.Sprintf("%d", totalRevenue)})
 
 	wr.Flush()
 	if err := wr.Error(); err != nil {
