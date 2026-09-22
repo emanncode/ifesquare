@@ -471,20 +471,31 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 	today := db.GetToday()
 	tx.Exec("INSERT OR IGNORE INTO days (user_id, date) VALUES (?, ?)", scopeID, today)
 
-	// Batch-load existing product names and prices in one query.
-	// Two products may share a name as long as their prices differ, so a row
-	// only counts as a duplicate when both name and price match an existing product.
-	existing := make(map[string]map[int]bool)
-	if nameRows, err := tx.Query("SELECT name, price FROM products WHERE user_id = ? AND archived_at IS NULL", scopeID); err == nil {
+	// Batch-load existing product names, prices, opening, and closing in one query.
+	// Two products may share a name as long as their price, opening, or closing stock differ.
+	// A row only counts as a duplicate when name, price, opening, and closing all match.
+	type productSignature struct {
+		price   int
+		opening int
+		closing int
+	}
+
+	existing := make(map[string]map[productSignature]bool)
+	if nameRows, err := tx.Query(`
+		SELECT p.name, p.price, COALESCE(e.opening, p.stock), COALESCE(e.closing, -1)
+		FROM products p
+		LEFT JOIN entries e ON e.product_id = p.id AND e.day_date = ? AND e.user_id = p.user_id
+		WHERE p.user_id = ? AND p.archived_at IS NULL
+	`, today, scopeID); err == nil {
 		defer nameRows.Close()
 		for nameRows.Next() {
 			var n string
-			var p int
-			if nameRows.Scan(&n, &p) == nil {
+			var p, op, cl int
+			if nameRows.Scan(&n, &p, &op, &cl) == nil {
 				if existing[n] == nil {
-					existing[n] = make(map[int]bool)
+					existing[n] = make(map[productSignature]bool)
 				}
-				existing[n][p] = true
+				existing[n][productSignature{price: p, opening: op, closing: cl}] = true
 			}
 		}
 		nameRows.Close()
@@ -507,7 +518,7 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 	var products []pendingProduct
 	var entries []pendingEntry
 	var importErrors []string
-	seen := make(map[string]map[int]int)
+	seen := make(map[string]map[productSignature]int)
 
 	for i, row := range records[1:] {
 		if len(row) < 6 {
@@ -559,28 +570,30 @@ func ImportHandler(w http.ResponseWriter, r *http.Request) {
 			lowStockThreshold = t
 		}
 
-		// Two rows are only duplicates when name AND price match, so products
-		// that share a name but differ in price are both imported.
-		if existing[name] == nil {
-			existing[name] = make(map[int]bool)
-		}
-		if existing[name][price] {
-			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – '%s' with price %d is already in your product list", i+2, name, price))
+		sig := productSignature{price: price, opening: opening, closing: closing}
+
+		// Two rows are only duplicates when name, price, opening, AND closing all match.
+		// Products that share a name but differ in price, opening, or closing are all imported.
+		if existing[name] != nil && existing[name][sig] {
+			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – '%s' with price %d, opening %d, and closing %d is already in your product list", i+2, name, price, opening, closing))
 			continue
 		}
 		if seen[name] == nil {
-			seen[name] = make(map[int]int)
+			seen[name] = make(map[productSignature]int)
 		}
-		if prevRow, ok := seen[name][price]; ok {
-			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – '%s' with price %d already appears in your CSV (first at row %d)", i+2, name, price, prevRow))
+		if prevRow, ok := seen[name][sig]; ok {
+			importErrors = append(importErrors, fmt.Sprintf("row %d: skipped – '%s' with price %d, opening %d, and closing %d already appears in your CSV (first at row %d)", i+2, name, price, opening, closing, prevRow))
 			continue
 		}
-		seen[name][price] = i + 2
+		seen[name][sig] = i + 2
 
 		idx := len(products)
 		products = append(products, pendingProduct{name, price, opening, lowStockThreshold})
 		entries = append(entries, pendingEntry{idx, opening, receipts, closing, price})
-		existing[name][price] = true
+		if existing[name] == nil {
+			existing[name] = make(map[productSignature]bool)
+		}
+		existing[name][sig] = true
 	}
 
 	const chunkSize = 100
