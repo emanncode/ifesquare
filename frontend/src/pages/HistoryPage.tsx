@@ -105,20 +105,9 @@ export default function HistoryPage() {
     // Optimistically update local details and calculations instantly
     setDetail((prev) => {
       if (!prev) return prev
-      let updatedTotalUnits = 0
-      let updatedTotalRevenue = 0
 
       const nextEntries = prev.entries.map((e) => {
-        if (e.product_id !== productId) {
-          const t = e.opening + e.receipts
-          const c = e.closing
-          if (c != null && c >= 0) {
-            const s = Math.max(0, t - c)
-            updatedTotalUnits += s
-            updatedTotalRevenue += s * e.price
-          }
-          return e
-        }
+        if (e.product_id !== productId) return e
 
         const nextEntry = { ...e }
         if (field === "opening") nextEntry.opening = value ?? 0
@@ -134,8 +123,6 @@ export default function HistoryPage() {
           const s = Math.max(0, t - c)
           nextEntry.sales = s
           nextEntry.amount = s * nextEntry.price
-          updatedTotalUnits += s
-          updatedTotalRevenue += s * nextEntry.price
         } else {
           nextEntry.sales = null
           nextEntry.amount = null
@@ -144,6 +131,9 @@ export default function HistoryPage() {
         return nextEntry
       })
 
+      const updatedTotalAmount = nextEntries.reduce((s, r) => s + (r.amount ?? 0), 0)
+      const updatedTotalUnits = nextEntries.reduce((s, r) => s + (r.sales ?? 0), 0)
+
       // Optimistically update left panel days list totals
       setDays((prevDaysList) =>
         prevDaysList.map((d) => {
@@ -151,7 +141,8 @@ export default function HistoryPage() {
           return {
             ...d,
             total_units: updatedTotalUnits,
-            total_revenue: updatedTotalRevenue,
+            total_amount: updatedTotalAmount,
+            total_revenue: updatedTotalAmount,
           }
         })
       )
@@ -160,7 +151,8 @@ export default function HistoryPage() {
         ...prev,
         entries: nextEntries,
         total_units: updatedTotalUnits,
-        total_revenue: updatedTotalRevenue,
+        total_amount: updatedTotalAmount,
+        total_revenue: updatedTotalAmount,
       }
     })
 
@@ -264,8 +256,11 @@ export default function HistoryPage() {
                       </p>
                     </div>
                     <div className="text-right">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                        Total amount
+                      </p>
                       <p className="font-bold text-primary">
-                        {nairaFmt(d.total_revenue)}
+                        {nairaFmt(d.total_amount ?? d.total_revenue)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {fmtInt(d.total_units)} units
@@ -305,9 +300,9 @@ export default function HistoryPage() {
           )}
         </div>
       )}
-      </motion.div>
-    )
-  }
+    </motion.div>
+  )
+}
 
 
 

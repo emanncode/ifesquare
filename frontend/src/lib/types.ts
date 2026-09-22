@@ -51,6 +51,7 @@ export type TodayResponse = {
 export type ApiHistoryDaySummary = {
   date: string
   closed_at: string
+  total_amount?: number
   total_revenue: number
   total_units: number
 }
@@ -65,6 +66,7 @@ export type ApiHistoryDayDetail = {
       amount: number | null
     }
   >
+  total_amount?: number
   total_revenue: number
   total_units: number
 }
