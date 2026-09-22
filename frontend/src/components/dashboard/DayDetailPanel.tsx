@@ -130,7 +130,7 @@ export function DayDetailPanel({
                   <a href="/app/products" className="underline hover:text-foreground">Products</a> page.
                 </p>
               )}
-            <table className="w-full min-w-[560px] border-collapse text-sm">
+              <table className="w-full min-w-140 border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
                     <th className="px-2 py-2 text-left font-semibold">Product</th>
