@@ -35,11 +35,14 @@ export default function LandingPage() {
               Ifesquare
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <ThemeToggle />
-            <Button asChild size="sm" className="h-10 rounded-full px-4">
-              <Link to="/login">
-                Sign in
+            <Button asChild variant="ghost" size="sm" className="h-9 px-3">
+              <Link to="/login">Sign in</Link>
+            </Button>
+            <Button asChild size="sm" className="h-9 rounded-full px-4">
+              <Link to="/register">
+                Get Started
                 <ArrowRight className="size-4" />
               </Link>
             </Button>

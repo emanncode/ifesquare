@@ -162,6 +162,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const register = useCallback(
+    async (email: string, password: string, storeName: string, phoneNumber: string) => {
+      try {
+        const user = await api<User>("/api/auth/register", {
+          method: "POST",
+          body: { email, password, store_name: storeName, phone_number: phoneNumber },
+        })
+        setStoredLoginTime()
+        setState({ user, loading: false, error: null })
+        return user
+      } catch (err) {
+        const message = errorMessage(err, "Unable to register your account. Please try again.")
+        setState((s) => ({ ...s, error: message }))
+        throw new Error(message, { cause: err })
+      }
+    },
+    [],
+  )
+
   const logout = useCallback(async () => {
     try {
       await api("/api/auth/logout", { method: "POST" })
@@ -178,10 +197,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error: state.error,
       isAuthenticated: state.user !== null,
       login,
+      register,
       logout,
       refresh,
     }),
-    [state.user, state.loading, state.error, login, logout, refresh],
+    [state.user, state.loading, state.error, login, register, logout, refresh],
   )
 
   return createElement(AuthContext.Provider, { value }, children)

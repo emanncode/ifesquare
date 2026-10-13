@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth"
 
 const ComingSoonPage = lazy(() => import("@/pages/ComingSoonPage"))
 const LoginPage = lazy(() => import("@/pages/LoginPage"))
+const RegisterPage = lazy(() => import("@/pages/RegisterPage"))
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"))
 const HistoryPage = lazy(() => import("@/pages/HistoryPage"))
 const ProductsPage = lazy(() => import("@/pages/ProductsPage"))
@@ -29,7 +30,7 @@ function StaffRouteGuard({ children }: { children: React.ReactNode }) {
 }
 
 export function AppRoutes() {
-  const { loading, login, isAuthenticated } = useAuth()
+  const { loading, login, register, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -58,6 +59,23 @@ export function AppRoutes() {
                 <LoginPage
                   onSubmit={async (email, password) => {
                     await login(email, password)
+                    navigate("/app", { replace: true })
+                  }}
+                />
+              </Suspense>
+            )
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/app" replace />
+            ) : (
+              <Suspense fallback={<PageLoader />}>
+                <RegisterPage
+                  onSubmit={async (email, password, storeName, phoneNumber) => {
+                    await register(email, password, storeName, phoneNumber)
                     navigate("/app", { replace: true })
                   }}
                 />

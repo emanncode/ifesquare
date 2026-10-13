@@ -1,7 +1,8 @@
 import { useMemo, useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Wallet, Package, Cylinder, AlertTriangle, Loader2 } from "lucide-react"
+import { Wallet, Package, Cylinder, AlertTriangle, Loader2, Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader"
 import { MetricCard } from "@/components/dashboard/MetricCard"
 import { MonthComparisonCard } from "@/components/dashboard/MonthComparisonCard"
@@ -201,6 +202,23 @@ export default function DashboardPage() {
       {!isStaff && monthlyComparison && (
         <div className="mb-6">
           <MonthComparisonCard data={monthlyComparison} />
+        </div>
+      )}
+
+      {!isStaff && rows.length === 0 && (
+        <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 p-6 sm:flex sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Welcome to your Ifesquare Ledger!</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              You don&apos;t have any products in today&apos;s inventory yet. Add your products or import a CSV catalog to start recording today&apos;s counts.
+            </p>
+          </div>
+          <div className="mt-4 sm:mt-0 sm:ml-6 flex items-center gap-3 shrink-0">
+            <Button onClick={() => navigate("/app/products")} className="h-9">
+              <Plus className="mr-1.5 size-4" />
+              Add Products
+            </Button>
+          </div>
         </div>
       )}
 

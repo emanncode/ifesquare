@@ -5,6 +5,7 @@ export type User = {
   email: string;
   role: "owner" | "staff";
   owner_id: number | null;
+  store_name?: string | null;
   phone_number: string | null;
   notify_on_close: boolean;
   email_2_name: string | null;

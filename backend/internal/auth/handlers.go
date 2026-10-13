@@ -21,6 +21,7 @@ type userResp struct {
 	Email         string  `json:"email"`
 	Role          string  `json:"role"`
 	OwnerID       *int64  `json:"owner_id"`
+	StoreName     *string `json:"store_name,omitempty"`
 	PhoneNumber   *string `json:"phone_number"`
 	NotifyOnClose bool    `json:"notify_on_close"`
 	Email2Name    *string `json:"email_2_name"`
@@ -181,14 +182,18 @@ func getUserProfile(userID int64) (*userResp, error) {
 	var id int64
 	var email, role string
 	var ownerID sql.NullInt64
-	var phoneNumber sql.NullString
+	var storeName, phoneNumber sql.NullString
 	var notifyOnClose int
 	var email2Name, email2Address, email3Name, email3Address sql.NullString
-	err := db.DB.QueryRow("SELECT id, email, role, owner_id, phone_number, notify_on_close, email_2_name, email_2_address, email_3_name, email_3_address FROM users WHERE id = ?", userID).Scan(&id, &email, &role, &ownerID, &phoneNumber, &notifyOnClose, &email2Name, &email2Address, &email3Name, &email3Address)
+	err := db.DB.QueryRow("SELECT id, email, role, owner_id, store_name, phone_number, notify_on_close, email_2_name, email_2_address, email_3_name, email_3_address FROM users WHERE id = ?", userID).Scan(&id, &email, &role, &ownerID, &storeName, &phoneNumber, &notifyOnClose, &email2Name, &email2Address, &email3Name, &email3Address)
 	if err != nil {
 		return nil, err
 	}
 
+	var sn *string
+	if storeName.Valid {
+		sn = &storeName.String
+	}
 	var pn *string
 	if phoneNumber.Valid {
 		pn = &phoneNumber.String
@@ -216,6 +221,7 @@ func getUserProfile(userID int64) (*userResp, error) {
 		Email:         email,
 		Role:          role,
 		OwnerID:       oid,
+		StoreName:     sn,
 		PhoneNumber:   pn,
 		NotifyOnClose: notifyOnClose != 0,
 		Email2Name:    e2n,
@@ -223,6 +229,85 @@ func getUserProfile(userID int64) (*userResp, error) {
 		Email3Name:    e3n,
 		Email3Address: e3a,
 	}, nil
+}
+
+type registerReq struct {
+	Email       string `json:"email"`
+	Password    string `json:"password"`
+	StoreName   string `json:"store_name"`
+	PhoneNumber string `json:"phone_number"`
+}
+
+func Register(w http.ResponseWriter, r *http.Request) {
+	var req registerReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeAuthError(w, http.StatusBadRequest, errInvalidBody)
+		return
+	}
+
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+	req.StoreName = strings.TrimSpace(req.StoreName)
+	req.PhoneNumber = strings.TrimSpace(req.PhoneNumber)
+
+	if req.Email == "" || len(req.Password) < 6 || req.StoreName == "" {
+		writeAuthError(w, http.StatusBadRequest, "Please provide a valid store name, email, and password (at least 6 characters).")
+		return
+	}
+
+	var exists int
+	if err := db.DB.QueryRow("SELECT COUNT(*) FROM users WHERE email = ?", req.Email).Scan(&exists); err != nil {
+		writeAuthError(w, http.StatusInternalServerError, "Database error.")
+		return
+	}
+	if exists > 0 {
+		writeAuthError(w, http.StatusBadRequest, "An account with this email address already exists.")
+		return
+	}
+
+	hash, err := HashPassword(req.Password)
+	if err != nil {
+		writeAuthError(w, http.StatusInternalServerError, "Unable to hash password.")
+		return
+	}
+
+	res, err := db.DB.Exec(`
+		INSERT INTO users (email, password_hash, role, active, store_name, phone_number, notify_on_close)
+		VALUES (?, ?, 'owner', 1, ?, ?, 1)
+	`, req.Email, hash, req.StoreName, req.PhoneNumber)
+	if err != nil {
+		writeAuthError(w, http.StatusInternalServerError, "Unable to create account.")
+		return
+	}
+
+	userID, _ := res.LastInsertId()
+
+	token, err := IssueToken(jwtSecret, userID, req.Email, DefaultTokenTTL)
+	if err != nil {
+		writeAuthError(w, http.StatusInternalServerError, errTokenIssue)
+		return
+	}
+
+	secure := r.TLS != nil || os.Getenv("APP_ENV") == "production"
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   secure,
+		MaxAge:   int(DefaultTokenTTL.Seconds()),
+	})
+
+	pn := req.PhoneNumber
+	sn := req.StoreName
+	writeJSON(w, http.StatusCreated, userResp{
+		ID:            userID,
+		Email:         req.Email,
+		Role:          "owner",
+		StoreName:     &sn,
+		PhoneNumber:   &pn,
+		NotifyOnClose: true,
+	})
 }
 
 func Me(w http.ResponseWriter, r *http.Request) {

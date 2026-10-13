@@ -7,6 +7,7 @@ export type AuthContextValue = {
   error: string | null
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<User>
+  register: (email: string, password: string, storeName: string, phoneNumber: string) => Promise<User>
   logout: () => Promise<void>
   refresh: () => Promise<void>
 }

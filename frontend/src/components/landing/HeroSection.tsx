@@ -72,18 +72,28 @@ export function HeroSection() {
         </p>
 
         <div className="mt-8 flex flex-col items-center gap-4">
-          <Button
-            asChild
-            size="lg"
-            className="h-12 rounded-full px-6 text-sm font-medium"
-          >
-            <Link to="/login">
-              Sign in to your ledger
-              <ArrowRight className="size-4" />
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button
+              asChild
+              size="lg"
+              className="h-12 rounded-full px-6 text-sm font-medium"
+            >
+              <Link to="/register">
+                Create Free Account
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="h-12 rounded-full px-6 text-sm font-medium"
+            >
+              <Link to="/login">Sign in</Link>
+            </Button>
+          </div>
           <p className="text-xs text-muted-foreground">
-            One shop. One login. Built with care for family business.
+            No setup fees. Built specifically for retail and grocery store owners.
           </p>
         </div>
 

@@ -79,6 +79,9 @@ func main() {
 	}
 	ledger.SetDefaultThreshold(lowStockDefault)
 
+	// Launch background auto-close worker
+	ledger.StartAutoCloseWorker()
+
 	// Pre-load cache is now per-user and happens on first request via handlers.
 	// The global cache preload was removed because there is no user context at startup.
 
@@ -167,11 +170,15 @@ func main() {
 
 	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
+		now := db.GetNow()
+		resp := fmt.Sprintf(`{"status":"ok","business_date":"%s","server_time":"%s","timezone":"%s"}`,
+			db.GetToday(), now.Format(time.RFC3339), db.GetLocation().String())
+		w.Write([]byte(resp))
 	})
 
 	r.Route("/api/auth", func(r chi.Router) {
 		r.Post("/login", auth.Login)
+		r.Post("/register", auth.Register)
 		r.Post("/logout", auth.Logout)
 		r.With(auth.Middleware).Get("/me", auth.Me)
 		r.With(auth.Middleware).Patch("/me", auth.UpdateMe)
