@@ -21,6 +21,11 @@ dist-ssr
 *.local
 .env*
 !.env.example
+linear_project.json
+linear_issues.json
+linear_recent.json
+linear_docs.md
+fetch_linear.js
 
 # Editor
 .vscode/*

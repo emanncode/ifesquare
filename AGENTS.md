@@ -1,33 +1,41 @@
-# Agent rules — design-first with Pencil
+# Agent Rules — Ifesquare
 
-## Pencil + MCP
+## Development Workflow: Code-First
+Implement directly in application code (`backend/` and `frontend/`) using existing design tokens, components, and patterns. (Pencil design-first gate is retired).
 
-This project uses [Pencil](https://pencil.dev) for UI design. Design files live in `design/*.pen`.
+## Mandatory Granular Technical File Logging
+For **every file modified or created during a task**, agents MUST document:
+1. Exact file path and functional purpose.
+2. Technologies, libraries, and dependencies used.
+3. Styling, Tailwind v4 tokens, and UI layout applied.
+4. Business logic, state changes, error handling, and API contracts.
+5. Invariants verified (RBAC, 2 AM rollover, offline queue, atomic transactions).
 
-- Open designs in **VS Code** with the Pencil extension.
-- Keep the active `.pen` file open while the agent uses Pencil MCP tools.
-- Project MCP configs: `.grok/config.toml`, `.cursor/mcp.json` (and user-level configs from `~/Documents/pencil-agent-kit/setup-agents.sh`).
-
-## Design-first workflow (required)
-
-1. **Design before code** — For new UI, layout changes, or major visual work, the agent must create or update frames in `design/*.pen` first using Pencil MCP tools (`get_editor_state`, `batch_design`, etc.).
-2. **User approval gate** — Do not implement UI in application code until the user explicitly approves the Pencil design (e.g. "approved", "looks good", "ship it", "go ahead and build").
-3. **Match the approved design** — Implementation should follow approved frames: spacing, hierarchy, colors, copy, and screen structure.
-4. **Mid-project agent switches** — The same `design/*.pen` files are the source of truth. Any agent (Grok, Cursor, Claude Code, Copilot, Kiro) should read the current Pencil canvas before changing UI.
-5. **After approval** — Implement in the project’s normal stack, then optionally update the `.pen` file if the built UI diverges for good reasons (document why in the PR/commit).
-
-## When Pencil is unavailable
-
-If Pencil MCP is not connected, ask the user to run:
-
+Append this breakdown to the session's local tech log in `docs/tech-logs/YYYY-MM-DD.md` and sync it to the dedicated Linear document (`YYYY-MM-DD — Technical File Log`) via:
 ```bash
-~/Documents/pencil-agent-kit/setup-agents.sh
+node scripts/log_tech_linear.js docs/tech-logs/YYYY-MM-DD.md
 ```
 
-Then open `design/starter.pen` (or the project design file) in VS Code and restart the agent session.
+## Agent Skills Reference
+Comprehensive domain context lives in `.agents/skills/`:
+- `allonifesquare`: Master entry skill, product context, invariants, and workflows.
+- `ifesquare-ai-instructions`: Coding rules, safekeeping, and invariant enforcement.
+- `ifesquare-tech-logging`: Specification and template for granular file logging.
+- `ifesquare-feature-specification`: Full feature specification, API endpoints, and schema.
+- `ifesquare-design`: Styling tokens, components, and design system.
+- `ifesquare-backend`: Go backend architecture, caching, and migrations.
+- `ifesquare-frontend`: React 19, Tailwind v4, PWA, and offline IndexedDB sync.
+- `ifesquare-daily-logs`: Chronological implementation history from Linear.
 
-## Suggested prompts
+## Linear Source of Truth
+Project overview and documents: https://linear.app/emanncode/project/ifesquare-6b11239c548c/overview
 
-- "Design the login screen in Pencil using our dark theme — wait for my approval before coding."
-- "Read the current Pencil canvas and list what’s already designed."
-- "I approve the Student Home frame — implement it in the app."
+## Core Business Invariants
+1. **2:00 AM Rollover**: Business day rolls over at 2:00 AM local time (not midnight). Activity before 2:00 AM belongs to the prior day.
+2. **Daily Ledger Calculation**: Sales = `(Opening + Receipts - Closing) * Price`.
+3. **Closing a Day**: Auto-fills empty closing counts to `Opening + Receipts` (0 sales), updates master stock, locks day, sends Termii SMS.
+4. **RBAC**: Owner has full access; Staff is strictly restricted to current day ledger table (prices, revenue, history, settings completely hidden).
+
+## Verification Commands
+- **Backend**: `cd backend && go test ./...`
+- **Frontend**: `cd frontend && npx tsc --noEmit && npm run lint`
