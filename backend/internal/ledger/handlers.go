@@ -62,6 +62,12 @@ func TodayHandler(w http.ResponseWriter, r *http.Request) {
 		entries = []EntryWithProduct{}
 	}
 
+	if isStaff {
+		for i := range entries {
+			entries[i].Price = 0
+		}
+	}
+
 	today := getToday()
 	var closedAt sql.NullString
 	db.DB.QueryRow("SELECT closed_at FROM days WHERE user_id = ? AND date = ?", scopeID, today).Scan(&closedAt)
@@ -279,6 +285,9 @@ func CloseHandler(w http.ResponseWriter, r *http.Request) {
 	hk := cacheKey(scopeID, "/api/history")
 	mk := cacheKey(scopeID, "analytics:monthly-comparison:"+today)
 	cache.Invalidate(ck, hk, mk)
+
+	go DispatchCloseDayNotifications(today, scopeID, false)
+
 	writeJSON(w, http.StatusOK, map[string]string{"message": "day closed"})
 }
 
