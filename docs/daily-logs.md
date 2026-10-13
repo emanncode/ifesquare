@@ -1742,3 +1742,33 @@ Frontend already sends JWT cookie with `credentials: "include"`; middleware extr
 ## Docs
 
 * Updated `full_on_feature.md` — added Input Validation, CSV Export, Sync Guard, Rate Limiting, Password Reset, and CSRF sections; bumped API endpoint count to 16.
+
+---
+
+# 2026-10-13
+
+## Summary
+Major platform elevation milestone: Established multi-agent skills architecture mirroring Soldbay, transitioned to code-first workflows, anchored the 2:00 AM business day rollover to `Africa/Lagos` timezone, implemented automated day closure background worker, integrated Termii SMS with `talert` default (bypassing NCC CAC requirement), resolved Staff RBAC price leakage, delivered self-serve owner registration (`/register`), and released via 7 atomic conventional commits to `main`.
+
+## Key Discoveries & Architectural Context
+* **Nigerian Telecom Regulatory Mandate**: Custom alphanumeric Sender IDs (`Ifesquare`) require CAC Certificate of Registration per NCC rules to prevent SMS spoofing. Bypassed by using Termii's pre-approved default generic sender ID **`talert`** (`TERMII_CHANNEL="generic"`). Verified live balance: ₦30.00 NGN under `EmannCode`.
+* **Production Hosting Stack**:
+  * Backend API: Go 1.26 on **Render**
+  * Database: Cloud libSQL on **Turso** (AWS EU-West-1)
+  * Frontend: React 19 SPA on **Vercel** (`https://ifesquare.uniflowapp.xyz`)
+* **Timezone Anchoring**: Shifted `db.GetToday()` calculation to `Africa/Lagos` (WAT) to prevent UTC server drift.
+* **Automated Closure**: Background worker in `worker.go` auto-finalizes yesterday's unclosed ledgers between 2:02 AM–2:30 AM WAT, auto-fills null closing to `Opening + Receipts` (0 sales), and dispatches dual SMS/email notifications.
+* **Staff RBAC Confidentiality**: Redacted product prices on backend (`entry.Price = 0`) for staff role in `TodayHandler`.
+* **Self-Serve SaaS**: Mounted `POST /api/auth/register`, built `/register` page, connected landing page CTAs, and added first-run dashboard setup banner.
+
+## Commits Pushed to Remote
+| Hash | Type | Summary |
+|---|---|---|
+| `7c8abeb` | chore | setup agent ecosystem (22 skills), code-first rules, and Linear sync tooling |
+| `e13993b` | feat | anchor business day rollover to Africa/Lagos timezone; migration 011 |
+| `617121e` | feat | add background worker for automated day closure at 2:02 AM WAT |
+| `5f73ff1` | feat | integrate Termii SMS client with talert default and configurable channel |
+| `1e0c944` | test | add core ledger test suite and enforce staff price redaction |
+| `d0b89bc` | feat | add self-serve store registration and onboarding flow |
+| `b8dc63f` | docs | update README and technical change logs |
+
