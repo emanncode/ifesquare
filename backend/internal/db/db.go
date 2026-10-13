@@ -98,6 +98,7 @@ func migrate() error {
 		"migrations/008_audit_log.sql",
 		"migrations/009_recipient_emails.sql",
 		"migrations/010_perf_indexes.sql",
+		"migrations/011_store_and_autoclose.sql",
 	}
 	for _, name := range files {
 		sqlBytes, err := migrations.ReadFile(name)
@@ -125,8 +126,33 @@ func Close() {
 	}
 }
 
+var businessLocation *time.Location
+
+func init() {
+	tz := os.Getenv("TIMEZONE")
+	if tz == "" {
+		tz = "Africa/Lagos"
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		// Fallback to WAT (UTC+1, West Africa Time) if tzdata is not available in system
+		loc = time.FixedZone("WAT", 3600)
+	}
+	businessLocation = loc
+}
+
+// GetLocation returns the configured business time.Location (default: Africa/Lagos).
+func GetLocation() *time.Location {
+	return businessLocation
+}
+
+// GetNow returns the current time evaluated in the business timezone.
+func GetNow() time.Time {
+	return time.Now().In(businessLocation)
+}
+
 // GetToday returns the current date string (YYYY-MM-DD) for the business day,
-// rolling over at 2 AM instead of 12 AM.
+// rolling over at 2 AM in the business timezone.
 func GetToday() string {
-	return time.Now().Add(-2 * time.Hour).Format("2006-01-02")
+	return GetNow().Add(-2 * time.Hour).Format("2006-01-02")
 }
