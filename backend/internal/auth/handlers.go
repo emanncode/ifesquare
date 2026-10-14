@@ -325,6 +325,7 @@ func Me(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateMeReq struct {
+	StoreName     *string `json:"store_name"`
 	PhoneNumber   *string `json:"phone_number"`
 	NotifyOnClose *bool   `json:"notify_on_close"`
 	Email2Name    *string `json:"email_2_name"`
@@ -345,12 +346,22 @@ func UpdateMe(w http.ResponseWriter, r *http.Request) {
 	var sets []string
 	var args []interface{}
 
-	if req.PhoneNumber != nil {
-		sets = append(sets, "phone_number = ?")
-		if *req.PhoneNumber == "" {
+	if req.StoreName != nil {
+		sets = append(sets, "store_name = ?")
+		trimmed := strings.TrimSpace(*req.StoreName)
+		if trimmed == "" {
 			args = append(args, nil)
 		} else {
-			args = append(args, *req.PhoneNumber)
+			args = append(args, trimmed)
+		}
+	}
+	if req.PhoneNumber != nil {
+		sets = append(sets, "phone_number = ?")
+		trimmed := strings.TrimSpace(*req.PhoneNumber)
+		if trimmed == "" {
+			args = append(args, nil)
+		} else {
+			args = append(args, trimmed)
 		}
 	}
 	if req.NotifyOnClose != nil {

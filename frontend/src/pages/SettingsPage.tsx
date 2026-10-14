@@ -108,6 +108,9 @@ function AccountTab({
   user: NonNullable<ReturnType<typeof useAuth>["user"]>;
   onSaved: () => void;
 }) {
+  const [storeName, setStoreName] = useState(user.store_name ?? "");
+  const [phoneNumber, setPhoneNumber] = useState(user.phone_number ?? "");
+  const [notifyOnClose, setNotifyOnClose] = useState(user.notify_on_close ?? true);
   const [email2Name, setEmail2Name] = useState(user.email_2_name ?? "");
   const [email2Address, setEmail2Address] = useState(user.email_2_address ?? "");
   const [email3Name, setEmail3Name] = useState(user.email_3_name ?? "");
@@ -118,6 +121,9 @@ function AccountTab({
 
   if (prevUser !== user) {
     setPrevUser(user);
+    setStoreName(user.store_name ?? "");
+    setPhoneNumber(user.phone_number ?? "");
+    setNotifyOnClose(user.notify_on_close ?? true);
     setEmail2Name(user.email_2_name ?? "");
     setEmail2Address(user.email_2_address ?? "");
     setEmail3Name(user.email_3_name ?? "");
@@ -130,6 +136,9 @@ function AccountTab({
       await api("/api/auth/me", {
         method: "PATCH",
         body: {
+          store_name: storeName.trim() || null,
+          phone_number: phoneNumber.trim() || null,
+          notify_on_close: notifyOnClose,
           email_2_name: email2Name.trim() || null,
           email_2_address: email2Address.trim() || null,
           email_3_name: email3Name.trim() || null,
@@ -150,11 +159,60 @@ function AccountTab({
       <div className="border-b border-border px-5 py-4">
         <CardTitle className="text-base">Account settings</CardTitle>
       </div>
-      <div className="px-5 py-4 space-y-5">
+      <div className="px-5 py-4 space-y-6">
         <div className="space-y-1.5">
           <Label>Primary Account Email (You)</Label>
           <p className="text-sm font-semibold text-foreground">{user.email}</p>
         </div>
+
+        {user.role === "owner" && (
+          <div className="border-t border-border pt-4 space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Shop Profile & SMS Notifications</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Manage your store branding and mobile phone number for daily ledger closing summaries.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="storeName">Store / Shop Name</Label>
+                <Input
+                  id="storeName"
+                  placeholder="e.g. Ifeoma General Store"
+                  value={storeName}
+                  onChange={(e) => setStoreName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="phoneNumber">Phone Number for SMS</Label>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  placeholder="e.g. 08012345678 or +234..."
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Receives automated daily ledger summary SMS alerts via Termii.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-1">
+              <input
+                id="notifyOnClose"
+                type="checkbox"
+                checked={notifyOnClose}
+                onChange={(e) => setNotifyOnClose(e.target.checked)}
+                className="size-4 rounded border-border text-primary focus:ring-primary accent-primary cursor-pointer"
+              />
+              <Label htmlFor="notifyOnClose" className="text-sm font-normal cursor-pointer select-none">
+                Send SMS alert to my phone when a business day is closed (or auto-closed at 2:00 AM)
+              </Label>
+            </div>
+          </div>
+        )}
 
         <div className="border-t border-border pt-4 space-y-4">
           <div>

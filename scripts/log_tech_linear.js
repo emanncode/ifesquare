@@ -7,6 +7,9 @@
 const fs = require('fs');
 const https = require('https');
 const path = require('path');
+const dns = require('dns');
+
+dns.setDefaultResultOrder('ipv4first');
 
 const API_KEY = process.env.LINEAR_API_KEY;
 if (!API_KEY) {
@@ -15,36 +18,25 @@ if (!API_KEY) {
 }
 const PROJECT_UUID = 'db6b2bc5-f866-44e9-8a52-516c40f3792c';
 
-function makeRequest(query, variables) {
-  return new Promise((resolve, reject) => {
-    const data = JSON.stringify({ query, variables });
-    const req = https.request({
-      hostname: 'api.linear.app',
-      path: '/graphql',
-      method: 'POST',
-      family: 4,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': API_KEY,
-        'Content-Length': Buffer.byteLength(data)
-      }
-    }, (res) => {
-      let body = '';
-      res.on('data', chunk => body += chunk);
-      res.on('end', () => {
-        try {
-          const parsed = JSON.parse(body);
-          if (parsed.errors) reject(new Error(JSON.stringify(parsed.errors)));
-          else resolve(parsed.data);
-        } catch (e) {
-          reject(e);
-        }
-      });
-    });
-    req.on('error', reject);
-    req.write(data);
-    req.end();
+async function makeRequest(query, variables) {
+  const res = await fetch('https://api.linear.app/graphql', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': API_KEY,
+      'User-Agent': 'IfesquareTechLog/1.0',
+    },
+    body: JSON.stringify({ query, variables }),
   });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`HTTP ${res.status}: ${text}`);
+  }
+  const json = await res.json();
+  if (json.errors) {
+    throw new Error(JSON.stringify(json.errors));
+  }
+  return json.data;
 }
 
 async function main() {
@@ -107,6 +99,6 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('Error logging to Linear:', err.message);
+  console.error('Error logging to Linear:', err);
   process.exit(1);
 });
