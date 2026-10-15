@@ -19,7 +19,7 @@ description: Feature inventory, component matrix, and enhancement backlog for th
 | **Analytics & Insights** | MoM revenue comparison, Recharts visualizations, sparklines | ✅ Complete | ✅ Complete | Hidden from staff users. |
 | **Notifications** | Owner day-close summary alerts | ✅ Complete | ✅ Configurable | Dual dispatch: Termii SMS (talert) + SMTP Email. Configurable in Settings. |
 | **Audit Logging** | Entity mutation tracking with before/after state | ✅ Complete | ✅ Complete | Exposed in Settings Activity tab. |
-| **Self-Serve Onboarding** | Owner registration, store setup wizard | ✅ Complete | ✅ Complete | Public /register, landing CTAs & first-run setup banner. |
+| **Self-Serve Onboarding** | Owner registration, store setup wizard | ✅ Complete | ✅ Complete | Public `/register`, account-creation landing CTAs, and store profile setup. |
 | **Automated Day Closure** | Background worker to auto-finalize forgotten days | ✅ Complete | N/A | Background worker triggers at 2:02 AM WAT; auto_closed flag. |
 
 ---

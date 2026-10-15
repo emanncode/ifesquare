@@ -1,47 +1,13 @@
 ---
 name: ifesquare-workflow
-description: Standard development lifecycle, testing procedures, and Pencil MCP workflow for Ifesquare.
+description: Current implementation and verification workflow for Ifesquare.
 ---
 
-# Development Workflow for Ifesquare
+# Ifesquare Development Workflow
 
-Follow this process for adding features, refactoring, or fixing bugs in Ifesquare.
-
----
-
-## 1. Feature Lifecycle
-
-1. **Clarify Scope & Business Impact**:
-   - Determine whether the change affects the ledger snapshot, pricing, staff permissions, or offline syncing.
-2. **Design First (For Visual Work)**:
-   - If introducing or modifying screens, update or create frames in `design/*.pen` using Pencil MCP tools (`get_editor_state`, `batch_design`).
-   - Request and secure explicit user approval before touching frontend application code.
-3. **Backend First Implementation**:
-   - Create SQL migration in `backend/internal/db/migrations/` if schema changes are required.
-   - Implement data store operations with transactions and proper error propagation.
-   - Add HTTP handlers in `internal/<feature>/handlers.go` and mount routes in Chi router.
-   - Enforce RBAC checks and invalidate in-memory cache on writes.
-   - Write comprehensive Go unit and table-driven tests.
-4. **Frontend Integration**:
-   - Update `frontend/src/lib/types.ts` to reflect API payloads.
-   - Add/update endpoints in `frontend/src/lib/api.ts`.
-   - Wire up offline queueing if the action is usable without active internet.
-   - Implement components conforming to approved designs.
-5. **Quality Verification**:
-   - Run backend tests: `go test ./...` in `backend/`.
-   - Run frontend tests: `npm test` in `frontend/`.
-   - Verify build integrity: `npm run build` in `frontend/`.
-
----
-
-## 2. Testing Guidelines
-
-### Backend Testing (`backend/`)
-* Use `net/http/httptest` to verify HTTP handlers and response codes.
-* Use in-memory SQLite (`:memory:`) or isolated test databases with schema migrations run before test suites.
-* Ensure RBAC tests verify that staff tokens receive 403 Forbidden on owner routes and redacted data on ledger reads.
-
-### Frontend Testing (`frontend/`)
-* Use Vitest and React Testing Library for component behavior tests.
-* Test offline queue addition and replay logic under network disconnection scenarios.
-
+1. Identify affected ledger, RBAC, cache, offline-queue, and rollover invariants before coding.
+2. Implement directly in `backend/` and `frontend/` using existing components, tokens, and patterns. The former Pencil design-first gate is retired.
+3. Put schema changes in a new embedded migration; wrap close-day behavior in a transaction; invalidate cache after writes.
+4. Keep staff restrictions enforced in the API as well as the interface.
+5. For every modified or created file, append the required technical breakdown to `docs/tech-logs/YYYY-MM-DD.md`, then sync the log to its Linear document with `node scripts/log_tech_linear.js docs/tech-logs/YYYY-MM-DD.md`.
+6. Verify relevant work with `go test ./...` in `backend/` and `npx tsc --noEmit`, `npm run lint`, and `npm run build` in `frontend/`.

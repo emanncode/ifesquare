@@ -42,7 +42,7 @@ frontend/
 
 ### 2. Role-Based Access Routing
 - Handled in `App.tsx` and custom route guards:
-  - **Public Routes**: `/` (Coming Soon), `/login`.
+  - **Public Routes**: `/` (product page), `/register`, `/login`. The product page must render without waiting for an authenticated-session request.
   - **Authenticated (Shared)**: `/app` (Today's Ledger Table). Staff sees filtered columns without prices or financial metrics.
   - **Owner-Only Routes**:
     - `/app/products`: Product catalog management and CSV imports.
