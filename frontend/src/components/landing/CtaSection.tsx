@@ -14,20 +14,18 @@ export function CtaSection() {
           transition={{ type: "spring", stiffness: 200, damping: 15 }}
         >
           <h2 className="text-balance text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-            Ready to see today's numbers?
+            Start with the stock you already know
           </h2>
           <p className="max-w-sm text-pretty text-sm leading-relaxed text-muted-foreground">
-            No setup, no onboarding call. Sign in and your ledger is
-            waiting — just like it would be if you'd been writing in a
-            book.
+            Create your store account, add your products, and begin your first ledger day.
           </p>
           <Button
             asChild
             size="lg"
             className="h-12 rounded-full px-6 text-sm font-medium"
           >
-            <Link to="/login">
-              Sign in to your ledger
+            <Link to="/register">
+              Create your store account
               <ArrowRight className="size-4" />
             </Link>
           </Button>

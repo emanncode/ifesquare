@@ -1,10 +1,11 @@
 import { useEffect } from "react"
-import { BrowserRouter } from "react-router-dom"
+import { BrowserRouter, Route, Routes } from "react-router-dom"
 import { AuthProvider } from "@/components/AuthProvider"
 import { AppRoutes } from "@/components/AppRoutes"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import { ToastProvider } from "@/hooks/useToast"
 import { replayQueue } from "@/lib/offlineQueue"
+import LandingPage from "@/pages/ComingSoonPage"
 
 function OfflineReplay() {
   useEffect(() => {
@@ -20,10 +21,18 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <ToastProvider>
-          <AuthProvider>
-            <OfflineReplay />
-            <AppRoutes />
-          </AuthProvider>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route
+              path="/*"
+              element={
+                <AuthProvider>
+                  <OfflineReplay />
+                  <AppRoutes />
+                </AuthProvider>
+              }
+            />
+          </Routes>
         </ToastProvider>
       </BrowserRouter>
     </ErrorBoundary>

@@ -5,7 +5,6 @@ import { Loader2 } from "lucide-react"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { useAuth } from "@/hooks/useAuth"
 
-const ComingSoonPage = lazy(() => import("@/pages/ComingSoonPage"))
 const LoginPage = lazy(() => import("@/pages/LoginPage"))
 const RegisterPage = lazy(() => import("@/pages/RegisterPage"))
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"))
@@ -48,7 +47,6 @@ export function AppRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Suspense fallback={<PageLoader />}><ComingSoonPage /></Suspense>} />
         <Route
           path="/login"
           element={

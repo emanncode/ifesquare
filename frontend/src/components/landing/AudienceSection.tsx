@@ -1,23 +1,23 @@
 import { motion } from "framer-motion"
-import { Store, Users, Receipt } from "lucide-react"
+import { Store, Users, Warehouse } from "lucide-react"
 import { FadeUp } from "@/components/landing/FadeUp"
 
 const audience = [
   {
     icon: Store,
-    title: "Small shops & kiosks",
+    title: "Independent shops",
     description:
       "One-person operations that need a simple way to track stock without accounting software.",
   },
   {
     icon: Users,
-    title: "Family-run businesses",
+    title: "Growing teams",
     description:
       "Mum-and-pop stores where everyone helps out and the ledger needs to be easy for anyone to use.",
   },
   {
-    icon: Receipt,
-    title: "Distributors & resellers",
+    icon: Warehouse,
+    title: "Stock-moving businesses",
     description:
       "People who move inventory regularly and need to know what sold, what's left, and what to reorder.",
   },
@@ -31,11 +31,10 @@ export function AudienceSection() {
           Who it's for
         </p>
         <h2 className="text-balance text-center text-2xl font-semibold tracking-tight sm:text-3xl">
-          Built for real shops, not corporations
+          Made for the people who keep stock moving
         </h2>
         <p className="mx-auto mt-4 max-w-lg text-pretty text-center text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Ifesquare started as a tool for one shop. It turns out most
-          small shops have the same needs.
+          Whether one person counts stock or a small team shares the day, the ledger stays understandable.
         </p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
