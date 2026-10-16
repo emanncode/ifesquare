@@ -5,11 +5,8 @@ import { Button } from "@/components/ui/button"
 import BrandMark from "@/components/login/brandmark"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import { HeroSection } from "@/components/landing/HeroSection"
-import { StatsSection } from "@/components/landing/StatsSection"
 import { ProblemSection } from "@/components/landing/ProblemSection"
 import { SolutionSection } from "@/components/landing/SolutionSection"
-import { ComparisonSection } from "@/components/landing/ComparisonSection"
-import { FeaturesSection } from "@/components/landing/FeaturesSection"
 import { HowItWorksSection } from "@/components/landing/HowItWorksSection"
 import { AudienceSection } from "@/components/landing/AudienceSection"
 import { CtaSection } from "@/components/landing/CtaSection"
@@ -51,12 +48,9 @@ export default function LandingPage() {
 
         <main className="flex flex-1 flex-col items-center px-[5%] pb-20 pt-6">
           <HeroSection />
-          <StatsSection />
           <ProblemSection />
-          <SolutionSection />
-          <ComparisonSection />
-          <FeaturesSection />
           <HowItWorksSection />
+          <SolutionSection />
           <AudienceSection />
           <CtaSection />
         </main>
@@ -70,7 +64,15 @@ export default function LandingPage() {
           </div>
           <p className="text-xs text-muted-foreground">
             &copy; {new Date().getFullYear()} Ifesquare &middot; Built for
-            Mum's shop &middot; Ledger & sales analytics
+            Mum's shop &middot; Ledger & sales analytics &middot; Engineered by{" "}
+            <a
+              href="https://emanncode.work"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-foreground underline hover:text-primary transition-colors"
+            >
+              EmannCode
+            </a>
           </p>
           <div className="mt-5 flex items-center justify-center gap-5 text-xs text-muted-foreground">
             <a
