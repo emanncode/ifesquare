@@ -16,10 +16,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Turso CLI
-        run: curl -sSfL https://get.tur.so/install.sh | bash
+        run: |
+          curl -sSfL https://get.tur.so/install.sh | bash
+          echo "$HOME/.turso" >> "$GITHUB_PATH"
 
-      - name: Authenticate Turso
-        run: turso auth token --expire 300
+      - name: Verify Turso Authentication
+        run: turso auth whoami
         env:
           TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
 
