@@ -1,6 +1,6 @@
 ---
 name: ifesquare-tech-logging
-description: Standard protocol, format specification, and tooling for logging granular file-by-file technical explanations to the separate Linear technical daily document.
+description: Standard protocol and format for logging granular file-by-file technical explanations in the repository's local technical daily log.
 ---
 
 # Ifesquare Granular Technical File Logging Protocol
@@ -9,9 +9,7 @@ description: Standard protocol, format specification, and tooling for logging gr
 
 To maintain an exhaustive, high-fidelity audit trail of engineering decisions, code alterations, styling implementations, and technical dependencies across the Ifesquare codebase, all coding agents must log detailed file breakdowns for every session.
 
-This technical log is maintained in a **dedicated, separate Linear daily document** (distinct from standard high-level daily progress summaries):
-- **Linear Document Title Format**: `YYYY-MM-DD — Technical File Log`
-- **Local Mirror**: `docs/tech-logs/YYYY-MM-DD.md`
+This technical log is maintained in the repository at `docs/tech-logs/YYYY-MM-DD.md` as code-adjacent implementation history. It is not a Linear document. Durable product decisions and reusable knowledge belong in Notion; Linear tracks execution.
 
 ---
 
@@ -43,11 +41,5 @@ For each file added or modified during a session, format an entry using this str
 ## Logging Procedure
 
 1. **Staging**: At the conclusion of modifying code files, append or write the entries into `docs/tech-logs/YYYY-MM-DD.md`.
-2. **Dispatch to Linear**: Run the logging script:
-   ```bash
-   node scripts/log_tech_linear.js docs/tech-logs/YYYY-MM-DD.md
-   ```
-   The script checks if `YYYY-MM-DD — Technical File Log` already exists in the Linear project:
-   - If it exists, it appends the new entry with a clear separator (`---`).
-   - If not, it creates the new Linear document under project `ifesquare` (`6b11239c548c`).
+2. **Do not dispatch to Linear**: The `scripts/log_tech_linear.js` integration is legacy and must not be run for new work. Existing historical Linear technical logs remain historical records.
 3. **Walkthrough Inclusion**: Reference the logged file changes in your session walkthrough.

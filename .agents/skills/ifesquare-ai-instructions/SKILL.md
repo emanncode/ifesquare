@@ -63,11 +63,8 @@ On **every single file modified or created during a coding session**, agents MUS
 
 ### Logging Execution Protocol:
 - Staged locally in `docs/tech-logs/YYYY-MM-DD.md`.
-- Synced to Linear's separate daily technical document (`YYYY-MM-DD — Technical File Log`) via:
-  ```bash
-  node scripts/log_tech_linear.js docs/tech-logs/YYYY-MM-DD.md
-  ```
-- This technical log is separate from the high-level daily progress reports.
+- Keep it as repository-local implementation history; do not sync it to a Linear document. The Linear script is legacy and must not be run for new work.
+- Put durable product decisions and reusable knowledge in Notion. Linear remains the execution tracker for issues/status, with issue-scoped review evidence allowed.
 
 ---
 

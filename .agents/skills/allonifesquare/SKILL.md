@@ -5,13 +5,15 @@ description: Master product context, architecture, discovery, and implementation
 
 # AllOnIfesquare Agent Skill
 
-## Product Context & Linear Reference
+## Product Context & Documentation References
 
 Ifesquare is a modern shop inventory and daily ledger management system built to replace handwritten paper ledgers for small retail businesses and supermarkets.
 
 - **Linear Project**: https://linear.app/emanncode/project/ifesquare-6b11239c548c/overview
 - **Project ID**: `6b11239c548c` (UUID: `db6b2bc5-f866-44e9-8a52-516c40f3792c`)
-- **Working Source of Truth**: The Linear Project Documents, `.agents/skills/`, and `docs/`.
+- **Canonical durable documentation**: Notion project pages for product context, requirements, workflows, research, and decisions.
+- **Execution tracker**: Linear for issues, bugs, owners, priorities, statuses, and releases. Issue-scoped code reviews may remain attached to issues.
+- **Repository references**: `.agents/skills/` and `docs/` for code-adjacent technical details. When content overlaps Notion, Notion is canonical and the repo copy must be kept aligned.
 
 ---
 
@@ -81,7 +83,7 @@ When the Owner closes a business day:
      - Styling, layout, and Tailwind tokens applied
      - Functional logic, state handling, and database operations
      - Invariants verified
-   - Record this breakdown in `docs/tech-logs/YYYY-MM-DD.md` and sync it to the dedicated Linear document (`YYYY-MM-DD — Technical File Log`) using `node scripts/log_tech_linear.js docs/tech-logs/YYYY-MM-DD.md`.
+   - Record this breakdown in `docs/tech-logs/YYYY-MM-DD.md`. Keep this technical log local to the repository; do not create or sync a Linear document for it.
 
 3. **Invariable Verification**:
    - Backend verification: `go test ./...` in `backend/`
